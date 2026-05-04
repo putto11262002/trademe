@@ -63,12 +63,13 @@ Import server files with the suffix in the path (`@/db/index.server`, not `@/db`
 
 ```
 types.ts              ← TS types (often re-exports `$inferSelect` from @/db/schema)
+schemas.ts            ← zod schemas (isomorphic — shared by client form + server validator)
 api.server.ts         ← server-only async fns; takes deps; returns app shapes
-server.ts             ← createServerFn wrappers around api.server.ts
-index.ts              ← barrel — re-exports types + server.ts. NEVER api.server.ts.
+functions.ts          ← createServerFn wrappers around api.server.ts (isomorphic — clients import these)
+index.ts              ← barrel — re-exports types + schemas + functions. NEVER api.server.ts.
 ```
 
-`api.server.ts` is the testable core (mockable db, no TanStack runtime); `server.ts` is the framework boundary.
+`api.server.ts` is the testable core (mockable db, no TanStack runtime); `functions.ts` is the framework boundary that exposes the server fns to the client.
 
 **DB schemas centralized.** Drizzle tables under `src/db/schema/<table>.ts` with a barrel; modules import via `@/db/schema`. Cross-module FKs stay visible in one place.
 
