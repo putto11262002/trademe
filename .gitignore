@@ -9,7 +9,6 @@ count.txt
 .nitro
 .tanstack
 .wrangler
-worker-configuration.d.ts
 .output
 .vinxi
 __unconfig*
