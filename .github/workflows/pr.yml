@@ -42,35 +42,41 @@ jobs:
       - run: pnpm build
 
       - name: Deploy preview version to Cloudflare
-        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: versions upload --var DATABASE_URL:${{ steps.neon.outputs.db_url }} --preview-alias pr-${{ github.event.number }} --message "PR #${{ github.event.number }} (${{ github.event.pull_request.head.sha }})"
 
+      - name: Resolve workers.dev subdomain
+        id: cf
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          sub=$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/subdomain" \
+            | jq -r '.result.subdomain')
+          echo "subdomain=$sub" >> "$GITHUB_OUTPUT"
+
       - name: Comment preview info on PR
         uses: actions/github-script@v7
         env:
-          DEPLOY_OUTPUT: ${{ steps.deploy.outputs.command-output }}
+          SUBDOMAIN: ${{ steps.cf.outputs.subdomain }}
         with:
           script: |
-            const match = (process.env.DEPLOY_OUTPUT || '').match(/(https:\/\/[a-z0-9-]+\.workers\.dev)/i)
-            const url = match ? match[1] : null
+            const n = context.issue.number
+            const url = `https://pr-${n}-trademe.${process.env.SUBDOMAIN}.workers.dev`
             const body = [
               '### Preview deployed',
               '',
-              `- **Neon branch:** \`preview/pr-${context.issue.number}\` (forked from \`production\`)`,
-              url
-                ? `- **Worker preview:** ${url}`
-                : '- **Worker preview:** URL not parsed — check "Deploy preview version" step logs',
-              url
-                ? `- **Smoke test:** \`curl ${url}/api/health\` should return \`{"ok":true,"testUserCount":N}\``
-                : '- **Smoke test:** \`curl <preview-url>/api/health\``,
+              `- **Neon branch:** \`preview/pr-${n}\` (forked from \`production\`)`,
+              `- **Worker preview:** ${url}`,
+              `- **Smoke test:** \`curl ${url}/api/health\` should return \`{"ok":true,"testUserCount":N}\``,
             ].join('\n')
 
             github.rest.issues.createComment({
-              issue_number: context.issue.number,
+              issue_number: n,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body,
