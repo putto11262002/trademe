@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useSuspenseQuery } from "@tanstack/react-query"
 import { getCurrentUserFn } from "@/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -10,16 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Skeleton } from "@/components/ui/skeleton"
 
 export function UserMenu() {
-  const { data: user, isLoading } = useQuery({
+  const { data: user } = useSuspenseQuery({
     queryKey: ["currentUser"],
     queryFn: () => getCurrentUserFn(),
     staleTime: Infinity,
   })
 
-  if (isLoading) return <Skeleton className="h-8 w-8 rounded-full" />
   if (!user) return null
 
   const initial = user.displayName.charAt(0).toUpperCase()
