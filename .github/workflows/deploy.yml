@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - uses: pnpm/action-setup@v4
 
@@ -27,16 +25,7 @@ jobs:
 
       - run: pnpm typecheck
 
-      - name: Detect drizzle migration changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            drizzle:
-              - 'drizzle/**'
-
       - name: Run migrations against production DB
-        if: steps.filter.outputs.drizzle == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm db:migrate
