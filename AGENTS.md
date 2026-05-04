@@ -60,6 +60,4 @@ Instructions for AI agents (Claude Code, Cursor, etc.) working in this repo.
 
 **Never push to `master` directly.** All changes via PR. Branch names: `feat/*`, `fix/*`, `chore/*`, `ci/*`, `docs/*`. Squash merge is the default.
 
-**Don't commit workspace tooling.** `.agents/`, `.claude/`, `skills-lock.json`, `.dev.vars`, `worker-configuration.d.ts`'s only exception (it IS committed). Stage files explicitly by name; avoid `git add .` / `git add -A`.
-
 **Verify before declaring done.** Run `pnpm typecheck` (and `pnpm build` for changes affecting the bundle) locally before pushing. For UI changes, say so explicitly when you can't visually verify — don't claim "looks good" from typecheck alone.
