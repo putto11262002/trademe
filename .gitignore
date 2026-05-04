@@ -13,3 +13,8 @@ count.txt
 .vinxi
 __unconfig*
 todos.json
+
+# AI agent / workspace tooling — per-user, never committed
+.agents
+.claude
+skills-lock.json
