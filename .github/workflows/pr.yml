@@ -3,6 +3,13 @@ name: PR preview
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.prettierrc'
+      - '.prettierignore'
+      - 'eslint.config.js'
 
 permissions:
   contents: read
