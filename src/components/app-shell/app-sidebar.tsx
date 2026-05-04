@@ -1,15 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router"
 import { LayoutDashboard, MessageSquare, TrendingUp } from "lucide-react"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -20,32 +12,39 @@ const NAV = [
 export function AppSidebar() {
   const location = useLocation()
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="px-2 py-1.5 text-base font-semibold">TradeMe</div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV.map(({ to, label, icon: Icon }) => {
-                const active =
-                  to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)
-                return (
-                  <SidebarMenuItem key={to}>
-                    <SidebarMenuButton asChild isActive={active}>
-                      <Link to={to}>
-                        <Icon />
-                        <span>{label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <nav
+      aria-label="Primary"
+      className="bg-sidebar text-sidebar-foreground border-sidebar-border flex h-svh w-14 flex-col items-center gap-1 border-r py-3"
+    >
+      <Link
+        to="/"
+        aria-label="TradeMe home"
+        className="mb-3 flex size-8 items-center justify-center"
+      >
+        <img src="/logo.png" alt="" className="size-8 object-contain" />
+      </Link>
+      {NAV.map(({ to, label, icon: Icon }) => {
+        const active =
+          to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)
+        return (
+          <Tooltip key={to} delayDuration={150}>
+            <TooltipTrigger asChild>
+              <Link
+                to={to}
+                aria-label={label}
+                className={cn(
+                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex size-9 items-center justify-center rounded-md transition-colors",
+                  active &&
+                    "bg-sidebar-accent text-sidebar-accent-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">{label}</TooltipContent>
+          </Tooltip>
+        )
+      })}
+    </nav>
   )
 }
