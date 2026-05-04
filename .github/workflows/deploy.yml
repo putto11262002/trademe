@@ -3,6 +3,13 @@ name: Deploy to production
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.prettierrc'
+      - '.prettierignore'
+      - 'eslint.config.js'
   workflow_dispatch:
 
 permissions:
