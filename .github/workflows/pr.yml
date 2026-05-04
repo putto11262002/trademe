@@ -72,7 +72,6 @@ jobs:
               '',
               `- **Neon branch:** \`preview/pr-${n}\` (forked from \`production\`)`,
               `- **Worker preview:** ${url}`,
-              `- **Smoke test:** \`curl ${url}/api/health\` should return \`{"ok":true,"testUserCount":N}\``,
             ].join('\n')
 
             github.rest.issues.createComment({
