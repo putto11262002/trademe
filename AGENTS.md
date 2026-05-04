@@ -89,4 +89,6 @@ index.ts              ← barrel — re-exports types + server.ts. NEVER api.ser
 
 **Never push to `master` directly.** All changes via PR. Branch names: `feat/*`, `fix/*`, `chore/*`, `ci/*`, `docs/*`. Squash merge is the default.
 
+**Never open a PR without explicit approval.** Push branches freely once work is ready and verified, but wait for "PR this" / "open the PR" / "ship it" before running `gh pr create`. PR opening is a visible action — triggers CI, posts to GitHub, may notify reviewers.
+
 **Verify before declaring done.** Run `pnpm typecheck` (and `pnpm build` for changes affecting the bundle) locally before pushing. For UI changes, say so explicitly when you can't visually verify — don't claim "looks good" from typecheck alone.
