@@ -1,6 +1,6 @@
 import { count } from "drizzle-orm"
 import handler from "@tanstack/react-start/server-entry"
-import { db } from "@/db"
+import { getDb } from "@/db"
 import { testUser } from "@/db/schema"
 
 export default {
@@ -9,7 +9,7 @@ export default {
 
     if (url.pathname === "/api/health") {
       try {
-        const [row] = await db.select({ value: count() }).from(testUser)
+        const [row] = await getDb().select({ value: count() }).from(testUser)
         return Response.json({ ok: true, testUserCount: row.value })
       } catch (e) {
         return Response.json(
