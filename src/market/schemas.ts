@@ -23,3 +23,58 @@ export const frankfurterLatestSchema = z.object({
 })
 
 export type FrankfurterLatest = z.infer<typeof frankfurterLatestSchema>
+
+// Finnhub /company-news — https://finnhub.io/docs/api/company-news
+export const finnhubNewsItemSchema = z.object({
+  id: z.number(),
+  category: z.string().optional(),
+  datetime: z.number(),
+  headline: z.string(),
+  image: z.string().optional(),
+  related: z.string().optional(),
+  source: z.string(),
+  summary: z.string().optional(),
+  url: z.string(),
+})
+
+// Finnhub /stock/profile2 — https://finnhub.io/docs/api/company-profile2
+export const finnhubProfileSchema = z.object({
+  country: z.string().optional(),
+  currency: z.string().optional(),
+  exchange: z.string().optional(),
+  finnhubIndustry: z.string().optional(),
+  ipo: z.string().optional(),
+  logo: z.string().optional(),
+  marketCapitalization: z.number().optional(),
+  name: z.string().optional(),
+  shareOutstanding: z.number().optional(),
+  ticker: z.string().optional(),
+  weburl: z.string().optional(),
+})
+
+// Finnhub /stock/metric?metric=all — https://finnhub.io/docs/api/company-basic-financials
+export const finnhubMetricSchema = z.object({
+  metric: z
+    .record(z.string(), z.union([z.number(), z.string(), z.null()]))
+    .optional(),
+})
+
+// Finnhub /calendar/earnings — https://finnhub.io/docs/api/earnings-calendar
+export const finnhubEarningsSchema = z.object({
+  earningsCalendar: z
+    .array(
+      z.object({
+        date: z.string(),
+        epsActual: z.number().nullable().optional(),
+        epsEstimate: z.number().nullable().optional(),
+        hour: z.string().optional(),
+        quarter: z.number().optional(),
+        revenueActual: z.number().nullable().optional(),
+        revenueEstimate: z.number().nullable().optional(),
+        symbol: z.string(),
+        year: z.number().optional(),
+      }),
+    )
+    .nullable()
+    .optional(),
+})
