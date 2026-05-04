@@ -3,6 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router"
 import { PieChart, Plus } from "lucide-react"
 import { Suspense } from "react"
 import { getPositionsFn } from "@/trade"
+import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { PositionsList } from "@/components/trade/positions-list"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,9 +25,11 @@ function PositionsPage() {
           Aggregated holdings derived from your trade log.
         </p>
       </header>
-      <Suspense fallback={<PositionsSkeleton />}>
-        <Positions />
-      </Suspense>
+      <QueryErrorBoundary>
+        <Suspense fallback={<PositionsSkeleton />}>
+          <Positions />
+        </Suspense>
+      </QueryErrorBoundary>
     </div>
   )
 }

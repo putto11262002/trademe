@@ -3,6 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router"
 import { Plus, TrendingUp } from "lucide-react"
 import { Suspense } from "react"
 import { listTradesFn } from "@/trade"
+import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { TradesDataTable } from "@/components/trade/trades-data-table"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,9 +34,11 @@ function TradesPage() {
         </Button>
       </header>
 
-      <Suspense fallback={<SectionSkeleton title="All trades" />}>
-        <TradeList />
-      </Suspense>
+      <QueryErrorBoundary>
+        <Suspense fallback={<SectionSkeleton title="All trades" />}>
+          <TradeList />
+        </Suspense>
+      </QueryErrorBoundary>
     </div>
   )
 }
