@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import * as api from "./api.server"
-import { addTradeSchema } from "./validation"
+import { addTradeSchema } from "./schemas"
 
 export const addTradeFn = createServerFn({ method: "POST" })
   .inputValidator(addTradeSchema)

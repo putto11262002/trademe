@@ -3,7 +3,7 @@ import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
 import type { Position, Trade } from "./types"
-import type { AddTradeInput } from "./validation"
+import type { AddTradeInput } from "./schemas"
 
 type TradeRow = typeof trade.$inferSelect
 
