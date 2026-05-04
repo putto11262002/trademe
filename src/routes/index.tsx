@@ -13,9 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export const Route = createFileRoute("/")({ component: App })
 
-type Health =
-  | { ok: true; testUserCount: number }
-  | { ok: false; error: string }
+type Health = { ok: true; tradeCount: number } | { ok: false; error: string }
 
 function App() {
   const { data, isLoading, isError } = useQuery<Health>({
@@ -25,7 +23,7 @@ function App() {
   })
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-6">
+    <div className="flex items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -50,7 +48,7 @@ function App() {
                 <span className="font-medium text-green-600">Connected</span>
                 <span className="text-muted-foreground">
                   {" "}
-                  · {data.testUserCount} test users
+                  · {data.tradeCount} {data.tradeCount === 1 ? "trade" : "trades"}
                 </span>
               </div>
             )}
@@ -62,6 +60,6 @@ function App() {
           </Button>
         </CardContent>
       </Card>
-    </main>
+    </div>
   )
 }

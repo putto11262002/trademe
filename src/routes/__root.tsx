@@ -9,6 +9,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools"
 import { QueryClient } from "@tanstack/react-query"
 
 import { AppShell } from "@/components/app-shell"
+import { Toaster } from "@/components/ui/sonner"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRouteWithContext<{
@@ -53,6 +54,7 @@ function RootDocument() {
         <AppShell>
           <Outlet />
         </AppShell>
+        <Toaster />
         <TanStackDevtools
           config={{
             position: "bottom-right",

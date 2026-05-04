@@ -23,11 +23,11 @@ function AppShellInner({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-svh">
+      <div className="flex h-svh">
         <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <AppHeader />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     </TooltipProvider>

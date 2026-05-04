@@ -1,10 +1,16 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { LayoutDashboard, MessageSquare, TrendingUp } from "lucide-react"
+import {
+  LayoutDashboard,
+  MessageSquare,
+  PieChart,
+  TrendingUp,
+} from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/positions", label: "Positions", icon: PieChart },
   { to: "/trades", label: "Trades", icon: TrendingUp },
   { to: "/chat", label: "Chat", icon: MessageSquare },
 ] as const
