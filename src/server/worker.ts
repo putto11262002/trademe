@@ -1,6 +1,6 @@
 import { count } from "drizzle-orm"
 import handler from "@tanstack/react-start/server-entry"
-import { getDb } from "@/db"
+import { getDb } from "@/db/index.server"
 import { testUser } from "@/db/schema"
 
 export default {
