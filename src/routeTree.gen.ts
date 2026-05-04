@@ -9,13 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TradesRouteImport } from './routes/trades'
+import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TradesIndexRouteImport } from './routes/trades/index'
+import { Route as TradesNewRouteImport } from './routes/trades/new'
 
-const TradesRoute = TradesRouteImport.update({
-  id: '/trades',
-  path: '/trades',
+const PositionsRoute = PositionsRouteImport.update({
+  id: '/positions',
+  path: '/positions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -28,44 +30,62 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TradesIndexRoute = TradesIndexRouteImport.update({
+  id: '/trades/',
+  path: '/trades/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TradesNewRoute = TradesNewRouteImport.update({
+  id: '/trades/new',
+  path: '/trades/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
-  '/trades': typeof TradesRoute
+  '/positions': typeof PositionsRoute
+  '/trades/new': typeof TradesNewRoute
+  '/trades/': typeof TradesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
-  '/trades': typeof TradesRoute
+  '/positions': typeof PositionsRoute
+  '/trades/new': typeof TradesNewRoute
+  '/trades': typeof TradesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
-  '/trades': typeof TradesRoute
+  '/positions': typeof PositionsRoute
+  '/trades/new': typeof TradesNewRoute
+  '/trades/': typeof TradesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat' | '/trades'
+  fullPaths: '/' | '/chat' | '/positions' | '/trades/new' | '/trades/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/trades'
-  id: '__root__' | '/' | '/chat' | '/trades'
+  to: '/' | '/chat' | '/positions' | '/trades/new' | '/trades'
+  id: '__root__' | '/' | '/chat' | '/positions' | '/trades/new' | '/trades/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
-  TradesRoute: typeof TradesRoute
+  PositionsRoute: typeof PositionsRoute
+  TradesNewRoute: typeof TradesNewRoute
+  TradesIndexRoute: typeof TradesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/trades': {
-      id: '/trades'
-      path: '/trades'
-      fullPath: '/trades'
-      preLoaderRoute: typeof TradesRouteImport
+    '/positions': {
+      id: '/positions'
+      path: '/positions'
+      fullPath: '/positions'
+      preLoaderRoute: typeof PositionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -82,13 +102,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trades/': {
+      id: '/trades/'
+      path: '/trades'
+      fullPath: '/trades/'
+      preLoaderRoute: typeof TradesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trades/new': {
+      id: '/trades/new'
+      path: '/trades/new'
+      fullPath: '/trades/new'
+      preLoaderRoute: typeof TradesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
-  TradesRoute: TradesRoute,
+  PositionsRoute: PositionsRoute,
+  TradesNewRoute: TradesNewRoute,
+  TradesIndexRoute: TradesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
