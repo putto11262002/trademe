@@ -8,6 +8,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { QueryClient } from "@tanstack/react-query"
 
+import { AppShell } from "@/components/app-shell"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRouteWithContext<{
@@ -27,10 +28,10 @@ export const Route = createRootRouteWithContext<{
       },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
+      { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon-64.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
     ],
   }),
   notFoundComponent: () => (
@@ -49,7 +50,9 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <AppShell>
+          <Outlet />
+        </AppShell>
         <TanStackDevtools
           config={{
             position: "bottom-right",
