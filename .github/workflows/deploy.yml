@@ -48,8 +48,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-          secrets: |
-            DATABASE_URL
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          command: deploy --var DATABASE_URL:${{ secrets.DATABASE_URL }}
