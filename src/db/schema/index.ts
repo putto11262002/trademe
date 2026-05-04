@@ -1,1 +1,7 @@
 export * from "./trade"
+export * from "./market-bar"
+export * from "./market-fx-bar"
+export * from "./market-news-article"
+export * from "./market-fundamentals"
+export * from "./market-earnings-event"
+export * from "./market-company-profile"
