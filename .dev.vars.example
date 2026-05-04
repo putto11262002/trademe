@@ -1,3 +1,7 @@
 # Local secrets for `wrangler dev`. Mirror of .env, consumed by the Worker runtime.
 # Copy to `.dev.vars` and fill in. Both files are gitignored.
 DATABASE_URL=postgres://user:password@ep-xxx.region.neon.tech/dbname?sslmode=require
+
+# Market data vendors
+# Finnhub (free tier — https://finnhub.io/register)
+FINNHUB_API_KEY=
