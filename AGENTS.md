@@ -32,7 +32,7 @@ Instructions for AI agents (Claude Code, Cursor, etc.) working in this repo.
 
 **Worker entry** at `src/server/worker.ts` wraps TanStack's `fetch` handler. It is the seam for non-HTTP handlers later (`scheduled`, `queue`, `email`). `/api/health` lives there as a smoke endpoint; production routes should be TanStack server functions or file routes, not added to `worker.ts`.
 
-**Database layer.** `src/db/index.ts` exposes `getDb()` — lazy-initialized (do not eagerly construct DB clients at module top-level; breaks prerender and cold starts). Schema is per-table under `src/db/schema/*.ts` with a barrel re-export. Migrations are version-controlled under `drizzle/`.
+**Database layer.** `src/db/index.server.ts` exposes `getDb()` — lazy-initialized (do not eagerly construct DB clients at module top-level; breaks prerender and cold starts). Schema lives centrally per-table under `src/db/schema/*.ts` with a barrel — modules import from `@/db/schema`. Migrations are version-controlled under `drizzle/`.
 
 **Two connection paths to the same Neon DB.**
 - Worker runtime: `process.env.DATABASE_URL`, set as a CF Worker `--var` at deploy time
@@ -44,6 +44,35 @@ Instructions for AI agents (Claude Code, Cursor, etc.) working in this repo.
 - `pr.yml` (PR open/sync): create Neon branch off `production` → migrate → `wrangler versions upload --preview-alias pr-N` → comment preview URL
 - `pr-cleanup.yml` (PR close): delete the per-PR Neon branch
 - `deploy.yml` (push to master): migrate prod Neon (always; idempotent) → `wrangler deploy`
+
+## Conventions
+
+**File and folder naming.** kebab-case everywhere (`trade-form.tsx`). React component exports stay PascalCase. Named exports only — no `export default` except where TanStack file routes require it. Always import via `@/...` alias.
+
+**Server / client boundary.** Suffix signals bundle target:
+
+| Suffix | Kind |
+|---|---|
+| `*.server.ts(x)` | Server-only — touches `db`, `env`, secrets. Never imported by routes/components. Stripped from client. |
+| `*.client.ts(x)` | Client-only — browser APIs. Rare. |
+| `*.ts(x)` (no suffix) | Isomorphic — types, schema (types only), components, routes, `createServerFn` wrappers. |
+
+Import server files with the suffix in the path (`@/db/index.server`, not `@/db`) so the boundary is visible at the call site.
+
+**Module folder layout.** Per-feature modules under `src/<module>/`:
+
+```
+types.ts              ← TS types (often re-exports `$inferSelect` from @/db/schema)
+api.server.ts         ← server-only async fns; takes deps; returns app shapes
+server.ts             ← createServerFn wrappers around api.server.ts
+index.ts              ← barrel — re-exports types + server.ts. NEVER api.server.ts.
+```
+
+`api.server.ts` is the testable core (mockable db, no TanStack runtime); `server.ts` is the framework boundary.
+
+**DB schemas centralized.** Drizzle tables under `src/db/schema/<table>.ts` with a barrel; modules import via `@/db/schema`. Cross-module FKs stay visible in one place.
+
+**UI components.** Feature-specific components under `src/components/<feature>/`. Routes (`src/routes/**`) compose, don't define inline.
 
 ## Rules
 
