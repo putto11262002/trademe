@@ -73,14 +73,8 @@ function Dashboard() {
     <div className="space-y-6">
       <PortfolioHero summary={data.summary} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-3">
-          <h2 className="text-lg font-medium">Composition</h2>
-          <CompositionDonut positions={data.positions} />
-        </section>
-        <section className="space-y-3">
-          <h2 className="text-lg font-medium">Sectors</h2>
-          <SectorAllocationCard allocation={data.summary.sectorAllocation} />
-        </section>
+        <CompositionDonut positions={data.positions} />
+        <SectorAllocationCard allocation={data.summary.sectorAllocation} />
       </div>
       <section className="space-y-3">
         <div className="flex items-center justify-between">

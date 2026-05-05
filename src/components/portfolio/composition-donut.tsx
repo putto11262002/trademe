@@ -1,6 +1,6 @@
 import { Cell, Pie, PieChart } from "recharts"
 import type { EnrichedPosition } from "@/trade"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   type ChartConfig,
   ChartContainer,
@@ -54,7 +54,11 @@ export function CompositionDonut({
 
   return (
     <Card>
-      <CardContent className="flex items-center gap-2 pt-6">
+      <CardHeader>
+        <CardTitle>Composition</CardTitle>
+        <CardDescription>Your top holdings by value</CardDescription>
+      </CardHeader>
+      <CardContent className="flex items-center gap-2">
         <ChartContainer config={config} className="aspect-square h-48 shrink-0">
           <PieChart>
             <ChartTooltip
