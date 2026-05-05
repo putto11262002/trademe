@@ -54,8 +54,8 @@ export function CompositionDonut({
 
   return (
     <Card>
-      <CardContent>
-        <ChartContainer config={config} className="mx-auto aspect-square max-h-64">
+      <CardContent className="flex items-center gap-2 pt-6">
+        <ChartContainer config={config} className="aspect-square h-48 shrink-0">
           <PieChart>
             <ChartTooltip
               content={
@@ -68,7 +68,7 @@ export function CompositionDonut({
               data={slices}
               dataKey="value"
               nameKey="name"
-              innerRadius={60}
+              innerRadius={48}
               strokeWidth={2}
             >
               {slices.map((s) => (
@@ -77,17 +77,17 @@ export function CompositionDonut({
             </Pie>
           </PieChart>
         </ChartContainer>
-        <ul className="text-muted-foreground mt-4 space-y-1 text-sm">
+        <ul className="min-w-0 flex-1 space-y-2 text-sm">
           {slices.map((s) => (
             <li key={s.name} className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
+              <span className="flex min-w-0 items-center gap-2">
                 <span
-                  className="size-2 rounded-full"
+                  className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: s.color }}
                 />
-                <span className="text-foreground">{s.name}</span>
+                <span className="text-foreground truncate">{s.name}</span>
               </span>
-              <span className="tabular-nums">
+              <span className="text-muted-foreground shrink-0 tabular-nums">
                 {((s.value / total) * 100).toFixed(1)}%
               </span>
             </li>

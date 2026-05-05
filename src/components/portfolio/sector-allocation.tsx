@@ -1,3 +1,4 @@
+import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts"
 import type { SectorAllocation } from "@/trade"
 import {
   Card,
@@ -6,6 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 import { thb } from "./format"
 
 const CHART_COLORS = [
@@ -27,7 +34,22 @@ export function SectorAllocationCard({
     return null
   }
 
-  const total = allocation.reduce((s, a) => s + a.valueTHB, 0)
+  const config: ChartConfig = Object.fromEntries(
+    allocation.map((a, i) => [
+      a.sector,
+      {
+        label: a.sector,
+        color: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
+      },
+    ]),
+  )
+
+  const chartData = allocation.map((a, i) => ({
+    sector: a.sector,
+    pct: Number(a.pct.toFixed(1)),
+    valueTHB: a.valueTHB,
+    fill: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
+  }))
 
   return (
     <Card>
@@ -35,51 +57,47 @@ export function SectorAllocationCard({
         <CardTitle>Sector allocation</CardTitle>
         <CardDescription>How your holdings split across sectors</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="bg-muted flex h-3 w-full overflow-hidden rounded-full">
-          {allocation.map((a, i) => (
-            <div
-              key={a.sector}
-              className="h-full"
-              style={{
-                width: `${a.pct}%`,
-                backgroundColor:
-                  i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
-              }}
-              title={`${a.sector} · ${a.pct.toFixed(1)}%`}
+      <CardContent>
+        <ChartContainer config={config} className="w-full" style={{ height: Math.max(allocation.length * 40 + 16, 80) }}>
+          <BarChart
+            layout="vertical"
+            data={chartData}
+            margin={{ top: 0, right: 32, bottom: 0, left: 8 }}
+          >
+            <YAxis
+              dataKey="sector"
+              type="category"
+              tickLine={false}
+              axisLine={false}
+              width={110}
+              tick={{ fontSize: 12 }}
             />
-          ))}
-        </div>
-        <ul className="space-y-2 text-sm">
-          {allocation.map((a, i) => (
-            <li
-              key={a.sector}
-              className="flex items-center justify-between gap-3"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span
-                  className="size-2 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor:
-                      i < CHART_COLORS.length
-                        ? CHART_COLORS[i]
-                        : FALLBACK_COLOR,
-                  }}
+            <XAxis
+              type="number"
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}%`}
+              tick={{ fontSize: 11 }}
+              domain={[0, 100]}
+            />
+            <ChartTooltip
+              cursor={{ fill: "var(--color-muted)", opacity: 0.4 }}
+              content={
+                <ChartTooltipContent
+                  formatter={(value, _name, item) =>
+                    `${value}% · ${thb.format(item.payload.valueTHB)}`
+                  }
+                  hideIndicator
                 />
-                <span className="text-foreground truncate">{a.sector}</span>
-              </span>
-              <span className="text-muted-foreground tabular-nums shrink-0">
-                <span className="text-foreground font-medium">
-                  {a.pct.toFixed(1)}%
-                </span>
-                <span className="ml-2 text-xs">{thb.format(a.valueTHB)}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="text-muted-foreground text-xs tabular-nums">
-          Total {thb.format(total)}
-        </div>
+              }
+            />
+            <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
+              {chartData.map((d) => (
+                <Cell key={d.sector} fill={d.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   )

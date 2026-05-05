@@ -32,7 +32,14 @@ export function PositionCard({ position }: { position: EnrichedPosition }) {
       </ItemMedia>
       <ItemContent>
         <ItemTitle>{position.ticker}</ItemTitle>
-        <ItemDescription>{position.name}</ItemDescription>
+        <ItemDescription>
+          {position.name}
+          {position.sector ? (
+            <span className="text-muted-foreground/70 ml-1.5 text-xs">
+              · {position.sector}
+            </span>
+          ) : null}
+        </ItemDescription>
       </ItemContent>
       <ItemActions>
         <Badge
