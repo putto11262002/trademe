@@ -113,7 +113,7 @@ export function TradesDataTable({ data }: { data: Array<Trade> }) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-md border">
+      <div className="overflow-hidden rounded-4xl border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
