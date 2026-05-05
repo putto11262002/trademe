@@ -1,4 +1,4 @@
-import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts"
+import { Cell, Pie, PieChart } from "recharts"
 import type { SectorAllocation } from "@/trade"
 import {
   Card,
@@ -34,22 +34,16 @@ export function SectorAllocationCard({
     return null
   }
 
-  const config: ChartConfig = Object.fromEntries(
-    allocation.map((a, i) => [
-      a.sector,
-      {
-        label: a.sector,
-        color: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
-      },
-    ]),
-  )
-
-  const chartData = allocation.map((a, i) => ({
-    sector: a.sector,
-    pct: Number(a.pct.toFixed(1)),
-    valueTHB: a.valueTHB,
-    fill: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
+  const slices = allocation.map((a, i) => ({
+    name: a.sector,
+    value: a.valueTHB,
+    pct: a.pct,
+    color: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
   }))
+
+  const config: ChartConfig = Object.fromEntries(
+    slices.map((s) => [s.name, { label: s.name, color: s.color }]),
+  )
 
   return (
     <Card>
@@ -57,47 +51,45 @@ export function SectorAllocationCard({
         <CardTitle>Sector allocation</CardTitle>
         <CardDescription>How your holdings split across sectors</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={config} className="w-full" style={{ height: Math.max(allocation.length * 40 + 16, 80) }}>
-          <BarChart
-            layout="vertical"
-            data={chartData}
-            margin={{ top: 0, right: 32, bottom: 0, left: 8 }}
-          >
-            <YAxis
-              dataKey="sector"
-              type="category"
-              tickLine={false}
-              axisLine={false}
-              width={110}
-              tick={{ fontSize: 12 }}
-            />
-            <XAxis
-              type="number"
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(v) => `${v}%`}
-              tick={{ fontSize: 11 }}
-              domain={[0, 100]}
-            />
+      <CardContent className="flex items-center gap-2">
+        <ChartContainer config={config} className="aspect-square h-48 shrink-0">
+          <PieChart>
             <ChartTooltip
-              cursor={{ fill: "var(--color-muted)", opacity: 0.4 }}
               content={
                 <ChartTooltipContent
-                  formatter={(value, _name, item) =>
-                    `${value}% · ${thb.format(item.payload.valueTHB)}`
-                  }
-                  hideIndicator
+                  formatter={(value) => thb.format(Number(value))}
                 />
               }
             />
-            <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
-              {chartData.map((d) => (
-                <Cell key={d.sector} fill={d.fill} />
+            <Pie
+              data={slices}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={48}
+              strokeWidth={2}
+            >
+              {slices.map((s) => (
+                <Cell key={s.name} fill={s.color} />
               ))}
-            </Bar>
-          </BarChart>
+            </Pie>
+          </PieChart>
         </ChartContainer>
+        <ul className="min-w-0 flex-1 space-y-2 text-sm">
+          {slices.map((s) => (
+            <li key={s.name} className="flex items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-2">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="text-foreground truncate">{s.name}</span>
+              </span>
+              <span className="text-muted-foreground shrink-0 tabular-nums">
+                {s.pct.toFixed(1)}%
+              </span>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )
