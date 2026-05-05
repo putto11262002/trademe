@@ -9,17 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TradesIndexRouteImport } from './routes/trades/index'
+import { Route as PositionsIndexRouteImport } from './routes/positions/index'
 import { Route as TradesNewRouteImport } from './routes/trades/new'
+import { Route as PositionsTickerRouteImport } from './routes/positions/$ticker'
 
-const PositionsRoute = PositionsRouteImport.update({
-  id: '/positions',
-  path: '/positions',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -35,59 +31,85 @@ const TradesIndexRoute = TradesIndexRouteImport.update({
   path: '/trades/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PositionsIndexRoute = PositionsIndexRouteImport.update({
+  id: '/positions/',
+  path: '/positions/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TradesNewRoute = TradesNewRouteImport.update({
   id: '/trades/new',
   path: '/trades/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PositionsTickerRoute = PositionsTickerRouteImport.update({
+  id: '/positions/$ticker',
+  path: '/positions/$ticker',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
-  '/positions': typeof PositionsRoute
+  '/positions/$ticker': typeof PositionsTickerRoute
   '/trades/new': typeof TradesNewRoute
+  '/positions/': typeof PositionsIndexRoute
   '/trades/': typeof TradesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
-  '/positions': typeof PositionsRoute
+  '/positions/$ticker': typeof PositionsTickerRoute
   '/trades/new': typeof TradesNewRoute
+  '/positions': typeof PositionsIndexRoute
   '/trades': typeof TradesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
-  '/positions': typeof PositionsRoute
+  '/positions/$ticker': typeof PositionsTickerRoute
   '/trades/new': typeof TradesNewRoute
+  '/positions/': typeof PositionsIndexRoute
   '/trades/': typeof TradesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat' | '/positions' | '/trades/new' | '/trades/'
+  fullPaths:
+    | '/'
+    | '/chat'
+    | '/positions/$ticker'
+    | '/trades/new'
+    | '/positions/'
+    | '/trades/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/positions' | '/trades/new' | '/trades'
-  id: '__root__' | '/' | '/chat' | '/positions' | '/trades/new' | '/trades/'
+  to:
+    | '/'
+    | '/chat'
+    | '/positions/$ticker'
+    | '/trades/new'
+    | '/positions'
+    | '/trades'
+  id:
+    | '__root__'
+    | '/'
+    | '/chat'
+    | '/positions/$ticker'
+    | '/trades/new'
+    | '/positions/'
+    | '/trades/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
-  PositionsRoute: typeof PositionsRoute
+  PositionsTickerRoute: typeof PositionsTickerRoute
   TradesNewRoute: typeof TradesNewRoute
+  PositionsIndexRoute: typeof PositionsIndexRoute
   TradesIndexRoute: typeof TradesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/positions': {
-      id: '/positions'
-      path: '/positions'
-      fullPath: '/positions'
-      preLoaderRoute: typeof PositionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/chat': {
       id: '/chat'
       path: '/chat'
@@ -109,11 +131,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TradesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/positions/': {
+      id: '/positions/'
+      path: '/positions'
+      fullPath: '/positions/'
+      preLoaderRoute: typeof PositionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trades/new': {
       id: '/trades/new'
       path: '/trades/new'
       fullPath: '/trades/new'
       preLoaderRoute: typeof TradesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/positions/$ticker': {
+      id: '/positions/$ticker'
+      path: '/positions/$ticker'
+      fullPath: '/positions/$ticker'
+      preLoaderRoute: typeof PositionsTickerRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -122,8 +158,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
-  PositionsRoute: PositionsRoute,
+  PositionsTickerRoute: PositionsTickerRoute,
   TradesNewRoute: TradesNewRoute,
+  PositionsIndexRoute: PositionsIndexRoute,
   TradesIndexRoute: TradesIndexRoute,
 }
 export const routeTree = rootRouteImport

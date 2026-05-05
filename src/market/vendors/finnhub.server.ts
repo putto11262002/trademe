@@ -3,15 +3,19 @@ import {
   finnhubEarningsSchema,
   finnhubMetricSchema,
   finnhubNewsItemSchema,
+  finnhubPriceTargetSchema,
   finnhubProfileSchema,
   finnhubQuoteSchema,
+  finnhubRecommendationSchema,
 } from "../schemas"
 import type {
   CompanyProfile,
   EarningsEvent,
   Fundamentals,
   NewsItem,
+  PriceTarget,
   Quote,
+  RecommendationTrend,
 } from "../types"
 
 const BASE_URL = "https://finnhub.io/api/v1"
@@ -164,6 +168,52 @@ export const finnhub = {
       week52High: num("52WeekHigh"),
       week52Low: num("52WeekLow"),
       dividendYield: num("dividendYieldIndicatedAnnual"),
+      beta: num("beta"),
     }
+  },
+
+  async fetchPriceTarget(ticker: string): Promise<PriceTarget> {
+    const raw = await get<unknown>(
+      `/stock/price-target?symbol=${encodeURIComponent(ticker)}`,
+    )
+    const parsed = finnhubPriceTargetSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new MarketUpstreamError("finnhub", "invalid /stock/price-target response", {
+        cause: parsed.error,
+      })
+    }
+    const p = parsed.data
+    return {
+      ticker,
+      targetHigh: p.targetHigh ?? undefined,
+      targetLow: p.targetLow ?? undefined,
+      targetMean: p.targetMean ?? undefined,
+      targetMedian: p.targetMedian ?? undefined,
+      numberOfAnalysts: p.numberOfAnalysts ?? undefined,
+      lastUpdated: p.lastUpdated ? new Date(p.lastUpdated) : undefined,
+    }
+  },
+
+  async fetchRecommendationTrends(
+    ticker: string,
+  ): Promise<Array<RecommendationTrend>> {
+    const raw = await get<unknown>(
+      `/stock/recommendation?symbol=${encodeURIComponent(ticker)}`,
+    )
+    const parsed = finnhubRecommendationSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new MarketUpstreamError("finnhub", "invalid /stock/recommendation response", {
+        cause: parsed.error,
+      })
+    }
+    return parsed.data.map((r) => ({
+      ticker: r.symbol,
+      period: new Date(r.period),
+      buy: r.buy,
+      hold: r.hold,
+      sell: r.sell,
+      strongBuy: r.strongBuy,
+      strongSell: r.strongSell,
+    }))
   },
 }

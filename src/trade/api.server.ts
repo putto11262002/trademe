@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
@@ -47,6 +47,16 @@ export async function listTrades(): Promise<Array<Trade>> {
     .select()
     .from(trade)
     .where(eq(trade.userId, user.id))
+    .orderBy(desc(trade.tradedAt))
+  return rows.map(toTrade)
+}
+
+export async function getTradesForTicker(ticker: string): Promise<Array<Trade>> {
+  const user = await requireUser()
+  const rows = await getDb()
+    .select()
+    .from(trade)
+    .where(and(eq(trade.userId, user.id), eq(trade.ticker, ticker.toUpperCase())))
     .orderBy(desc(trade.tradedAt))
   return rows.map(toTrade)
 }

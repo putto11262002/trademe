@@ -29,6 +29,27 @@ export type Fundamentals = {
   week52High?: number
   week52Low?: number
   dividendYield?: number
+  beta?: number
+}
+
+export type PriceTarget = {
+  ticker: string
+  targetHigh?: number
+  targetLow?: number
+  targetMean?: number
+  targetMedian?: number
+  numberOfAnalysts?: number
+  lastUpdated?: Date
+}
+
+export type RecommendationTrend = {
+  ticker: string
+  period: Date
+  buy: number
+  hold: number
+  sell: number
+  strongBuy: number
+  strongSell: number
 }
 
 export type NewsItem = {

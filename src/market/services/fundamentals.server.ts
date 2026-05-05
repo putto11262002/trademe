@@ -21,6 +21,7 @@ function toFundamentals(row: Row): Fundamentals {
     week52High: num(row.week52High),
     week52Low: num(row.week52Low),
     dividendYield: num(row.dividendYield),
+    // beta is not persisted yet; comes through fresh fetches via KV cache
   }
 }
 
