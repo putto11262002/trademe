@@ -14,8 +14,6 @@ count.txt
 __unconfig*
 todos.json
 
-# Claude Code — commit settings/rules/skills, ignore per-user overrides and local scripts
+# Claude Code — commit settings/rules/skills/agents/skills-lock, ignore per-user overrides and local scripts
 .claude/settings.local.json
 .claude/scripts/
-.agents
-skills-lock.json
