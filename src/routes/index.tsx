@@ -4,10 +4,8 @@ import { Plus, TrendingUp } from "lucide-react"
 import { Suspense } from "react"
 import { getPortfolioDashboardFn } from "@/trade"
 import { CompositionDonut } from "@/components/portfolio/composition-donut"
-import { FxDecompositionCard } from "@/components/portfolio/fx-decomposition"
 import { PortfolioHero } from "@/components/portfolio/portfolio-hero"
 import { PositionCard } from "@/components/portfolio/position-card"
-import { RealizedPnLCard } from "@/components/portfolio/realized-pnl"
 import { SectorAllocationCard } from "@/components/portfolio/sector-allocation"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Button } from "@/components/ui/button"
@@ -75,10 +73,6 @@ function Dashboard() {
     <div className="space-y-6">
       <PortfolioHero summary={data.summary} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <FxDecompositionCard summary={data.summary} />
-        <RealizedPnLCard summary={data.summary} />
-      </div>
-      <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3">
           <h2 className="text-lg font-medium">Composition</h2>
           <CompositionDonut positions={data.positions} />
@@ -108,11 +102,7 @@ function Dashboard() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-32" />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
-      </div>
+      <Skeleton className="h-56" />
       <div className="grid gap-6 lg:grid-cols-2">
         <Skeleton className="h-80" />
         <Skeleton className="h-80" />
