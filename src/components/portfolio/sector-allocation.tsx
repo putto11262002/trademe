@@ -1,6 +1,12 @@
 import { Cell, Pie, PieChart } from "recharts"
-import type { EnrichedPosition } from "@/trade"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import type { SectorAllocation } from "@/trade"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   type ChartConfig,
   ChartContainer,
@@ -17,46 +23,33 @@ const CHART_COLORS = [
   "var(--color-chart-5)",
 ]
 
-const TOP_N = 5
+const FALLBACK_COLOR = "var(--color-muted-foreground)"
 
-export function CompositionDonut({
-  positions,
+export function SectorAllocationCard({
+  allocation,
 }: {
-  positions: Array<EnrichedPosition>
+  allocation: Array<SectorAllocation>
 }) {
-  const sorted = [...positions].sort((a, b) => b.valueTHB - a.valueTHB)
-  const top = sorted.slice(0, TOP_N)
-  const rest = sorted.slice(TOP_N)
-  const restValue = rest.reduce((s, p) => s + p.valueTHB, 0)
+  if (allocation.length === 0) {
+    return null
+  }
 
-  const slices = [
-    ...top.map((p, i) => ({
-      name: p.ticker,
-      value: p.valueTHB,
-      color: CHART_COLORS[i % CHART_COLORS.length],
-    })),
-    ...(rest.length > 0
-      ? [
-          {
-            name: `Other (${rest.length})`,
-            value: restValue,
-            color: "var(--color-muted-foreground)",
-          },
-        ]
-      : []),
-  ]
+  const slices = allocation.map((a, i) => ({
+    name: a.sector,
+    value: a.valueTHB,
+    pct: a.pct,
+    color: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
+  }))
 
   const config: ChartConfig = Object.fromEntries(
     slices.map((s) => [s.name, { label: s.name, color: s.color }]),
   )
 
-  const total = slices.reduce((s, x) => s + x.value, 0)
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Composition</CardTitle>
-        <CardDescription>Your top holdings by value</CardDescription>
+        <CardTitle>Sector allocation</CardTitle>
+        <CardDescription>How your holdings split across sectors</CardDescription>
       </CardHeader>
       <CardContent className="flex items-center gap-2">
         <ChartContainer config={config} className="aspect-square h-48 shrink-0">
@@ -92,7 +85,7 @@ export function CompositionDonut({
                 <span className="text-foreground truncate">{s.name}</span>
               </span>
               <span className="text-muted-foreground shrink-0 tabular-nums">
-                {((s.value / total) * 100).toFixed(1)}%
+                {s.pct.toFixed(1)}%
               </span>
             </li>
           ))}

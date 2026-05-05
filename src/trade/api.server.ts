@@ -63,17 +63,27 @@ export async function getPositions(): Promise<Array<Position>> {
         totalBought: 0,
         totalSold: 0,
         totalCost: 0,
+        totalCostTHB: 0,
         totalProceeds: 0,
+        totalProceedsTHB: 0,
         tradeCount: 0,
       } satisfies Position)
+    // For older rows without an FX rate captured at trade time, fall back to 1
+    // so THB totals at least equal USD totals (a no-op rather than NaN/0).
+    const fx = t.fxRate ?? 1
+    const grossUSD = t.quantity * t.pricePerShare
     if (t.side === "buy") {
+      const costUSD = grossUSD + t.fees
       p.netQuantity += t.quantity
       p.totalBought += t.quantity
-      p.totalCost += t.quantity * t.pricePerShare + t.fees
+      p.totalCost += costUSD
+      p.totalCostTHB += costUSD * fx
     } else {
+      const proceedsUSD = grossUSD - t.fees
       p.netQuantity -= t.quantity
       p.totalSold += t.quantity
-      p.totalProceeds += t.quantity * t.pricePerShare - t.fees
+      p.totalProceeds += proceedsUSD
+      p.totalProceedsTHB += proceedsUSD * fx
     }
     p.tradeCount += 1
     byTicker.set(t.ticker, p)

@@ -6,6 +6,7 @@ import { getPortfolioDashboardFn } from "@/trade"
 import { CompositionDonut } from "@/components/portfolio/composition-donut"
 import { PortfolioHero } from "@/components/portfolio/portfolio-hero"
 import { PositionCard } from "@/components/portfolio/position-card"
+import { SectorAllocationCard } from "@/components/portfolio/sector-allocation"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Button } from "@/components/ui/button"
 import { ItemGroup } from "@/components/ui/item"
@@ -72,24 +73,22 @@ function Dashboard() {
     <div className="space-y-6">
       <PortfolioHero summary={data.summary} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-3">
-          <h2 className="text-lg font-medium">Composition</h2>
-          <CompositionDonut positions={data.positions} />
-        </section>
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Top positions</h2>
-            <Button asChild variant="link" size="sm" className="h-auto p-0">
-              <Link to="/positions">View all →</Link>
-            </Button>
-          </div>
-          <ItemGroup>
-            {top.map((p) => (
-              <PositionCard key={p.ticker} position={p} />
-            ))}
-          </ItemGroup>
-        </section>
+        <CompositionDonut positions={data.positions} />
+        <SectorAllocationCard allocation={data.summary.sectorAllocation} />
       </div>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Top positions</h2>
+          <Button asChild variant="link" size="sm" className="h-auto p-0">
+            <Link to="/positions">View all →</Link>
+          </Button>
+        </div>
+        <ItemGroup>
+          {top.map((p) => (
+            <PositionCard key={p.ticker} position={p} />
+          ))}
+        </ItemGroup>
+      </section>
     </div>
   )
 }
@@ -97,14 +96,15 @@ function Dashboard() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-32" />
+      <Skeleton className="h-56" />
       <div className="grid gap-6 lg:grid-cols-2">
         <Skeleton className="h-80" />
-        <div className="space-y-3">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
+        <Skeleton className="h-80" />
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
       </div>
     </div>
   )
