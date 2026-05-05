@@ -2,7 +2,14 @@ import { count } from "drizzle-orm"
 import handler from "@tanstack/react-start/server-entry"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
-import { getFXRate, getQuote } from "@/market/api.server"
+import {
+  getCompanyProfile,
+  getFXRate,
+  getFundamentals,
+  getNews,
+  getNextEarnings,
+  getQuote,
+} from "@/market/api.server"
 import type { Currency } from "@/market"
 
 function jsonError(e: unknown, status = 500) {
@@ -26,21 +33,50 @@ export default {
     }
 
     // DEV smoke endpoints — remove once chat/portfolio consume the market layer directly.
-    const quoteMatch = url.pathname.match(/^\/api\/dev\/quote\/([A-Za-z0-9.-]+)$/)
-    if (quoteMatch) {
+    let m
+    if ((m = url.pathname.match(/^\/api\/dev\/quote\/([A-Za-z0-9.-]+)$/))) {
       try {
-        const quote = await getQuote(quoteMatch[1])
-        return Response.json({ ok: true, quote })
+        return Response.json({ ok: true, quote: await getQuote(m[1]) })
       } catch (e) {
         return jsonError(e)
       }
     }
-
-    const fxMatch = url.pathname.match(/^\/api\/dev\/fx\/([A-Za-z]{3})\/([A-Za-z]{3})$/)
-    if (fxMatch) {
+    if ((m = url.pathname.match(/^\/api\/dev\/fx\/([A-Za-z]{3})\/([A-Za-z]{3})$/))) {
       try {
-        const rate = await getFXRate(fxMatch[1].toUpperCase() as Currency, fxMatch[2].toUpperCase() as Currency)
+        const rate = await getFXRate(
+          m[1].toUpperCase() as Currency,
+          m[2].toUpperCase() as Currency,
+        )
         return Response.json({ ok: true, rate })
+      } catch (e) {
+        return jsonError(e)
+      }
+    }
+    if ((m = url.pathname.match(/^\/api\/dev\/news\/([A-Za-z0-9.-]+)$/))) {
+      try {
+        const days = Number(url.searchParams.get("days") ?? 7)
+        return Response.json({ ok: true, news: await getNews(m[1], { days }) })
+      } catch (e) {
+        return jsonError(e)
+      }
+    }
+    if ((m = url.pathname.match(/^\/api\/dev\/earnings\/([A-Za-z0-9.-]+)$/))) {
+      try {
+        return Response.json({ ok: true, next: await getNextEarnings(m[1]) })
+      } catch (e) {
+        return jsonError(e)
+      }
+    }
+    if ((m = url.pathname.match(/^\/api\/dev\/company\/([A-Za-z0-9.-]+)$/))) {
+      try {
+        return Response.json({ ok: true, profile: await getCompanyProfile(m[1]) })
+      } catch (e) {
+        return jsonError(e)
+      }
+    }
+    if ((m = url.pathname.match(/^\/api\/dev\/fundamentals\/([A-Za-z0-9.-]+)$/))) {
+      try {
+        return Response.json({ ok: true, fundamentals: await getFundamentals(m[1]) })
       } catch (e) {
         return jsonError(e)
       }
