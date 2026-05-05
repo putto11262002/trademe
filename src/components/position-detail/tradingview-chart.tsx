@@ -1,5 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card"
-
 /**
  * TradingView "advanced chart" iframe embed — no API key required.
  * Docs: https://www.tradingview.com/widget/advanced-chart/
@@ -12,17 +10,15 @@ export function TradingViewChart({ ticker }: { ticker: string }) {
     `&toolbarbg=f1f3f6&studies=[]&theme=light&style=1&timezone=Etc/UTC&withdateranges=1` +
     `&hideideas=1&locale=en`
   return (
-    <Card size="sm" className="overflow-hidden p-0">
-      <CardContent className="p-0">
-        <iframe
-          title={`${ticker} chart`}
-          src={src}
-          className="h-[420px] w-full border-0"
-          allowTransparency
-          // eslint-disable-next-line react/no-unknown-property
-          scrolling="no"
-        />
-      </CardContent>
-    </Card>
+    <div className="overflow-hidden">
+      <iframe
+        title={`${ticker} chart`}
+        src={src}
+        className="h-[420px] w-full border-0"
+        allowTransparency
+        // eslint-disable-next-line react/no-unknown-property
+        scrolling="no"
+      />
+    </div>
   )
 }

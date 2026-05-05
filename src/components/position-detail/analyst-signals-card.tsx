@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { dash, fmt, usd2 } from "./format"
+import { fmt, usd2 } from "./format"
 
 const BAR_COLOR = {
   buy: "bg-green-600",
@@ -77,10 +77,10 @@ export function AnalystSignalsCard({
       <CardHeader>
         <CardTitle>Analyst signals</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <div>
+      <CardContent className="flex flex-col gap-6 sm:flex-row sm:gap-12">
+        <div className="shrink-0 space-y-2">
           <h3 className="text-muted-foreground text-xs">Price target (12-month)</h3>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
+          <div className="flex flex-wrap items-baseline gap-x-3">
             <span className="text-2xl font-semibold tabular-nums">
               {fmt(priceTarget?.targetMean, (n) => usd2.format(n))}
             </span>
@@ -100,45 +100,41 @@ export function AnalystSignalsCard({
               </Badge>
             ) : null}
           </div>
-          <div className="text-muted-foreground mt-2 grid grid-cols-3 gap-2 text-xs tabular-nums">
+          <div className="text-muted-foreground grid grid-cols-3 gap-4 text-xs tabular-nums">
             <div>
               <div>Low</div>
-              <div className="text-foreground">
+              <div className="text-foreground font-medium">
                 {fmt(priceTarget?.targetLow, (n) => usd2.format(n))}
               </div>
             </div>
             <div>
               <div>Median</div>
-              <div className="text-foreground">
+              <div className="text-foreground font-medium">
                 {fmt(priceTarget?.targetMedian, (n) => usd2.format(n))}
               </div>
             </div>
             <div>
               <div>High</div>
-              <div className="text-foreground">
+              <div className="text-foreground font-medium">
                 {fmt(priceTarget?.targetHigh, (n) => usd2.format(n))}
               </div>
             </div>
           </div>
-          {priceTarget?.numberOfAnalysts ? (
-            <p className="text-muted-foreground mt-2 text-xs">
-              Based on {priceTarget.numberOfAnalysts} analyst
-              {priceTarget.numberOfAnalysts === 1 ? "" : "s"}.
-            </p>
-          ) : null}
           {!priceTarget ||
           (priceTarget.targetMean == null &&
             priceTarget.targetLow == null &&
             priceTarget.targetHigh == null) ? (
-            <p className="text-muted-foreground mt-2 text-xs">
-              Price target unavailable. {dash}
+            <p className="text-muted-foreground text-xs">Price target unavailable.</p>
+          ) : priceTarget?.numberOfAnalysts ? (
+            <p className="text-muted-foreground text-xs">
+              {priceTarget.numberOfAnalysts} analyst{priceTarget.numberOfAnalysts === 1 ? "" : "s"}
             </p>
           ) : null}
         </div>
 
-        <div>
-          <h3 className="text-muted-foreground mb-2 text-xs">
-            Recommendation breakdown
+        <div className="flex-1 space-y-2">
+          <h3 className="text-muted-foreground text-xs">
+            Recommendation
             {recommendation?.period
               ? ` (${recommendation.period.toISOString().slice(0, 7)})`
               : ""}

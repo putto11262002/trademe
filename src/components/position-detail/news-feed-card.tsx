@@ -2,53 +2,39 @@ import { formatDistanceToNow } from "date-fns"
 import { ExternalLink } from "lucide-react"
 import type { NewsItem } from "@/market"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item"
 
 const MAX_ITEMS = 12
 
 export function NewsFeedCard({ news }: { news: Array<NewsItem> }) {
   const items = news.slice(0, MAX_ITEMS)
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent news</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {items.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No recent news.</p>
-        ) : (
-          <ul className="divide-border divide-y">
-            {items.map((n) => (
-              <li key={n.id} className="py-3 first:pt-0 last:pb-0">
-                <a
-                  href={n.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:bg-accent/40 group -mx-2 flex flex-col gap-1 rounded-md px-2 py-1"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="group-hover:text-primary line-clamp-2 flex-1 text-sm font-medium">
-                      {n.headline}
-                    </span>
-                    <ExternalLink className="text-muted-foreground mt-0.5 size-3 shrink-0" />
-                  </div>
-                  <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-                    <span>{n.source}</span>
-                    <span>·</span>
-                    <span>
-                      {formatDistanceToNow(n.publishedAt, { addSuffix: true })}
-                    </span>
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      <h2 className="text-lg font-medium">Recent news</h2>
+      {items.length === 0 ? (
+        <p className="text-muted-foreground text-sm">No recent news.</p>
+      ) : (
+        <ItemGroup>
+          {items.map((n) => (
+            <Item key={n.id} asChild variant="outline">
+              <a href={n.url} target="_blank" rel="noreferrer">
+                <ItemContent>
+                  <ItemTitle className="line-clamp-2 font-medium">{n.headline}</ItemTitle>
+                  <ItemDescription>
+                    {n.source} · {formatDistanceToNow(n.publishedAt, { addSuffix: true })}
+                  </ItemDescription>
+                </ItemContent>
+                <ExternalLink className="text-muted-foreground size-3.5 shrink-0" />
+              </a>
+            </Item>
+          ))}
+        </ItemGroup>
+      )}
+    </div>
   )
 }

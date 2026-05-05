@@ -39,6 +39,9 @@ function enrich(
   fxAsOf: Date,
 ): EnrichedPosition {
   const avgCost = p.totalBought > 0 ? p.totalCost / p.totalBought : 0
+  const avgCostTHB = p.totalBought > 0 && p.totalCostTHB != null
+    ? p.totalCostTHB / p.totalBought
+    : avgCost * fxRate
   const valueUSD = p.netQuantity * quote.price
   const valueTHB = valueUSD * fxRate
   const costForOpenLeg = avgCost * p.netQuantity
@@ -52,6 +55,7 @@ function enrich(
     currentPriceUSD: quote.price,
     priceAsOf: quote.asOf,
     avgCost,
+    avgCostTHB,
     valueUSD,
     valueTHB,
     unrealizedPnLUSD,

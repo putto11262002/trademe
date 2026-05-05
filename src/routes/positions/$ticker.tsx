@@ -51,20 +51,19 @@ function PositionDetail({ ticker }: { ticker: string }) {
 
       <TradingViewChart ticker={data.ticker} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
-          <YourPositionCard position={data.position} fxRate={data.fxRate} />
-          <TradeHistoryCard trades={data.trades} />
-        </div>
-        <div className="space-y-6">
-          <KeyStatsCard quote={data.quote} fundamentals={data.fundamentals} />
-          <AnalystSignalsCard
-            quote={data.quote}
-            priceTarget={data.priceTarget}
-            recommendation={data.recommendation}
-          />
-        </div>
-      </div>
+      <AnalystSignalsCard
+        quote={data.quote}
+        priceTarget={data.priceTarget}
+        recommendation={data.recommendation}
+      />
+      <KeyStatsCard quote={data.quote} fundamentals={data.fundamentals} />
+
+      <YourPositionCard position={data.position} fxRate={data.fxRate} />
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Trade history</h2>
+        <TradeHistoryCard trades={data.trades} />
+      </section>
 
       <NewsFeedCard news={data.news} />
 
