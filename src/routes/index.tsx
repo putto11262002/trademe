@@ -1,65 +1,111 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
-import { Badge } from "@/components/ui/badge"
+import { useSuspenseQuery } from "@tanstack/react-query"
+import { Link, createFileRoute } from "@tanstack/react-router"
+import { Plus, TrendingUp } from "lucide-react"
+import { Suspense } from "react"
+import { getPortfolioDashboardFn } from "@/trade"
+import { CompositionDonut } from "@/components/portfolio/composition-donut"
+import { PortfolioHero } from "@/components/portfolio/portfolio-hero"
+import { PositionCard } from "@/components/portfolio/position-card"
+import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Button } from "@/components/ui/button"
+import { ItemGroup } from "@/components/ui/item"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const Route = createFileRoute("/")({ component: App })
+export const Route = createFileRoute("/")({ component: HomePage })
 
-type Health = { ok: true; tradeCount: number } | { ok: false; error: string }
+function HomePage() {
+  return (
+    <div className="space-y-6 p-6">
+      <header>
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <p className="text-muted-foreground text-sm">
+          Your portfolio at a glance.
+        </p>
+      </header>
+      <QueryErrorBoundary>
+        <Suspense fallback={<DashboardSkeleton />}>
+          <Dashboard />
+        </Suspense>
+      </QueryErrorBoundary>
+    </div>
+  )
+}
 
-function App() {
-  const { data, isLoading, isError } = useQuery<Health>({
-    queryKey: ["health"],
-    queryFn: () => fetch("/api/health").then((r) => r.json()),
-    retry: false,
+function Dashboard() {
+  const { data } = useSuspenseQuery({
+    queryKey: ["portfolio"],
+    queryFn: () => getPortfolioDashboardFn(),
+    staleTime: 5 * 60 * 1000,
   })
 
+  if (data.positions.length === 0) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <TrendingUp className="text-muted-foreground size-10" />
+          <EmptyTitle>No positions yet</EmptyTitle>
+          <EmptyDescription>
+            Add your first trade to start tracking your portfolio.
+          </EmptyDescription>
+        </EmptyHeader>
+        <Button asChild>
+          <Link to="/trades/new">
+            <Plus className="size-4" />
+            Add trade
+          </Link>
+        </Button>
+      </Empty>
+    )
+  }
+
+  const top = [...data.positions]
+    .sort((a, b) => b.valueTHB - a.valueTHB)
+    .slice(0, 3)
+
   return (
-    <div className="flex items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
+    <div className="space-y-6">
+      <PortfolioHero summary={data.summary} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">Composition</h2>
+          <CompositionDonut positions={data.positions} />
+        </section>
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl">TradeMe</CardTitle>
-            <Badge variant="secondary">alpha</Badge>
+            <h2 className="text-lg font-medium">Top positions</h2>
+            <Button asChild variant="link" size="sm" className="h-auto p-0">
+              <Link to="/positions">View all →</Link>
+            </Button>
           </div>
-          <CardDescription>Trading dashboard — early scaffold</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border p-3">
-            <div className="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
-              Database
-            </div>
-            {isLoading ? (
-              <Skeleton className="h-5 w-40" />
-            ) : isError || !data?.ok ? (
-              <div className="text-destructive text-sm">
-                {data && !data.ok ? data.error : "Unreachable"}
-              </div>
-            ) : (
-              <div className="text-sm">
-                <span className="font-medium text-green-600">Connected</span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  · {data.tradeCount} {data.tradeCount === 1 ? "trade" : "trades"}
-                </span>
-              </div>
-            )}
-          </div>
-          <Button asChild className="w-full" variant="outline">
-            <a href="/api/health" target="_blank" rel="noreferrer">
-              View raw /api/health
-            </a>
-          </Button>
-        </CardContent>
-      </Card>
+          <ItemGroup>
+            {top.map((p) => (
+              <PositionCard key={p.ticker} position={p} />
+            ))}
+          </ItemGroup>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-32" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Skeleton className="h-80" />
+        <div className="space-y-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      </div>
     </div>
   )
 }

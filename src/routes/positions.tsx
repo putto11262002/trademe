@@ -2,9 +2,9 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { Link, createFileRoute } from "@tanstack/react-router"
 import { PieChart, Plus } from "lucide-react"
 import { Suspense } from "react"
-import { getPositionsFn } from "@/trade"
+import { getPortfolioDashboardFn } from "@/trade"
+import { HoldingsList } from "@/components/portfolio/holdings-list"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
-import { PositionsList } from "@/components/trade/positions-list"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -22,7 +22,7 @@ function PositionsPage() {
       <header>
         <h1 className="text-2xl font-semibold">Positions</h1>
         <p className="text-muted-foreground text-sm">
-          Aggregated holdings derived from your trade log.
+          Aggregated holdings with live prices.
         </p>
       </header>
       <QueryErrorBoundary>
@@ -36,11 +36,12 @@ function PositionsPage() {
 
 function Positions() {
   const { data } = useSuspenseQuery({
-    queryKey: ["positions"],
-    queryFn: () => getPositionsFn(),
+    queryKey: ["portfolio"],
+    queryFn: () => getPortfolioDashboardFn(),
+    staleTime: 5 * 60 * 1000,
   })
 
-  if (data.length === 0) {
+  if (data.positions.length === 0) {
     return (
       <Empty>
         <EmptyHeader>
@@ -60,7 +61,7 @@ function Positions() {
     )
   }
 
-  return <PositionsList data={data} />
+  return <HoldingsList positions={data.positions} />
 }
 
 function PositionsSkeleton() {
