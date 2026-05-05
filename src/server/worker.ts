@@ -1,5 +1,7 @@
 import { count } from "drizzle-orm"
 import handler from "@tanstack/react-start/server-entry"
+import { routeAgentRequest } from "agents"
+export { ChatAgent } from "@/agent/runtime/chat-agent.server"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
 import {
@@ -20,7 +22,7 @@ function jsonError(e: unknown, status = 500) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url)
 
     if (url.pathname === "/api/health") {
@@ -81,6 +83,9 @@ export default {
         return jsonError(e)
       }
     }
+
+    const agentRes = await routeAgentRequest(request, env as Env)
+    if (agentRes) return agentRes
 
     return handler.fetch(request)
   },
