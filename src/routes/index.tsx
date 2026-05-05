@@ -4,8 +4,11 @@ import { Plus, TrendingUp } from "lucide-react"
 import { Suspense } from "react"
 import { getPortfolioDashboardFn } from "@/trade"
 import { CompositionDonut } from "@/components/portfolio/composition-donut"
+import { FxDecompositionCard } from "@/components/portfolio/fx-decomposition"
 import { PortfolioHero } from "@/components/portfolio/portfolio-hero"
 import { PositionCard } from "@/components/portfolio/position-card"
+import { RealizedPnLCard } from "@/components/portfolio/realized-pnl"
+import { SectorAllocationCard } from "@/components/portfolio/sector-allocation"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Button } from "@/components/ui/button"
 import { ItemGroup } from "@/components/ui/item"
@@ -72,24 +75,32 @@ function Dashboard() {
     <div className="space-y-6">
       <PortfolioHero summary={data.summary} />
       <div className="grid gap-6 lg:grid-cols-2">
+        <FxDecompositionCard summary={data.summary} />
+        <RealizedPnLCard summary={data.summary} />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3">
           <h2 className="text-lg font-medium">Composition</h2>
           <CompositionDonut positions={data.positions} />
         </section>
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Top positions</h2>
-            <Button asChild variant="link" size="sm" className="h-auto p-0">
-              <Link to="/positions">View all →</Link>
-            </Button>
-          </div>
-          <ItemGroup>
-            {top.map((p) => (
-              <PositionCard key={p.ticker} position={p} />
-            ))}
-          </ItemGroup>
+          <h2 className="text-lg font-medium">Sectors</h2>
+          <SectorAllocationCard allocation={data.summary.sectorAllocation} />
         </section>
       </div>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Top positions</h2>
+          <Button asChild variant="link" size="sm" className="h-auto p-0">
+            <Link to="/positions">View all →</Link>
+          </Button>
+        </div>
+        <ItemGroup>
+          {top.map((p) => (
+            <PositionCard key={p.ticker} position={p} />
+          ))}
+        </ItemGroup>
+      </section>
     </div>
   )
 }
@@ -99,12 +110,17 @@ function DashboardSkeleton() {
     <div className="space-y-6">
       <Skeleton className="h-32" />
       <div className="grid gap-6 lg:grid-cols-2">
+        <Skeleton className="h-48" />
+        <Skeleton className="h-48" />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
         <Skeleton className="h-80" />
-        <div className="space-y-3">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
+        <Skeleton className="h-80" />
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
       </div>
     </div>
   )

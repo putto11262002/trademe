@@ -7,9 +7,16 @@ import { cn } from "@/lib/utils"
 import { pct, thb, usd } from "./format"
 
 export function PortfolioHero({ summary }: { summary: PortfolioSummary }) {
-  const isUp = summary.unrealizedPnLUSD >= 0
+  // Use the THB P&L derived from THB cost basis vs THB value (entry FX for
+  // cost, current FX for value). This captures FX drift; converting USD P&L
+  // at today's FX would understate it for a Thai investor.
+  const pnlTHB = summary.unrealizedPnLTHB
+  const pnlPct =
+    summary.totalCostTHB > 0
+      ? (summary.unrealizedPnLTHB / summary.totalCostTHB) * 100
+      : 0
+  const isUp = pnlTHB >= 0
   const Icon = isUp ? TrendingUp : TrendingDown
-  const pnlTHB = summary.unrealizedPnLUSD * summary.fxRate
 
   return (
     <Card>
@@ -27,7 +34,7 @@ export function PortfolioHero({ summary }: { summary: PortfolioSummary }) {
           className={cn("gap-1", isUp && "bg-green-600 text-white hover:bg-green-600/90")}
         >
           <Icon className="size-3" />
-          <span className="tabular-nums">{pct(summary.unrealizedPnLPct)}</span>
+          <span className="tabular-nums">{pct(pnlPct)}</span>
           <span className="opacity-80 tabular-nums">
             ({thb.format(pnlTHB)})
           </span>

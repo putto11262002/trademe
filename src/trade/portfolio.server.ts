@@ -10,7 +10,10 @@ import type {
   PortfolioDashboard,
   PortfolioSummary,
   Position,
+  SectorAllocation,
 } from "./types"
+
+const UNKNOWN_SECTOR = "Unknown"
 
 function enrich(
   p: Position,
@@ -19,6 +22,7 @@ function enrich(
   fx: FXRate,
 ): EnrichedPosition {
   const avgCost = p.totalBought > 0 ? p.totalCost / p.totalBought : 0
+  const avgCostTHB = p.totalBought > 0 ? p.totalCostTHB / p.totalBought : 0
   const valueUSD = p.netQuantity * quote.price
   const valueTHB = valueUSD * fx.rate
   const costForOpenLeg = avgCost * p.netQuantity
@@ -28,10 +32,15 @@ function enrich(
   return {
     ...p,
     name: profile.name,
+    // Finnhub's /stock/profile2 returns industry only; fall back so the
+    // sector breakdown is meaningful today and upgrades for free if a
+    // vendor provides true sector later.
+    sector: profile.sector ?? profile.industry,
     logoUrl: profile.logoUrl,
     currentPriceUSD: quote.price,
     priceAsOf: quote.asOf,
     avgCost,
+    avgCostTHB,
     valueUSD,
     valueTHB,
     unrealizedPnLUSD,
@@ -41,20 +50,86 @@ function enrich(
   }
 }
 
+function computeSectorAllocation(
+  enriched: Array<EnrichedPosition>,
+): Array<SectorAllocation> {
+  const totalValueTHB = enriched.reduce((s, p) => s + p.valueTHB, 0)
+  const bySector = new Map<string, number>()
+  for (const p of enriched) {
+    const key = p.sector?.trim() || UNKNOWN_SECTOR
+    bySector.set(key, (bySector.get(key) ?? 0) + p.valueTHB)
+  }
+  return Array.from(bySector.entries())
+    .map(([sector, valueTHB]) => ({
+      sector,
+      valueTHB,
+      pct: totalValueTHB > 0 ? (valueTHB / totalValueTHB) * 100 : 0,
+    }))
+    .sort((a, b) => b.valueTHB - a.valueTHB)
+}
+
+/**
+ * Realized P&L using average-cost method, summed across every position
+ * that has had at least one sell (including fully-closed ones).
+ *   realizedUSD = sum( totalProceeds - avgCostUSD * totalSold )
+ *   realizedTHB = sum( totalProceedsTHB - avgCostTHB * totalSold )
+ * Avg cost is computed from the total buys *to date*, which is a reasonable
+ * approximation when buys precede sells. Pure FIFO can refine this later.
+ */
+function computeRealizedPnL(positions: Array<Position>): {
+  realizedPnLUSD: number
+  realizedPnLTHB: number
+} {
+  let realizedPnLUSD = 0
+  let realizedPnLTHB = 0
+  for (const p of positions) {
+    if (p.totalSold <= 0 || p.totalBought <= 0) continue
+    const avgCostUSD = p.totalCost / p.totalBought
+    const avgCostTHB = p.totalCostTHB / p.totalBought
+    realizedPnLUSD += p.totalProceeds - avgCostUSD * p.totalSold
+    realizedPnLTHB += p.totalProceedsTHB - avgCostTHB * p.totalSold
+  }
+  return { realizedPnLUSD, realizedPnLTHB }
+}
+
 function computeSummary(
   enriched: Array<EnrichedPosition>,
+  allPositions: Array<Position>,
   fx: FXRate,
 ): PortfolioSummary {
   const totalValueUSD = enriched.reduce((s, p) => s + p.valueUSD, 0)
+  const totalValueTHB = totalValueUSD * fx.rate
   const totalCostUSD = enriched.reduce((s, p) => s + p.avgCost * p.netQuantity, 0)
+  const totalCostTHB = enriched.reduce((s, p) => s + p.avgCostTHB * p.netQuantity, 0)
   const unrealizedPnLUSD = totalValueUSD - totalCostUSD
   const unrealizedPnLPct = totalCostUSD > 0 ? (unrealizedPnLUSD / totalCostUSD) * 100 : 0
+  const unrealizedPnLTHB = totalValueTHB - totalCostTHB
+
+  // Stock-vs-FX decomposition (THB):
+  // stockPnLTHB = USD gain converted at the *blended entry FX* — i.e. what
+  // the THB gain would have been had USD/THB never moved since entry.
+  // fxPnLTHB = the residual, which is the FX-driven contribution.
+  const blendedEntryFx =
+    totalCostUSD > 0 ? totalCostTHB / totalCostUSD : fx.rate
+  const stockPnLTHB = unrealizedPnLUSD * blendedEntryFx
+  const fxPnLTHB = unrealizedPnLTHB - stockPnLTHB
+
+  const { realizedPnLUSD, realizedPnLTHB } = computeRealizedPnL(allPositions)
+  const sectorAllocation = computeSectorAllocation(enriched)
+
   return {
     totalValueUSD,
-    totalValueTHB: totalValueUSD * fx.rate,
+    totalValueTHB,
     totalCostUSD,
+    totalCostTHB,
     unrealizedPnLUSD,
     unrealizedPnLPct,
+    unrealizedPnLTHB,
+    stockPnLTHB,
+    fxPnLTHB,
+    realizedPnLUSD,
+    realizedPnLTHB,
+    sectorAllocation,
     positionCount: enriched.length,
     asOf: new Date(),
     fxRate: fx.rate,
@@ -79,7 +154,7 @@ export async function getPortfolioDashboard(): Promise<PortfolioDashboard> {
   )
 
   return {
-    summary: computeSummary(enriched, fx),
+    summary: computeSummary(enriched, positions, fx),
     positions: enriched,
   }
 }
