@@ -2,11 +2,16 @@ import { useRef, useEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
-import { ChevronDown, MessageSquare, Trash2 } from "lucide-react"
+import { ArrowUp, Bot, ChevronUp, Trash2, X } from "lucide-react"
 import { Streamdown } from "streamdown"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group"
 import { cn } from "@/lib/utils"
 
 const MOCK_USER_ID = "usr_demo_01"
@@ -93,7 +98,6 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   const { messages, sendMessage, status, clearHistory } = useAgentChat({ agent })
 
   const isStreaming = status === "streaming" || status === "submitted"
-
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, open])
@@ -113,59 +117,41 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   }
 
   return (
-    <div
-      className={cn(
-        "border-border bg-background flex flex-col border-t transition-[height] duration-200 ease-in-out",
-        open ? "h-[480px]" : "h-11",
-      )}
-    >
-      {/* Toggle bar */}
-      <button
-        onClick={onToggle}
-        className="hover:bg-muted/50 flex h-11 w-full shrink-0 items-center justify-between px-4 text-left transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <MessageSquare className="text-muted-foreground size-4" />
-          <span className="text-sm font-medium">Chat</span>
-          {isStreaming && (
-            <Badge variant="secondary" className="text-xs">thinking…</Badge>
-          )}
-          {!isStreaming && messages.length > 0 && (
-            <span className="text-muted-foreground text-xs">{messages.length} messages</span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {open && messages.length > 0 && (
+    <>
+      {/* Full-screen chat overlay — true full screen, covers sidebar too */}
+      {open && (
+        <div className="fixed inset-0 z-40 bg-background flex flex-col">
+          {/* Header — no border */}
+          <div className="flex h-14 shrink-0 items-center justify-end px-4 gap-1">
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground size-8"
+                onClick={clearHistory}
+                disabled={isStreaming}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground size-7"
-              onClick={(e) => { e.stopPropagation(); clearHistory() }}
-              disabled={isStreaming}
+              className="text-muted-foreground size-8"
+              onClick={onToggle}
             >
-              <Trash2 className="size-3.5" />
+              <X className="size-4" />
             </Button>
-          )}
-          <ChevronDown
-            className={cn(
-              "text-muted-foreground size-4 transition-transform duration-200",
-              open && "rotate-180",
-            )}
-          />
-        </div>
-      </button>
+          </div>
 
-      {/* Body — only rendered when open */}
-      {open && (
-        <>
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          {/* Messages — padded bottom so content clears the floating input */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 pb-36">
             {messages.length === 0 ? (
-              <p className="text-muted-foreground text-center text-sm">
+              <p className="text-muted-foreground text-center text-sm mt-8">
                 Ask me about your portfolio, a stock price, or recent news.
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="mx-auto max-w-3xl space-y-4">
                 {messages.map((m, i) => (
                   <Message
                     key={m.id}
@@ -178,28 +164,54 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
             )}
           </div>
 
-          {/* Input */}
-          <div className="border-border flex gap-2 border-t px-4 py-3">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about your portfolio…"
-              className="min-h-[36px] max-h-24 resize-none text-sm"
-              rows={1}
-              disabled={isStreaming}
-            />
-            <Button
-              size="sm"
-              onClick={submit}
-              disabled={isStreaming || !input.trim()}
-              className="shrink-0 self-end"
-            >
-              Send
-            </Button>
+          {/* Floating input — absolute so it has no background region of its own */}
+          <div className="absolute bottom-6 left-6 right-6 pointer-events-none">
+            <div className="mx-auto max-w-3xl pointer-events-auto">
+              <InputGroup className="border-border bg-background shadow-xl">
+                <InputGroupTextarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about your portfolio…"
+                  className="max-h-32 px-4 pt-4 text-sm"
+                  rows={2}
+                  disabled={isStreaming}
+                  autoFocus
+                />
+                <InputGroupAddon align="block-end" className="justify-end">
+                  <InputGroupButton
+                    size="icon-sm"
+                    variant="default"
+                    onClick={submit}
+                    disabled={isStreaming || !input.trim()}
+                  >
+                    <ArrowUp />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
+            </div>
           </div>
-        </>
+        </div>
       )}
-    </div>
+
+      {/* Floating pill — hidden when chat is open */}
+      {!open && (
+        <div className="fixed bottom-5 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <button
+            onClick={onToggle}
+            className="pointer-events-auto border-border bg-background hover:bg-muted flex items-center gap-2 rounded-full border px-3.5 py-2 shadow-lg transition-colors"
+          >
+            <Bot className="text-muted-foreground size-4" />
+            <span className="text-sm font-medium">Assistant</span>
+            {isStreaming ? (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">thinking…</Badge>
+            ) : (
+              <span className="bg-green-500 size-1.5 rounded-full" />
+            )}
+            <ChevronUp className="text-muted-foreground size-3.5" />
+          </button>
+        </div>
+      )}
+    </>
   )
 }
