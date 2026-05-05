@@ -14,7 +14,8 @@ count.txt
 __unconfig*
 todos.json
 
-# AI agent / workspace tooling — per-user, never committed
+# Claude Code — commit settings/rules/skills, ignore per-user overrides and local scripts
+.claude/settings.local.json
+.claude/scripts/
 .agents
-.claude
 skills-lock.json
