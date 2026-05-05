@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Streamdown } from "streamdown"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/chat")({ component: ChatPage })
@@ -63,8 +64,15 @@ function ToolPart({ part }: { part: AnyPart }) {
   )
 }
 
-function Message({ message }: { message: UIMessage }) {
+function Message({
+  message,
+  isStreaming,
+}: {
+  message: UIMessage
+  isStreaming: boolean
+}) {
   const isUser = message.role === "user"
+  const isLastAssistant = !isUser && isStreaming
 
   return (
     <div className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}>
@@ -74,17 +82,19 @@ function Message({ message }: { message: UIMessage }) {
 
       {message.parts.map((part, i) => {
         if (part.type === "text") {
+          if (isUser) {
+            return (
+              <div
+                key={i}
+                className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap"
+              >
+                {part.text}
+              </div>
+            )
+          }
           return (
-            <div
-              key={i}
-              className={cn(
-                "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
-                isUser
-                  ? "bg-primary text-primary-foreground rounded-br-sm"
-                  : "bg-muted rounded-bl-sm",
-              )}
-            >
-              {part.text}
+            <div key={i} className="prose prose-sm dark:prose-invert max-w-[80%]">
+              <Streamdown isAnimating={isLastAssistant}>{part.text}</Streamdown>
             </div>
           )
         }
@@ -158,7 +168,13 @@ function ChatPage() {
               Ask me about your portfolio, a stock price, or recent market news.
             </p>
           ) : (
-            messages.map((m) => <Message key={m.id} message={m} />)
+            messages.map((m, i) => (
+              <Message
+                key={m.id}
+                message={m}
+                isStreaming={isStreaming && i === messages.length - 1}
+              />
+            ))
           )}
           <div ref={bottomRef} />
         </div>
