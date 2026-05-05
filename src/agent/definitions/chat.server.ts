@@ -21,7 +21,7 @@ export async function runChatAgent(
       ...stockTools,
     },
     messages: modelMessages,
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(10),
     onFinish,
   })
 }
