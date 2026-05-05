@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import * as api from "./api.server"
+import * as portfolio from "./portfolio.server"
 import { addTradeSchema } from "./schemas"
 
 export const addTradeFn = createServerFn({ method: "POST" })
@@ -12,4 +13,8 @@ export const listTradesFn = createServerFn({ method: "GET" }).handler(
 
 export const getPositionsFn = createServerFn({ method: "GET" }).handler(
   async () => api.getPositions(),
+)
+
+export const getPortfolioDashboardFn = createServerFn({ method: "GET" }).handler(
+  async () => portfolio.getPortfolioDashboard(),
 )

@@ -24,3 +24,34 @@ export type Position = {
   totalProceeds: number
   tradeCount: number
 }
+
+export type EnrichedPosition = Position & {
+  name: string
+  logoUrl?: string
+  currentPriceUSD: number
+  priceAsOf: Date
+  avgCost: number
+  valueUSD: number
+  valueTHB: number
+  unrealizedPnLUSD: number
+  unrealizedPnLPct: number
+  fxRate: number
+  fxAsOf: Date
+}
+
+export type PortfolioSummary = {
+  totalValueUSD: number
+  totalValueTHB: number
+  totalCostUSD: number
+  unrealizedPnLUSD: number
+  unrealizedPnLPct: number
+  positionCount: number
+  asOf: Date
+  fxRate: number
+  fxAsOf: Date
+}
+
+export type PortfolioDashboard = {
+  summary: PortfolioSummary
+  positions: Array<EnrichedPosition>
+}

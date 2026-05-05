@@ -58,6 +58,7 @@ export function TradeForm() {
       toast.success("Trade added")
       queryClient.invalidateQueries({ queryKey: ["trades"] })
       queryClient.invalidateQueries({ queryKey: ["positions"] })
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] })
       navigate({ to: "/trades" })
     },
     onError: (error) => {
