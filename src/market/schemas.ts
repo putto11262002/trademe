@@ -59,6 +59,30 @@ export const finnhubMetricSchema = z.object({
     .optional(),
 })
 
+// Finnhub /stock/price-target — https://finnhub.io/docs/api/price-target
+export const finnhubPriceTargetSchema = z.object({
+  symbol: z.string().optional(),
+  targetHigh: z.number().nullable().optional(),
+  targetLow: z.number().nullable().optional(),
+  targetMean: z.number().nullable().optional(),
+  targetMedian: z.number().nullable().optional(),
+  numberOfAnalysts: z.number().nullable().optional(),
+  lastUpdated: z.string().optional(),
+})
+
+// Finnhub /stock/recommendation — https://finnhub.io/docs/api/recommendation-trends
+export const finnhubRecommendationSchema = z.array(
+  z.object({
+    symbol: z.string(),
+    period: z.string(),
+    buy: z.number(),
+    hold: z.number(),
+    sell: z.number(),
+    strongBuy: z.number(),
+    strongSell: z.number(),
+  }),
+)
+
 // Finnhub /calendar/earnings — https://finnhub.io/docs/api/earnings-calendar
 export const finnhubEarningsSchema = z.object({
   earningsCalendar: z

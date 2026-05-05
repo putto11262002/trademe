@@ -1,3 +1,4 @@
+import { and, desc, eq, lt } from "drizzle-orm"
 import { kvCache } from "../cache/kv.server"
 import { getDb } from "@/db/index.server"
 import { marketEarningsEvent } from "@/db/schema"
@@ -48,4 +49,31 @@ export async function getNextEarnings(
 
   await kvCache.set(key(symbol), next, TTL_SECONDS)
   return next
+}
+
+/**
+ * Returns past earnings (date < now) for the ticker from the local DB,
+ * newest first, capped at `limit`. The list is populated as a side effect
+ * of `getNextEarnings` (it archives any past events seen in the API window).
+ */
+export async function getPastEarnings(
+  ticker: string,
+  limit = 8,
+): Promise<Array<EarningsEvent>> {
+  const symbol = ticker.toUpperCase()
+  const now = new Date()
+  const rows = await getDb()
+    .select()
+    .from(marketEarningsEvent)
+    .where(
+      and(eq(marketEarningsEvent.ticker, symbol), lt(marketEarningsEvent.date, now)),
+    )
+    .orderBy(desc(marketEarningsEvent.date))
+    .limit(limit)
+  return rows.map((row) => ({
+    ticker: row.ticker,
+    date: row.date,
+    estimatedEPS: row.estimatedEPS != null ? parseFloat(row.estimatedEPS) : undefined,
+    actualEPS: row.actualEPS != null ? parseFloat(row.actualEPS) : undefined,
+  }))
 }

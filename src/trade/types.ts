@@ -76,3 +76,29 @@ export type PortfolioDashboard = {
   summary: PortfolioSummary
   positions: Array<EnrichedPosition>
 }
+
+import type {
+  CompanyProfile,
+  EarningsEvent,
+  Fundamentals,
+  NewsItem,
+  PriceTarget,
+  Quote,
+  RecommendationTrend,
+} from "@/market"
+
+export type PositionDetail = {
+  ticker: string
+  position: EnrichedPosition | null
+  quote: Quote
+  profile: CompanyProfile
+  fundamentals: Fundamentals | null
+  priceTarget: PriceTarget | null
+  recommendation: RecommendationTrend | null
+  news: Array<NewsItem>
+  nextEarnings: EarningsEvent | null
+  pastEarnings: Array<EarningsEvent>
+  trades: Array<Trade>
+  fxRate: number
+  fxAsOf: Date
+}
