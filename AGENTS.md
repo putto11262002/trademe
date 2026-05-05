@@ -2,6 +2,14 @@
 
 Instructions for AI agents (Claude Code, Cursor, etc.) working in this repo.
 
+## Context docs
+
+| Doc | When to read |
+|---|---|
+| [`docs/v0.md`](docs/v0.md) | Always — current scope, what's shipped, gaps & drift |
+| [`docs/IDEA.md`](docs/IDEA.md) | Long-term vision — what v0 is building toward |
+| [`docs/architecture.md`](docs/architecture.md) | Deeper technical decisions beyond this file |
+
 ## Project
 
 **TradeMe** — early-scaffold trading dashboard. Public repo `putto11262002/trademe`, default branch `master`.
