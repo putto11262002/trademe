@@ -184,7 +184,7 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
           )
         }
         return (
-          <div key={gi} className="prose prose-sm dark:prose-invert w-full">
+          <div key={gi} className="prose prose-sm dark:prose-invert w-full text-sm">
             <Streamdown isAnimating={isStreaming} components={markdownComponents}>{group.part.text}</Streamdown>
           </div>
         )
@@ -352,7 +352,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
         <div className="pointer-events-auto">
-          <InputGroup className="border-border bg-background/80 backdrop-blur-sm shadow-xl">
+          <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
             <InputGroupTextarea
               value={input}
               onChange={(e) => setInput(e.target.value)}

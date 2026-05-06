@@ -21,7 +21,7 @@ import { Link } from "@tanstack/react-router"
 
 const MIN_CHAT_WIDTH = 320
 const MAX_CHAT_WIDTH = 640
-const DEFAULT_CHAT_WIDTH = 380
+const DEFAULT_CHAT_WIDTH = 500
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
