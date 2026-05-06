@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm"
 import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
-import { ensureCompanyProfile } from "@/market/api.server"
+import { getCompanyProfile } from "@/market/api.server"
 import type { Position, Trade } from "./types"
 import type { AddTradeInput } from "./schemas"
 
@@ -27,7 +27,7 @@ function toTrade(row: TradeRow): Trade {
 export async function addTrade(input: AddTradeInput): Promise<Trade> {
   const user = await requireUser()
   const ticker = input.ticker.toUpperCase()
-  await ensureCompanyProfile(ticker)
+  await getCompanyProfile(ticker)
   const [row] = await getDb()
     .insert(trade)
     .values({

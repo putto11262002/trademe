@@ -26,6 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { TickerCombobox } from "@/components/trade/ticker-combobox"
 import {
   Select,
   SelectContent,
@@ -74,12 +75,18 @@ export function TradeForm() {
       <FieldGroup>
         <Field data-invalid={!!errors.ticker}>
           <FieldLabel htmlFor="ticker">Ticker</FieldLabel>
-          <Input
-            id="ticker"
-            placeholder="AAPL"
-            autoComplete="off"
-            aria-invalid={!!errors.ticker}
-            {...register("ticker")}
+          <Controller
+            control={control}
+            name="ticker"
+            render={({ field }) => (
+              <TickerCombobox
+                id="ticker"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                aria-invalid={!!errors.ticker}
+              />
+            )}
           />
           <FieldError>{errors.ticker?.message}</FieldError>
         </Field>

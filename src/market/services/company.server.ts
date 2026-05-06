@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, ilike, or, sql } from "drizzle-orm"
 import { getDb } from "@/db/index.server"
 import { marketCompanyProfile } from "@/db/schema"
 import { MarketNotFoundError } from "../errors"
@@ -81,6 +81,43 @@ export async function ensureCompanyProfile(
     .values(toRow(withRefresh))
     .onConflictDoNothing()
   return withRefresh
+}
+
+/**
+ * Prefix-match search over ticker and name. Used by the trade-form
+ * typeahead. DB-only — never hits Finnhub. Empty query returns the first
+ * `limit` rows alphabetically as a default browsing affordance.
+ */
+export async function searchCompanyProfiles(
+  query: string,
+  limit = 20,
+  offset = 0,
+): Promise<Array<CompanyProfile>> {
+  const q = query.trim()
+  const db = getDb()
+  const rows = await (q.length === 0
+    ? db
+        .select()
+        .from(marketCompanyProfile)
+        .orderBy(marketCompanyProfile.ticker)
+        .limit(limit)
+        .offset(offset)
+    : db
+        .select()
+        .from(marketCompanyProfile)
+        .where(
+          or(
+            ilike(marketCompanyProfile.ticker, `${q}%`),
+            ilike(marketCompanyProfile.name, `${q}%`),
+          ),
+        )
+        .orderBy(
+          sql`case when ${marketCompanyProfile.ticker} ilike ${q + "%"} then 0 else 1 end`,
+          marketCompanyProfile.ticker,
+        )
+        .limit(limit)
+        .offset(offset))
+  return rows.map(toProfile)
 }
 
 /**

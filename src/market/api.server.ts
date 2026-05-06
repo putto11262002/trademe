@@ -6,6 +6,7 @@ export {
   getCompanyProfile,
   ensureCompanyProfile,
   refreshCompanyProfile,
+  searchCompanyProfiles,
 } from "./services/company.server"
 export { getFundamentals } from "./services/fundamentals.server"
 export { getPriceTarget } from "./services/price-target.server"
