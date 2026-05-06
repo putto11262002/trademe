@@ -77,13 +77,13 @@ function AppShellInner({ children }: { children: ReactNode }) {
         {chatOpen && (
           <div
             onPointerDown={startResize}
-            className="w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/30 transition-colors"
+            className="w-px shrink-0 cursor-col-resize bg-border hover:bg-primary/40 transition-colors"
           />
         )}
 
         {/* Chat panel */}
         {chatOpen ? (
-          <div style={{ width: chatWidth }} className="shrink-0 flex flex-col border-l border-border overflow-hidden">
+          <div style={{ width: chatWidth }} className="shrink-0 flex flex-col overflow-hidden">
             <ChatPanel onClose={() => setChatOpen(false)} />
           </div>
         ) : (
