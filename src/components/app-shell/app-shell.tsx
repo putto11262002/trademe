@@ -37,6 +37,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(true)
   const [mobileView, setMobileView] = useState<"app" | "chat">("app")
   const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH)
+  const [isDragging, setIsDragging] = useState(false)
   const isResizing = useRef(false)
   const startX = useRef(0)
   const startWidth = useRef(0)
@@ -55,12 +56,14 @@ function AppShellInner({ children }: { children: ReactNode }) {
 
   const onPointerUp = useCallback(() => {
     isResizing.current = false
+    setIsDragging(false)
     document.removeEventListener("pointermove", onPointerMove)
     document.removeEventListener("pointerup", onPointerUp)
   }, [onPointerMove])
 
   function startResize(e: React.PointerEvent) {
     isResizing.current = true
+    setIsDragging(true)
     startX.current = e.clientX
     startWidth.current = chatWidth
     document.addEventListener("pointermove", onPointerMove)
@@ -80,23 +83,26 @@ function AppShellInner({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Resize handle */}
-        {chatOpen && (
-          <div
-            onPointerDown={startResize}
-            className="w-[3px] shrink-0 cursor-col-resize bg-border hover:bg-primary/40 transition-colors"
-          />
-        )}
-
-        {/* Chat panel */}
+        {/* Chat card — drag handle is the left edge of the card */}
         {chatOpen ? (
-          <div style={{ width: chatWidth }} className="shrink-0 flex flex-col overflow-hidden">
-            <ChatPanel onClose={() => setChatOpen(false)} />
+          <div
+            style={{ width: chatWidth }}
+            className={cn("shrink-0 flex my-2 mr-2 rounded-2xl overflow-hidden border-2 shadow-lg transition-colors", isDragging ? "border-primary" : "border-primary/70")}
+          >
+            {/* Drag handle — left edge of the card */}
+            <div
+              onPointerDown={startResize}
+              className="w-1 shrink-0 cursor-col-resize rounded-l-2xl"
+            />
+            {/* Chat content */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <ChatPanel onClose={() => setChatOpen(false)} />
+            </div>
           </div>
         ) : (
           <button
             onClick={() => setChatOpen(true)}
-            className="shrink-0 flex items-center justify-center w-8 border-l border-border hover:bg-muted transition-colors"
+            className="shrink-0 flex items-center justify-center w-8 hover:bg-muted transition-colors"
             aria-label="Open chat"
           >
             <MessageSquare className="size-4 text-muted-foreground" />

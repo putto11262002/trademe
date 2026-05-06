@@ -268,7 +268,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="relative flex flex-col h-full bg-background">
+    <div className="relative flex flex-col h-full">
       {/* Header */}
       <div className="flex h-14 shrink-0 items-center justify-end px-3 gap-1 border-b border-border">
         {messages.length > 0 && (
@@ -323,7 +323,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
       {/* Floating input */}
       <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
         <div className="pointer-events-auto">
-          <InputGroup className="border-border bg-background shadow-xl">
+          <InputGroup className="border-border bg-background/80 backdrop-blur-sm shadow-xl">
             <InputGroupTextarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
