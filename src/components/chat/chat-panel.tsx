@@ -22,13 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   MODELS,
   THINKING_LABELS,
@@ -203,6 +197,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const [input, setInput] = useState("")
   const [modelKey, setModelKey] = useState<ModelKey>(DEFAULT_MODEL)
   const [thinking, setThinking] = useState<ThinkingLevel>(DEFAULT_THINKING)
+  const [modelOpen, setModelOpen] = useState(false)
 
   const agent = useAgent({ agent: "chat", name: MOCK_USER_ID })
   const { messages, sendMessage, status, clearHistory } = useAgentChat({
@@ -379,46 +374,63 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
               disabled={isStreaming}
             />
             <InputGroupAddon align="block-end" className="justify-between">
-              <div className="flex items-center gap-1.5">
-                <Select
-                  value={modelKey}
-                  onValueChange={(v) => {
-                    const k = v as ModelKey
-                    setModelKey(k)
-                    if (!MODELS[k].supportsThinking) setThinking("off")
-                  }}
-                  disabled={isStreaming}
-                >
-                  <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
+              <div className="flex items-center gap-1">
+                <Popover open={modelOpen} onOpenChange={setModelOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      disabled={isStreaming}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      {selectedModel.label}
+                      <ChevronDown className="size-3 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-48 p-1 gap-0">
                     {(Object.keys(MODELS) as ModelKey[]).map((key) => (
-                      <SelectItem key={key} value={key}>
-                        <span className="font-medium">{MODELS[key].label}</span>
-                        <span className="text-muted-foreground ml-1.5">{MODELS[key].description}</span>
-                      </SelectItem>
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setModelKey(key)
+                          if (!MODELS[key].supportsThinking) setThinking("off")
+                          setModelOpen(false)
+                        }}
+                        className={cn(
+                          "w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                          key === modelKey ? "text-foreground font-medium" : "text-muted-foreground",
+                        )}
+                      >
+                        {MODELS[key].label}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </PopoverContent>
+                </Popover>
 
                 {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
-                  <Select
-                    value={thinking}
-                    onValueChange={(v) => setThinking(v as ThinkingLevel)}
-                    disabled={isStreaming}
-                  >
-                    <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        disabled={isStreaming}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                      >
+                        Think: {THINKING_LABELS[thinking]}
+                        <ChevronDown className="size-3 opacity-60" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-36 p-1 gap-0">
                       {selectedModel.thinkingLevels.map((level) => (
-                        <SelectItem key={level} value={level}>
+                        <button
+                          key={level}
+                          onClick={() => setThinking(level)}
+                          className={cn(
+                            "w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                            level === thinking ? "text-foreground font-medium" : "text-muted-foreground",
+                          )}
+                        >
                           {THINKING_LABELS[level]}
-                        </SelectItem>
+                        </button>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
 
