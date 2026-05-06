@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router"
 import { LayoutDashboard, PieChart, TrendingUp } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { UserMenu } from "./user-menu"
 import { cn } from "@/lib/utils"
 
 const NAV = [
@@ -46,6 +47,10 @@ export function AppSidebar() {
         )
       })}
 
+      {/* User menu — pinned to bottom */}
+      <div className="mt-auto">
+        <UserMenu />
+      </div>
     </nav>
   )
 }

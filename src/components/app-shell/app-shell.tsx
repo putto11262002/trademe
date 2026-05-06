@@ -4,8 +4,8 @@ import { getCurrentUserFn } from "@/auth"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ChatPanel } from "@/components/chat/chat-panel"
-import { AppHeader } from "./app-header"
 import { AppSidebar } from "./app-sidebar"
+import { UserMenu } from "./user-menu"
 import { AuthError } from "./auth-error"
 import { AuthSplash } from "./auth-splash"
 import { ChevronDown, LayoutDashboard, MessageSquare, PieChart, TrendingUp } from "lucide-react"
@@ -14,6 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Link } from "@tanstack/react-router"
@@ -75,7 +76,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
         <div className="flex flex-1 min-w-0">
           <AppSidebar />
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <AppHeader />
             <main className="flex-1 overflow-y-auto">{children}</main>
           </div>
         </div>
@@ -124,7 +124,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
                   App <ChevronDown className="size-3" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="center">
                 <DropdownMenuItem asChild>
                   <Link to="/" onClick={() => setMobileView("app")} className="flex items-center gap-2">
                     <LayoutDashboard className="size-4" /> Dashboard
@@ -139,6 +139,10 @@ function AppShellInner({ children }: { children: ReactNode }) {
                   <Link to="/trades" onClick={() => setMobileView("app")} className="flex items-center gap-2">
                     <TrendingUp className="size-4" /> Trades
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <div className="w-full"><UserMenu /></div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -163,7 +167,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
           <div className="flex h-full w-full overflow-hidden">
             <div className="hidden lg:block"><AppSidebar /></div>
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-              <AppHeader />
               <main className="flex-1 overflow-y-auto">{children}</main>
             </div>
           </div>
