@@ -197,6 +197,8 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
 export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastUserMsgRef = useRef<HTMLDivElement>(null)
+  const spacerRef = useRef<HTMLDivElement>(null)
+  const lastAssistantRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
@@ -223,14 +225,22 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
     }
   }, [open, messages])
 
-  // After submit: scroll user message to top before paint (no flash)
+  // Single layout pass: set spacer height then scroll — order matters, space must exist before scroll
   useLayoutEffect(() => {
-    if (!open || !justSubmittedRef.current || !lastUserMsgRef.current || !scrollContainerRef.current) return
-    justSubmittedRef.current = false
-    const el = lastUserMsgRef.current
-    const container = scrollContainerRef.current
-    const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
-    container.scrollTop = elTop
+    if (!scrollContainerRef.current || !lastUserMsgRef.current) return
+    const containerH = scrollContainerRef.current.clientHeight
+    const userMsgH = lastUserMsgRef.current.offsetHeight
+    const height = Math.max(0, containerH - userMsgH - 16) // 16 = space-y-4 gap
+    if (spacerRef.current) spacerRef.current.style.minHeight = `${height}px`
+    if (lastAssistantRef.current) lastAssistantRef.current.style.minHeight = `${height}px`
+
+    if (open && justSubmittedRef.current) {
+      justSubmittedRef.current = false
+      const el = lastUserMsgRef.current
+      const container = scrollContainerRef.current
+      const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+      container.scrollTop = elTop
+    }
   }, [messages, open])
 
   function submit() {
@@ -290,15 +300,14 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
                   return (
                     <div
                       key={m.id}
-                      ref={isLastUser ? lastUserMsgRef : undefined}
-                      style={isLastAssistant ? { minHeight: "calc(100dvh - 3.5rem - 9rem)" } : undefined}
+                      ref={isLastUser ? lastUserMsgRef : isLastAssistant ? lastAssistantRef : undefined}
                     >
                       <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
                     </div>
                   )
                 })}
                 {messages.length > 0 && messages[messages.length - 1].role === "user" && (
-                  <div style={{ minHeight: "calc(100dvh - 3.5rem - 9rem)" }} />
+                  <div ref={spacerRef} />
                 )}
                 <div ref={bottomRef} />
               </div>
