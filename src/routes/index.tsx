@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { Link, createFileRoute } from "@tanstack/react-router"
-import { Plus, TrendingUp } from "lucide-react"
+import { TrendingUp } from "lucide-react"
 import { Suspense } from "react"
 import { getPortfolioDashboardFn } from "@/trade"
 import { CompositionDonut } from "@/components/portfolio/composition-donut"
@@ -8,6 +8,7 @@ import { PortfolioHero } from "@/components/portfolio/portfolio-hero"
 import { PositionCard } from "@/components/portfolio/position-card"
 import { SectorAllocationCard } from "@/components/portfolio/sector-allocation"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
+import { AddTradeMenu } from "@/components/trade/add-trade-menu"
 import { Button } from "@/components/ui/button"
 import { ItemGroup } from "@/components/ui/item"
 import {
@@ -55,12 +56,7 @@ function Dashboard() {
             Add your first trade to start tracking your portfolio.
           </EmptyDescription>
         </EmptyHeader>
-        <Button asChild>
-          <Link to="/trades/new">
-            <Plus className="size-4" />
-            Add trade
-          </Link>
-        </Button>
+        <AddTradeMenu />
       </Empty>
     )
   }
