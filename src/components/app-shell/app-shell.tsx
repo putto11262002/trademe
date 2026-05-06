@@ -167,11 +167,11 @@ function AppShellInner({ children }: { children: ReactNode }) {
           <div className="flex h-full w-full overflow-hidden">
             <div className="hidden lg:block"><AppSidebar /></div>
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-              <main className="flex-1 overflow-y-auto">{children}</main>
+              <main className="flex-1 overflow-y-auto pt-16">{children}</main>
             </div>
           </div>
         ) : (
-          <div className="h-full w-full overflow-hidden">
+          <div className="h-full w-full overflow-hidden pt-16">
             <ChatPanel onClose={() => setMobileView("app")} />
           </div>
         )}
