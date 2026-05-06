@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
-import { ArrowUp, Bot, ChevronUp, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowUp, Bot, CheckCircle2, ChevronUp, Loader2, Trash2, X } from "lucide-react"
 import { Streamdown } from "streamdown"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,47 +13,59 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { cn } from "@/lib/utils"
+import { toolDisplayRegistry } from "@/agent/tool-display"
+import { Separator } from "@/components/ui/separator"
 
 const MOCK_USER_ID = "usr_demo_01"
 
 type AnyPart = UIMessage<unknown, UIDataTypes, UITools>["parts"][number]
 
-function ToolPart({ part }: { part: AnyPart }) {
-  if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool") return null
-
+function toolPartRow(part: AnyPart) {
   const toolName =
     part.type === "dynamic-tool"
       ? (part as { toolName: string }).toolName
       : part.type.replace(/^tool-/, "")
 
   const p = part as { state: string; input?: unknown; output?: unknown; errorText?: string }
+  const display = toolDisplayRegistry[toolName]
 
+  const isLoading = p.state === "input-available" || p.state === "input-streaming" || p.state === "output-streaming"
+  const isDone = p.state === "output-available"
+  const isError = p.state === "output-error"
+
+  const label = display?.label ?? toolName
+  const loadingMsg =
+    display == null ? `Running ${toolName}…`
+    : typeof display.loadingMessage === "function"
+    ? display.loadingMessage((p.input ?? {}) as Record<string, unknown>)
+    : display.loadingMessage
+  const resultMsg = isDone && display ? display.resultMessage(p.output) : null
+
+  return { toolName, isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText: p.state === "output-error" ? (p as { errorText?: string }).errorText : undefined }
+}
+
+function ToolGroup({ parts }: { parts: AnyPart[] }) {
   return (
-    <div className="space-y-1">
-      <div className="border-border rounded-lg border p-2.5 text-xs">
-        <div className="text-muted-foreground mb-1 font-mono font-medium">
-          ↳ {toolName}
-          <span className="ml-1.5 opacity-50">[{p.state}]</span>
-        </div>
-        {p.input !== undefined && Object.keys(p.input as object).length > 0 && (
-          <pre className="text-foreground/60 overflow-x-auto whitespace-pre-wrap break-all">
-            {JSON.stringify(p.input, null, 2)}
-          </pre>
-        )}
-      </div>
-      {p.state === "output-available" && p.output !== undefined && (
-        <div className="border-border rounded-lg border p-2.5 text-xs">
-          <div className="text-muted-foreground mb-1 font-mono font-medium">↳ result: {toolName}</div>
-          <pre className="text-foreground/50 overflow-x-auto whitespace-pre-wrap break-all">
-            {JSON.stringify(p.output, null, 2)}
-          </pre>
-        </div>
-      )}
-      {p.state === "output-error" && (
-        <div className="border-destructive/30 rounded-lg border p-2.5 text-xs">
-          <span className="text-destructive">{p.errorText}</span>
-        </div>
-      )}
+    <div className="w-full overflow-hidden rounded-4xl border border-border">
+      {parts.map((part, i) => {
+        const { isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText } = toolPartRow(part)
+        return (
+          <div key={i}>
+            {i > 0 && <Separator />}
+            <div className={cn(
+              "flex items-center gap-2.5 px-4 py-3 text-xs",
+              isError ? "text-destructive" : "text-muted-foreground",
+            )}>
+              {isLoading && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
+              {isDone && <CheckCircle2 className="size-3 shrink-0 text-green-500" />}
+              {isError && <AlertCircle className="size-3 shrink-0 text-destructive" />}
+              <span className="font-medium text-foreground">{label}</span>
+              <span className="opacity-40">·</span>
+              <span>{isError ? errorText : isDone ? resultMsg : loadingMsg}</span>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -61,30 +73,47 @@ function ToolPart({ part }: { part: AnyPart }) {
 function Message({ message, isStreaming }: { message: UIMessage; isStreaming: boolean }) {
   const isUser = message.role === "user"
 
+  type Group =
+    | { kind: "text"; part: AnyPart; idx: number }
+    | { kind: "tools"; parts: AnyPart[] }
+
+  const groups: Group[] = []
+  for (const [idx, part] of message.parts.entries()) {
+    const isTool = part.type.startsWith("tool-") || part.type === "dynamic-tool"
+    if (isTool) {
+      const last = groups[groups.length - 1]
+      if (last?.kind === "tools") {
+        last.parts.push(part)
+      } else {
+        groups.push({ kind: "tools", parts: [part] })
+      }
+    } else {
+      groups.push({ kind: "text", part, idx })
+    }
+  }
+
   return (
-    <div className={cn("flex flex-col gap-1.5", isUser ? "items-end" : "items-start")}>
-      {message.parts.map((part, i) => {
-        if (part.type === "text") {
-          if (isUser) {
-            return (
-              <div
-                key={i}
-                className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap"
-              >
-                {part.text}
-              </div>
-            )
-          }
+    <div className={cn("flex flex-col gap-5", isUser ? "items-end" : "items-start")}>
+      {groups.map((group, gi) => {
+        if (group.kind === "tools") {
+          return <ToolGroup key={gi} parts={group.parts} />
+        }
+        if (group.part.type !== "text") return null
+        if (isUser) {
           return (
-            <div key={i} className="prose prose-sm dark:prose-invert max-w-[85%]">
-              <Streamdown isAnimating={isStreaming}>{part.text}</Streamdown>
+            <div
+              key={gi}
+              className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap"
+            >
+              {group.part.text}
             </div>
           )
         }
-        if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
-          return <ToolPart key={i} part={part} />
-        }
-        return null
+        return (
+          <div key={gi} className="prose prose-sm dark:prose-invert max-w-[85%]">
+            <Streamdown isAnimating={isStreaming}>{group.part.text}</Streamdown>
+          </div>
+        )
       })}
     </div>
   )
