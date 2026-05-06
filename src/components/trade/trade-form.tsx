@@ -38,8 +38,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { TickerCombobox } from "@/components/trade/ticker-combobox"
+import { BROKERS } from "@/trade/brokers"
 import { cn } from "@/lib/utils"
 
 const thb = new Intl.NumberFormat("th-TH", {
@@ -201,7 +209,11 @@ const NUMBER_FIELDS: Record<
   fxRate: { step: 0.1, precision: 2, rightAddon: "THB/USD", placeholder: "36.50" },
 }
 
-export function TradeForm() {
+export function TradeForm({
+  defaultValues,
+}: {
+  defaultValues?: Partial<AddTradeFormValues>
+}) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const {
@@ -214,6 +226,7 @@ export function TradeForm() {
       side: "buy",
       fees: 0,
       tradedAt: new Date(),
+      ...defaultValues,
     },
   })
 
@@ -373,6 +386,33 @@ export function TradeForm() {
             <FieldError>{errors.fxRate?.message}</FieldError>
           </Field>
         </div>
+
+        <Field data-invalid={!!errors.broker}>
+          <FieldLabel htmlFor="broker">Broker</FieldLabel>
+          <Controller
+            control={control}
+            name="broker"
+            render={({ field }) => (
+              <Select
+                value={(field.value as string | undefined) ?? ""}
+                onValueChange={(v) => field.onChange(v === "" ? undefined : v)}
+              >
+                <SelectTrigger id="broker" className="w-full">
+                  <SelectValue placeholder="Select broker (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BROKERS.map((b) => (
+                    <SelectItem key={b.slug} value={b.slug}>
+                      {b.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          <FieldDescription>Optional. Where you placed the trade.</FieldDescription>
+          <FieldError>{errors.broker?.message}</FieldError>
+        </Field>
 
         <Field data-invalid={!!errors.tradedAt}>
           <FieldLabel>Trade date</FieldLabel>

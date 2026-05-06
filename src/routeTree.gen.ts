@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TradesIndexRouteImport } from './routes/trades/index'
 import { Route as PositionsIndexRouteImport } from './routes/positions/index'
 import { Route as TradesNewRouteImport } from './routes/trades/new'
+import { Route as TradesFromSlipRouteImport } from './routes/trades/from-slip'
 import { Route as PositionsTickerRouteImport } from './routes/positions/$ticker'
 
 const ChatRoute = ChatRouteImport.update({
@@ -41,6 +42,11 @@ const TradesNewRoute = TradesNewRouteImport.update({
   path: '/trades/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TradesFromSlipRoute = TradesFromSlipRouteImport.update({
+  id: '/trades/from-slip',
+  path: '/trades/from-slip',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PositionsTickerRoute = PositionsTickerRouteImport.update({
   id: '/positions/$ticker',
   path: '/positions/$ticker',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
   '/positions/$ticker': typeof PositionsTickerRoute
+  '/trades/from-slip': typeof TradesFromSlipRoute
   '/trades/new': typeof TradesNewRoute
   '/positions/': typeof PositionsIndexRoute
   '/trades/': typeof TradesIndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
   '/positions/$ticker': typeof PositionsTickerRoute
+  '/trades/from-slip': typeof TradesFromSlipRoute
   '/trades/new': typeof TradesNewRoute
   '/positions': typeof PositionsIndexRoute
   '/trades': typeof TradesIndexRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
   '/positions/$ticker': typeof PositionsTickerRoute
+  '/trades/from-slip': typeof TradesFromSlipRoute
   '/trades/new': typeof TradesNewRoute
   '/positions/': typeof PositionsIndexRoute
   '/trades/': typeof TradesIndexRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chat'
     | '/positions/$ticker'
+    | '/trades/from-slip'
     | '/trades/new'
     | '/positions/'
     | '/trades/'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chat'
     | '/positions/$ticker'
+    | '/trades/from-slip'
     | '/trades/new'
     | '/positions'
     | '/trades'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chat'
     | '/positions/$ticker'
+    | '/trades/from-slip'
     | '/trades/new'
     | '/positions/'
     | '/trades/'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
   PositionsTickerRoute: typeof PositionsTickerRoute
+  TradesFromSlipRoute: typeof TradesFromSlipRoute
   TradesNewRoute: typeof TradesNewRoute
   PositionsIndexRoute: typeof PositionsIndexRoute
   TradesIndexRoute: typeof TradesIndexRoute
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TradesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trades/from-slip': {
+      id: '/trades/from-slip'
+      path: '/trades/from-slip'
+      fullPath: '/trades/from-slip'
+      preLoaderRoute: typeof TradesFromSlipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/positions/$ticker': {
       id: '/positions/$ticker'
       path: '/positions/$ticker'
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
   PositionsTickerRoute: PositionsTickerRoute,
+  TradesFromSlipRoute: TradesFromSlipRoute,
   TradesNewRoute: TradesNewRoute,
   PositionsIndexRoute: PositionsIndexRoute,
   TradesIndexRoute: TradesIndexRoute,
