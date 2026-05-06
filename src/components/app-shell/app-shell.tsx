@@ -77,7 +77,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
         {chatOpen && (
           <div
             onPointerDown={startResize}
-            className="w-px shrink-0 cursor-col-resize bg-border hover:bg-primary/40 transition-colors"
+            className="w-[3px] shrink-0 cursor-col-resize bg-border hover:bg-primary/40 transition-colors"
           />
         )}
 
@@ -97,11 +97,11 @@ function AppShellInner({ children }: { children: ReactNode }) {
         )}
       </div>
 
-      {/* ── Mobile (<lg): top pill toggle ── */}
-      <div className="flex lg:hidden flex-col h-svh overflow-hidden">
-        {/* Top pill toggle */}
-        <div className="flex h-12 shrink-0 items-center justify-center border-b border-border bg-background">
-          <div className="flex items-center gap-0.5 rounded-full border border-border bg-muted p-1">
+      {/* ── Mobile (<lg): floating pill toggle ── */}
+      <div className="relative flex lg:hidden h-svh overflow-hidden">
+        {/* Floating pill */}
+        <div className="absolute top-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border bg-background/80 backdrop-blur-sm shadow-lg p-1">
             <button
               onClick={() => setMobileView("app")}
               className={cn(
@@ -127,9 +127,9 @@ function AppShellInner({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Active view */}
+        {/* Active view — full bleed, pill floats above */}
         {mobileView === "app" ? (
-          <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="flex h-full w-full overflow-hidden">
             <AppSidebar />
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
               <AppHeader />
@@ -137,7 +137,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
             </div>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="h-full w-full overflow-hidden">
             <ChatPanel onClose={() => setMobileView("app")} />
           </div>
         )}
