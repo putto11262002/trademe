@@ -12,7 +12,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { parseSlipFn, type SlipExtractionTrade } from "@/slip"
+import { parseSlipFn, type SlipExtractionSlip } from "@/slip"
 import type { AddTradeFormValues } from "@/trade"
 
 export const Route = createFileRoute("/trades/from-slip")({
@@ -41,18 +41,25 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
+const CORE_FIELDS = ["ticker", "side", "quantity", "pricePerShare"] as const
+
+function missingCoreFields(extraction: SlipExtractionSlip): string[] {
+  return CORE_FIELDS.filter((f) => extraction[f] == null)
+}
+
 function extractionToFormValues(
-  extraction: SlipExtractionTrade,
+  extraction: SlipExtractionSlip,
 ): Partial<AddTradeFormValues> {
-  const parsedDate = new Date(extraction.tradedAt)
-  const tradedAt = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate
+  const parsedDate = extraction.tradedAt ? new Date(extraction.tradedAt) : null
+  const tradedAt =
+    parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : new Date()
   return {
-    ticker: extraction.ticker,
-    side: extraction.side,
-    quantity: extraction.quantity,
-    pricePerShare: extraction.pricePerShare,
+    ticker: extraction.ticker ?? undefined,
+    side: extraction.side ?? undefined,
+    quantity: extraction.quantity ?? undefined,
+    pricePerShare: extraction.pricePerShare ?? undefined,
     fees: extraction.fees ?? 0,
-    fxRate: extraction.fxRate,
+    fxRate: extraction.fxRate ?? undefined,
     tradedAt,
     broker: extraction.broker ?? undefined,
   }
@@ -79,8 +86,15 @@ function FromSlipPage() {
       return { result, previewUrl: input.previewUrl }
     },
     onSuccess: ({ result, previewUrl }) => {
-      if (result.kind === "trade") {
-        toast.success("Slip parsed — fields autofilled")
+      if (result.kind === "slip") {
+        const missing = missingCoreFields(result.extraction)
+        if (missing.length > 0) {
+          toast.warning(
+            `Slip parsed — please complete: ${missing.join(", ")}`,
+          )
+        } else {
+          toast.success("Slip parsed — fields autofilled")
+        }
         setPhase({
           kind: "parsed",
           previewUrl,

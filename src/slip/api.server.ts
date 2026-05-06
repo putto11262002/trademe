@@ -3,7 +3,7 @@ import { runSlipExtraction } from "@/agent/definitions/slip-extraction.server"
 import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
 import { tradeSlip } from "@/db/schema"
-import type { SlipExtractionTrade } from "./schemas"
+import type { SlipExtractionSlip } from "./schemas"
 import type { ParseSlipResult, Slip } from "./types"
 
 type SlipRow = typeof tradeSlip.$inferSelect
@@ -13,7 +13,7 @@ function toSlip(row: SlipRow): Slip {
     id: row.id,
     userId: row.userId,
     status: row.status,
-    extraction: row.extraction as SlipExtractionTrade,
+    extraction: row.extraction as SlipExtractionSlip,
     extractionModel: row.extractionModel,
     parsedAt: row.parsedAt,
   }
@@ -40,7 +40,7 @@ export async function parseSlip(input: {
     })
     .returning()
 
-  return { kind: "trade", slipId: row.id, extraction: result }
+  return { kind: "slip", slipId: row.id, extraction: result }
 }
 
 export async function getSlip(slipId: string): Promise<Slip | null> {

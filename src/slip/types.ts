@@ -1,4 +1,4 @@
-import type { SlipExtractionTrade } from "./schemas"
+import type { SlipExtractionSlip } from "./schemas"
 
 export type SlipStatus = "parsed" | "attached"
 
@@ -6,15 +6,15 @@ export type Slip = {
   id: string
   userId: string
   status: SlipStatus
-  extraction: SlipExtractionTrade
+  extraction: SlipExtractionSlip
   extractionModel: string
   parsedAt: Date
 }
 
 /**
  * Discriminated result returned by `parseSlipFn` to the client. Only the
- * `trade` variant has a stored slipId; `not_a_slip` is not persisted.
+ * `slip` variant has a stored slipId; `not_a_slip` is not persisted.
  */
 export type ParseSlipResult =
-  | { kind: "trade"; slipId: string; extraction: SlipExtractionTrade }
+  | { kind: "slip"; slipId: string; extraction: SlipExtractionSlip }
   | { kind: "not_a_slip"; reason: string }
