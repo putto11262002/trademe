@@ -3,7 +3,7 @@ import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
 import { AlertCircle, ArrowUp, Bot, Brain, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2, X } from "lucide-react"
-import { Streamdown } from "streamdown"
+import { Streamdown, type Components } from "streamdown"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -15,6 +15,14 @@ import {
 import { cn } from "@/lib/utils"
 import { toolDisplayRegistry } from "@/agent/tool-display"
 import { Separator } from "@/components/ui/separator"
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -32,6 +40,23 @@ import {
 } from "@/agent/models"
 
 const MOCK_USER_ID = "usr_demo_01"
+
+const markdownComponents: Components = {
+  h1: ({ node: _n, ...props }) => <h1 className="text-base font-semibold mt-3 mb-1" {...props} />,
+  h2: ({ node: _n, ...props }) => <h2 className="text-sm font-semibold mt-2 mb-1" {...props} />,
+  h3: ({ node: _n, ...props }) => <h3 className="text-sm font-medium mt-2 mb-0.5" {...props} />,
+  table: ({ node: _n, ...props }) => (
+    <ScrollArea className="w-full rounded-4xl border">
+      <table className="min-w-full caption-bottom text-sm" {...props} />
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
+  ),
+  thead: ({ node: _n, ...props }) => <TableHeader {...props} />,
+  tbody: ({ node: _n, ...props }) => <TableBody {...props} />,
+  tr: ({ node: _n, ...props }) => <TableRow {...props} />,
+  th: ({ node: _n, ...props }) => <TableHead {...props} />,
+  td: ({ node: _n, ...props }) => <TableCell {...props} />,
+}
 
 type AnyPart = UIMessage<unknown, UIDataTypes, UITools>["parts"][number]
 
@@ -161,7 +186,7 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
         }
         return (
           <div key={gi} className="prose prose-sm dark:prose-invert max-w-[85%]">
-            <Streamdown isAnimating={isStreaming}>{group.part.text}</Streamdown>
+            <Streamdown isAnimating={isStreaming} components={markdownComponents}>{group.part.text}</Streamdown>
           </div>
         )
       })}
