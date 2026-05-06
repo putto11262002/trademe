@@ -17,7 +17,7 @@ function NewTradePage() {
       <header>
         <h1 className="text-2xl font-semibold">Add trade</h1>
         <p className="text-muted-foreground text-sm">
-          Record a manual buy or sell of a US stock.
+          Enter a US-stock buy or sell.
         </p>
       </header>
       <TradeForm />

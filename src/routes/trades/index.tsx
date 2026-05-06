@@ -1,11 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { Link, createFileRoute } from "@tanstack/react-router"
-import { Plus, TrendingUp } from "lucide-react"
+import { createFileRoute } from "@tanstack/react-router"
+import { TrendingUp } from "lucide-react"
 import { Suspense } from "react"
 import { listTradesFn } from "@/trade"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
+import { AddTradeMenu } from "@/components/trade/add-trade-menu"
 import { TradesDataTable } from "@/components/trade/trades-data-table"
-import { Button } from "@/components/ui/button"
 import {
   Empty,
   EmptyDescription,
@@ -26,12 +26,7 @@ function TradesPage() {
             Your portfolio activity, manually entered for now.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/trades/new">
-            <Plus className="size-4" />
-            Add trade
-          </Link>
-        </Button>
+        <AddTradeMenu />
       </header>
 
       <QueryErrorBoundary>
@@ -61,12 +56,7 @@ function TradeList() {
               Add your first trade to start tracking your portfolio.
             </EmptyDescription>
           </EmptyHeader>
-          <Button asChild>
-            <Link to="/trades/new">
-              <Plus className="size-4" />
-              Add trade
-            </Link>
-          </Button>
+          <AddTradeMenu />
         </Empty>
       ) : (
         <TradesDataTable data={data} />

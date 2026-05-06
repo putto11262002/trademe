@@ -1,11 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { Link, createFileRoute } from "@tanstack/react-router"
-import { PieChart, Plus } from "lucide-react"
+import { createFileRoute } from "@tanstack/react-router"
+import { PieChart } from "lucide-react"
 import { Suspense } from "react"
 import { getPortfolioDashboardFn } from "@/trade"
 import { HoldingsList } from "@/components/portfolio/holdings-list"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
-import { Button } from "@/components/ui/button"
+import { AddTradeMenu } from "@/components/trade/add-trade-menu"
 import {
   Empty,
   EmptyDescription,
@@ -51,12 +51,7 @@ function Positions() {
             Add a trade to start building your portfolio.
           </EmptyDescription>
         </EmptyHeader>
-        <Button asChild>
-          <Link to="/trades/new">
-            <Plus className="size-4" />
-            Add trade
-          </Link>
-        </Button>
+        <AddTradeMenu />
       </Empty>
     )
   }
