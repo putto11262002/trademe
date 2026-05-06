@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
-import { AlertCircle, ArrowUp, Bot, CheckCircle2, ChevronUp, Loader2, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowUp, Bot, Brain, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2, X } from "lucide-react"
 import { Streamdown } from "streamdown"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,13 @@ import {
 import { cn } from "@/lib/utils"
 import { toolDisplayRegistry } from "@/agent/tool-display"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   MODELS,
   THINKING_LABELS,
@@ -78,11 +85,41 @@ function ToolGroup({ parts }: { parts: AnyPart[] }) {
   )
 }
 
+function ReasoningPart({ part, isStreaming }: { part: AnyPart; isStreaming: boolean }) {
+  const [open, setOpen] = useState(false)
+  const p = part as { reasoning?: string }
+  const text = p.reasoning ?? ""
+  if (!text && !isStreaming) return null
+
+  return (
+    <div className="border-border w-full overflow-hidden rounded-4xl border text-xs">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2.5 px-4 py-3 transition-colors"
+      >
+        {isStreaming && !open
+          ? <Loader2 className="size-3 shrink-0 animate-spin" />
+          : <Brain className="size-3 shrink-0" />
+        }
+        <span className="font-medium">Thinking</span>
+        {!isStreaming && <span className="opacity-40">· {text.split(/\s+/).length} words</span>}
+        <ChevronDown className={cn("ml-auto size-3 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="border-border border-t px-4 pb-4 pt-3">
+          <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{text}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Message({ message, isStreaming }: { message: UIMessage; isStreaming: boolean }) {
   const isUser = message.role === "user"
 
   type Group =
     | { kind: "text"; part: AnyPart; idx: number }
+    | { kind: "reasoning"; part: AnyPart; idx: number }
     | { kind: "tools"; parts: AnyPart[] }
 
   const groups: Group[] = []
@@ -95,6 +132,8 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
       } else {
         groups.push({ kind: "tools", parts: [part] })
       }
+    } else if (part.type === "reasoning") {
+      groups.push({ kind: "reasoning", part, idx })
     } else {
       groups.push({ kind: "text", part, idx })
     }
@@ -105,6 +144,9 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
       {groups.map((group, gi) => {
         if (group.kind === "tools") {
           return <ToolGroup key={gi} parts={group.parts} />
+        }
+        if (group.kind === "reasoning") {
+          return <ReasoningPart key={gi} part={group.part} isStreaming={isStreaming} />
         }
         if (group.part.type !== "text") return null
         if (isUser) {
@@ -165,75 +207,26 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
       {open && (
         <div className="fixed inset-0 z-40 bg-background flex flex-col">
           {/* Header — no border */}
-          <div className="flex h-14 shrink-0 items-center justify-between px-4">
-            {/* Model + thinking selectors */}
-            <div className="flex items-center gap-1.5">
-              {/* Model toggle */}
-              <div className="border-border flex items-center gap-0.5 rounded-full border p-0.5">
-                {(Object.keys(MODELS) as ModelKey[]).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setModelKey(key)
-                      if (!MODELS[key].supportsThinking) setThinking("off")
-                    }}
-                    disabled={isStreaming}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                      modelKey === key
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {MODELS[key].label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Thinking toggle — only when Pro is selected */}
-              {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
-                <div className="border-border flex items-center gap-0.5 rounded-full border p-0.5">
-                  {selectedModel.thinkingLevels.map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setThinking(level)}
-                      disabled={isStreaming}
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                        thinking === level
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {THINKING_LABELS[level]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1">
-              {messages.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground size-8"
-                  onClick={clearHistory}
-                  disabled={isStreaming}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              )}
+          <div className="flex h-14 shrink-0 items-center justify-end px-4 gap-1">
+            {messages.length > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground size-8"
-                onClick={onToggle}
+                onClick={clearHistory}
+                disabled={isStreaming}
               >
-                <X className="size-4" />
+                <Trash2 className="size-4" />
               </Button>
-            </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground size-8"
+              onClick={onToggle}
+            >
+              <X className="size-4" />
+            </Button>
           </div>
 
           {/* Messages — padded bottom so content clears the floating input */}
@@ -270,7 +263,52 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
                   disabled={isStreaming}
                   autoFocus
                 />
-                <InputGroupAddon align="block-end" className="justify-end">
+                <InputGroupAddon align="block-end" className="justify-between">
+                  {/* Model + thinking selectors — bottom left */}
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      value={modelKey}
+                      onValueChange={(v) => {
+                        const k = v as ModelKey
+                        setModelKey(k)
+                        if (!MODELS[k].supportsThinking) setThinking("off")
+                      }}
+                      disabled={isStreaming}
+                    >
+                      <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(MODELS) as ModelKey[]).map((key) => (
+                          <SelectItem key={key} value={key}>
+                            <span className="font-medium">{MODELS[key].label}</span>
+                            <span className="text-muted-foreground ml-1.5">{MODELS[key].description}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
+                      <Select
+                        value={thinking}
+                        onValueChange={(v) => setThinking(v as ThinkingLevel)}
+                        disabled={isStreaming}
+                      >
+                        <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedModel.thinkingLevels.map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {THINKING_LABELS[level]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {/* Send button — bottom right */}
                   <InputGroupButton
                     size="icon-sm"
                     variant="default"
