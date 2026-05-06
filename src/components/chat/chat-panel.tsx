@@ -1,4 +1,5 @@
-import { useRef, useEffect, useLayoutEffect, useState } from "react"
+import { useRef, useEffect, useLayoutEffect, useState, Suspense } from "react"
+import { useMutation } from "@tanstack/react-query"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
@@ -24,15 +25,22 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  MODELS,
-  THINKING_LABELS,
-  DEFAULT_MODEL,
-  DEFAULT_THINKING,
-  type ModelKey,
-  type ThinkingLevel,
-} from "@/agent/models"
+  generalChatModels,
+  DEFAULT_GENERAL_CHAT_MODEL,
+  type GeneralChatModel,
+  type GeneralChatModelKey,
+  type ProviderOptions,
+} from "@/agent/general-chat-models"
+import { ConversationSidebar, ConversationToggle } from "@/components/chat/thread-switcher"
+import { createThreadFn, getThreadFn, updateThreadFn } from "@/thread/functions"
+import type { Thread } from "@/thread/types"
 
 const MOCK_USER_ID = "usr_demo_01"
+const THREAD_LS_KEY = "activeThreadId"
+
+// ---------------------------------------------------------------------------
+// Markdown / message rendering
+// ---------------------------------------------------------------------------
 
 const markdownComponents: Components = {
   h1: ({ node: _n, ...props }) => <h1 className="text-base font-semibold mt-3 mb-1" {...props} />,
@@ -58,14 +66,11 @@ function toolPartRow(part: AnyPart) {
     part.type === "dynamic-tool"
       ? (part as { toolName: string }).toolName
       : part.type.replace(/^tool-/, "")
-
   const p = part as { state: string; input?: unknown; output?: unknown; errorText?: string }
   const display = toolDisplayRegistry[toolName]
-
   const isLoading = p.state === "input-available" || p.state === "input-streaming" || p.state === "output-streaming"
   const isDone = p.state === "output-available"
   const isError = p.state === "output-error"
-
   const label = display?.label ?? toolName
   const loadingMsg =
     display == null ? `Running ${toolName}…`
@@ -73,8 +78,7 @@ function toolPartRow(part: AnyPart) {
     ? display.loadingMessage((p.input ?? {}) as Record<string, unknown>)
     : display.loadingMessage
   const resultMsg = isDone && display ? display.resultMessage(p.output) : null
-
-  return { toolName, isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText: p.state === "output-error" ? (p as { errorText?: string }).errorText : undefined }
+  return { isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText: isError ? (p as { errorText?: string }).errorText : undefined }
 }
 
 function ToolGroup({ parts }: { parts: AnyPart[] }) {
@@ -85,10 +89,7 @@ function ToolGroup({ parts }: { parts: AnyPart[] }) {
         return (
           <div key={i}>
             {i > 0 && <Separator />}
-            <div className={cn(
-              "flex items-center gap-2.5 px-4 py-3 text-xs",
-              isError ? "text-destructive" : "text-muted-foreground",
-            )}>
+            <div className={cn("flex items-center gap-2.5 px-4 py-3 text-xs", isError ? "text-destructive" : "text-muted-foreground")}>
               {isLoading && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
               {isDone && <CheckCircle2 className="size-3 shrink-0 text-green-500" />}
               {isError && <AlertCircle className="size-3 shrink-0 text-destructive" />}
@@ -108,17 +109,14 @@ function ReasoningPart({ part, isStreaming }: { part: AnyPart; isStreaming: bool
   const p = part as { reasoning?: string }
   const text = p.reasoning ?? ""
   if (!text && !isStreaming) return null
-
   return (
     <div className="border-border w-full overflow-hidden rounded-4xl border text-xs">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2.5 px-4 py-3 transition-colors"
       >
-        {isStreaming && !open
-          ? <Loader2 className="size-3 shrink-0 animate-spin" />
-          : <Brain className="size-3 shrink-0" />
-        }
+        {isStreaming && !open ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <Brain className="size-3 shrink-0" />}
         <span className="font-medium">Thinking</span>
         {!isStreaming && <span className="opacity-40">· {text.split(/\s+/).length} words</span>}
         <ChevronDown className={cn("ml-auto size-3 transition-transform", open && "rotate-180")} />
@@ -134,45 +132,29 @@ function ReasoningPart({ part, isStreaming }: { part: AnyPart; isStreaming: bool
 
 function Message({ message, isStreaming }: { message: UIMessage; isStreaming: boolean }) {
   const isUser = message.role === "user"
-
-  type Group =
-    | { kind: "text"; part: AnyPart; idx: number }
-    | { kind: "reasoning"; part: AnyPart; idx: number }
-    | { kind: "tools"; parts: AnyPart[] }
-
+  type Group = { kind: "text"; part: AnyPart; idx: number } | { kind: "reasoning"; part: AnyPart; idx: number } | { kind: "tools"; parts: AnyPart[] }
   const groups: Group[] = []
   for (const [idx, part] of message.parts.entries()) {
     const isTool = part.type.startsWith("tool-") || part.type === "dynamic-tool"
     if (isTool) {
       const last = groups[groups.length - 1]
-      if (last?.kind === "tools") {
-        last.parts.push(part)
-      } else {
-        groups.push({ kind: "tools", parts: [part] })
-      }
+      if (last?.kind === "tools") last.parts.push(part)
+      else groups.push({ kind: "tools", parts: [part] })
     } else if (part.type === "reasoning") {
       groups.push({ kind: "reasoning", part, idx })
     } else {
       groups.push({ kind: "text", part, idx })
     }
   }
-
   return (
     <div className={cn("flex flex-col gap-5", isUser ? "items-end" : "items-start")}>
       {groups.map((group, gi) => {
-        if (group.kind === "tools") {
-          return <ToolGroup key={gi} parts={group.parts} />
-        }
-        if (group.kind === "reasoning") {
-          return <ReasoningPart key={gi} part={group.part} isStreaming={isStreaming} />
-        }
+        if (group.kind === "tools") return <ToolGroup key={gi} parts={group.parts} />
+        if (group.kind === "reasoning") return <ReasoningPart key={gi} part={group.part} isStreaming={isStreaming} />
         if (group.part.type !== "text") return null
         if (isUser) {
           return (
-            <div
-              key={gi}
-              className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap"
-            >
+            <div key={gi} className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap">
               {group.part.text}
             </div>
           )
@@ -187,7 +169,25 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
   )
 }
 
-export function ChatPanel({ onClose }: { onClose: () => void }) {
+// ---------------------------------------------------------------------------
+// ConnectedChat — keyed by threadId so it fully remounts on thread switch
+// ---------------------------------------------------------------------------
+
+type ConnectedChatProps = {
+  threadId: string
+  modelKey: GeneralChatModelKey
+  providerOptions: ProviderOptions
+  activeTitle: string | null
+  onClose: () => void
+  onModelSelect: (key: GeneralChatModelKey) => void
+  onThinkingSelect: (opts: ProviderOptions) => void
+  onAutoTitle: (title: string) => void
+}
+
+function ConnectedChat({
+  threadId, modelKey, providerOptions, activeTitle,
+  onClose, onModelSelect, onThinkingSelect, onAutoTitle,
+}: ConnectedChatProps) {
   const lastPairRef = useRef<HTMLDivElement>(null)
   const prevLastPairRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -196,20 +196,33 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
-  const [modelKey, setModelKey] = useState<ModelKey>(DEFAULT_MODEL)
-  const [thinking, setThinking] = useState<ThinkingLevel>(DEFAULT_THINKING)
   const [modelOpen, setModelOpen] = useState(false)
 
-  const agent = useAgent({ agent: "chat", name: MOCK_USER_ID })
+  const agent = useAgent({ agent: "chat", name: threadId })
   const { messages, sendMessage, status, clearHistory } = useAgentChat({
     agent,
-    body: () => ({ model: modelKey, thinking }),
+    body: () => ({ modelKey, providerOptions }),
   })
 
   const isStreaming = status === "streaming" || status === "submitted"
-  const selectedModel = MODELS[modelKey]
+  const selectedModel = generalChatModels[modelKey] as GeneralChatModel
+  const thinkingLevels = selectedModel.thinking?.levels ?? []
+  const currentThinkingKey = thinkingLevels.find(
+    (l) => JSON.stringify(l.providerOptions) === JSON.stringify(providerOptions)
+  )?.key ?? null
 
-  // On mount: scroll to bottom once
+  // Auto-title after first assistant reply
+  useEffect(() => {
+    if (activeTitle !== null) return
+    const firstUser = messages.find((m) => m.role === "user")
+    const hasAssistant = messages.some((m) => m.role === "assistant")
+    if (!firstUser || !hasAssistant) return
+    const textPart = firstUser.parts.find((p) => p.type === "text") as { text?: string } | undefined
+    const title = textPart?.text?.slice(0, 60) ?? "New conversation"
+    onAutoTitle(title)
+  }, [messages, activeTitle, onAutoTitle])
+
+  // Scroll to bottom on first load
   useEffect(() => {
     if (hasInitialScrolledRef.current || messages.length === 0) return
     if (scrollContainerRef.current) {
@@ -218,44 +231,35 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     }
   }, [messages])
 
-  // Refocus textarea when streaming ends so user can type immediately
+  // Refocus textarea when streaming ends
   useEffect(() => {
     if (!isStreaming) textareaRef.current?.focus()
   }, [isStreaming])
 
-  // Keep scroll container paddingBottom in sync with the floating input height so the
-  // minHeight calc (which reads paddingBottom via getComputedStyle) stays accurate automatically.
+  // Keep paddingBottom in sync with floating input height
   useEffect(() => {
     const floating = floatingRef.current
     const scroll = scrollContainerRef.current
     if (!floating || !scroll) return
-    const update = () => {
-      scroll.style.paddingBottom = `${floating.offsetHeight + 16}px` // +16 = bottom-4 gap
-    }
+    const update = () => { scroll.style.paddingBottom = `${floating.offsetHeight + 16}px` }
     update()
     const ro = new ResizeObserver(update)
     ro.observe(floating)
     return () => ro.disconnect()
   }, [])
 
-  // The last user+assistant pair gets minHeight = containerH - paddingBottom so the pair fills
-  // the visible area. This means scrollTop = pairTop is always the scroll maximum — the user
-  // literally cannot scroll past the user message.
+  // Last pair minHeight so user message stays at scroll top
   useLayoutEffect(() => {
     if (!scrollContainerRef.current) return
     const container = scrollContainerRef.current
-
-    // Clear previous last pair's minHeight when a new pair takes over
     if (prevLastPairRef.current && prevLastPairRef.current !== lastPairRef.current) {
       prevLastPairRef.current.style.minHeight = ""
     }
-
     if (lastPairRef.current) {
       const paddingBottom = parseFloat(window.getComputedStyle(container).paddingBottom)
       lastPairRef.current.style.minHeight = `${container.clientHeight - paddingBottom}px`
       prevLastPairRef.current = lastPairRef.current
     }
-
     if (justSubmittedRef.current) {
       justSubmittedRef.current = false
       if (lastPairRef.current) {
@@ -275,32 +279,23 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      submit()
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() }
   }
 
   return (
-    <div className="relative h-full">
+    <>
       {/* Messages */}
       <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {messages.length === 0 ? (
-          <p className="text-muted-foreground text-center text-sm mt-8">
-            Ask me about your portfolio, a stock price, or recent news.
-          </p>
+          <p className="text-muted-foreground text-center text-sm mt-8">Ask me about your portfolio, a stock price, or recent news.</p>
         ) : (
           <div>
             {(() => {
-              // Group into pairs: leading assistant messages (e.g. initial greeting) render as-is;
-              // each user message + optional following assistant forms a "pair" container.
               type Pair = { user: UIMessage; userIdx: number; assistant: UIMessage | null; assistantIdx: number | null }
               const leading: { msg: UIMessage; idx: number }[] = []
               const pairs: Pair[] = []
               let i = 0
-              while (i < messages.length && messages[i].role === "assistant") {
-                leading.push({ msg: messages[i], idx: i++ })
-              }
+              while (i < messages.length && messages[i].role === "assistant") leading.push({ msg: messages[i], idx: i++ })
               while (i < messages.length) {
                 if (messages[i].role === "user") {
                   const user = messages[i]; const userIdx = i++
@@ -313,24 +308,15 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
               return (
                 <>
                   {leading.map(({ msg, idx }) => (
-                    <div key={msg.id}>
-                      <Message message={msg} isStreaming={isStreaming && idx === messages.length - 1} />
-                    </div>
+                    <div key={msg.id}><Message message={msg} isStreaming={isStreaming && idx === messages.length - 1} /></div>
                   ))}
                   {pairs.map((pair, pi) => {
                     const isLast = pi === pairs.length - 1
                     return (
                       <div key={pair.user.id} ref={isLast ? lastPairRef : undefined} className="space-y-6 pt-6">
-                        <div>
-                          <Message message={pair.user} isStreaming={false} />
-                        </div>
+                        <div><Message message={pair.user} isStreaming={false} /></div>
                         {pair.assistant && (
-                          <div>
-                            <Message
-                              message={pair.assistant}
-                              isStreaming={isStreaming && pair.assistantIdx === messages.length - 1}
-                            />
-                          </div>
+                          <div><Message message={pair.assistant} isStreaming={isStreaming && pair.assistantIdx === messages.length - 1} /></div>
                         )}
                       </div>
                     )
@@ -344,27 +330,15 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
 
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
-        {/* Action row */}
         <div className="pointer-events-auto flex items-center justify-end gap-1">
           {messages.length > 0 && (
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              onClick={clearHistory}
-              disabled={isStreaming}
-              className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive"
-              aria-label="Clear history"
-            >
+            <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
+              className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive" aria-label="Clear history">
               <Trash2 className="size-3.5" />
             </Button>
           )}
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            onClick={onClose}
-            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground"
-            aria-label="Close chat"
-          >
+          <Button type="button" size="icon-sm" variant="ghost" onClick={onClose}
+            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground" aria-label="Close chat">
             <X className="size-3.5" />
           </Button>
         </div>
@@ -384,76 +358,179 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
               <div className="flex items-center gap-1">
                 <Popover open={modelOpen} onOpenChange={setModelOpen}>
                   <PopoverTrigger asChild>
-                    <button
-                      disabled={isStreaming}
-                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    >
+                    <button type="button" disabled={isStreaming}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
                       {selectedModel.label}
                       <ChevronDown className="size-3 opacity-60" />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent side="top" align="start" className="w-48 p-1 gap-0">
-                    {(Object.keys(MODELS) as ModelKey[]).map((key) => (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          setModelKey(key)
-                          if (!MODELS[key].supportsThinking) setThinking("off")
-                          setModelOpen(false)
-                        }}
-                        className={cn(
-                          "w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
-                          key === modelKey ? "text-foreground font-medium" : "text-muted-foreground",
-                        )}
-                      >
-                        {MODELS[key].label}
+                    {(Object.keys(generalChatModels) as GeneralChatModelKey[]).map((key) => (
+                      <button type="button" key={key} onClick={() => { onModelSelect(key); setModelOpen(false) }}
+                        className={cn("w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                          key === modelKey ? "text-foreground font-medium" : "text-muted-foreground")}>
+                        {generalChatModels[key].label}
                       </button>
                     ))}
                   </PopoverContent>
                 </Popover>
 
-                {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
+                {thinkingLevels.length > 0 && (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button
-                        disabled={isStreaming}
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                      >
-                        Think: {THINKING_LABELS[thinking]}
+                      <button type="button" disabled={isStreaming}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                        Think: {thinkingLevels.find((l) => l.key === currentThinkingKey)?.label ?? "Off"}
                         <ChevronDown className="size-3 opacity-60" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent side="top" align="start" className="w-36 p-1 gap-0">
-                      {selectedModel.thinkingLevels.map((level) => (
-                        <button
-                          key={level}
-                          onClick={() => setThinking(level)}
-                          className={cn(
-                            "w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
-                            level === thinking ? "text-foreground font-medium" : "text-muted-foreground",
-                          )}
-                        >
-                          {THINKING_LABELS[level]}
+                      {thinkingLevels.map((level) => (
+                        <button type="button" key={level.key} onClick={() => onThinkingSelect(level.providerOptions)}
+                          className={cn("w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                            level.key === currentThinkingKey ? "text-foreground font-medium" : "text-muted-foreground")}>
+                          {level.label}
                         </button>
                       ))}
                     </PopoverContent>
                   </Popover>
                 )}
               </div>
-
-              <InputGroupButton
-                size="icon-sm"
-                variant="default"
-                onClick={submit}
-                disabled={isStreaming || !input.trim()}
-              >
+              <InputGroupButton size="icon-sm" variant="default" onClick={submit} disabled={isStreaming || !input.trim()}>
                 <ArrowUp />
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
+// ---------------------------------------------------------------------------
+// ChatPanel — thread management shell
+// ---------------------------------------------------------------------------
+
+export function ChatPanel({ onClose }: { onClose: () => void }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [initialized, setInitialized] = useState(false)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
+  const [activeTitle, setActiveTitle] = useState<string | null>(null)
+  const [modelKey, setModelKey] = useState<GeneralChatModelKey>(DEFAULT_GENERAL_CHAT_MODEL)
+  const [providerOptions, setProviderOptions] = useState<ProviderOptions>({})
+
+  const createMutation = useMutation({
+    mutationFn: () => createThreadFn({ data: { userId: MOCK_USER_ID, modelKey: DEFAULT_GENERAL_CHAT_MODEL, providerOptions: {} } }),
+    onSuccess: (id) => {
+      setActiveThreadId(id)
+      setActiveTitle(null)
+      setModelKey(DEFAULT_GENERAL_CHAT_MODEL)
+      setProviderOptions({})
+      localStorage.setItem(THREAD_LS_KEY, id)
+      setInitialized(true)
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: (vars: Parameters<typeof updateThreadFn>[0]) => updateThreadFn(vars),
+  })
+
+  // Thread initialization
+  useEffect(() => {
+    const stored = localStorage.getItem(THREAD_LS_KEY)
+    if (stored) {
+      getThreadFn({ data: { id: stored } })
+        .then((t) => {
+          if (t) {
+            setActiveThreadId(t.id)
+            setActiveTitle(t.title ?? null)
+            setModelKey((t.modelKey as GeneralChatModelKey) ?? DEFAULT_GENERAL_CHAT_MODEL)
+            setProviderOptions((t.providerOptions as ProviderOptions) ?? {})
+            localStorage.setItem(THREAD_LS_KEY, t.id)
+            setInitialized(true)
+          } else {
+            createMutation.mutate()
+          }
+        })
+        .catch(() => createMutation.mutate())
+    } else {
+      createMutation.mutate()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleThreadSelect(t: Thread) {
+    setActiveThreadId(t.id)
+    setActiveTitle(t.title ?? null)
+    setModelKey((t.modelKey as GeneralChatModelKey) ?? DEFAULT_GENERAL_CHAT_MODEL)
+    setProviderOptions((t.providerOptions as ProviderOptions) ?? {})
+    localStorage.setItem(THREAD_LS_KEY, t.id)
+  }
+
+  function handleThreadCreate(id: string) {
+    setActiveThreadId(id)
+    setActiveTitle(null)
+    setModelKey(DEFAULT_GENERAL_CHAT_MODEL)
+    setProviderOptions({})
+    localStorage.setItem(THREAD_LS_KEY, id)
+  }
+
+  function handleModelSelect(key: GeneralChatModelKey) {
+    const defaultOpts = (generalChatModels[key] as GeneralChatModel).thinking?.default ?? {}
+    setModelKey(key)
+    setProviderOptions(defaultOpts)
+    if (activeThreadId) {
+      updateMutation.mutate({ data: { id: activeThreadId, modelKey: key, providerOptions: defaultOpts } })
+    }
+  }
+
+  function handleThinkingSelect(opts: ProviderOptions) {
+    setProviderOptions(opts)
+    if (activeThreadId) {
+      updateMutation.mutate({ data: { id: activeThreadId, providerOptions: opts } })
+    }
+  }
+
+  function handleAutoTitle(title: string) {
+    setActiveTitle(title)
+    if (activeThreadId) {
+      updateMutation.mutate({ data: { id: activeThreadId, title } })
+    }
+  }
+
+  return (
+    <div className="relative h-full">
+      {/* Top-left toggle */}
+      <div className="absolute top-4 left-4 z-10" onMouseEnter={() => setSidebarOpen(true)}>
+        <ConversationToggle onClick={() => setSidebarOpen((o) => !o)} />
+      </div>
+
+      {/* Conversation sidebar */}
+      <ConversationSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        userId={MOCK_USER_ID}
+        activeThreadId={activeThreadId}
+        onSelect={handleThreadSelect}
+        onCreate={handleThreadCreate}
+      />
+
+      {/* Connected chat — remounts cleanly on thread switch */}
+      {initialized && activeThreadId && (
+        <Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>}>
+          <ConnectedChat
+            key={activeThreadId}
+            threadId={activeThreadId}
+            modelKey={modelKey}
+            providerOptions={providerOptions}
+            activeTitle={activeTitle}
+            onClose={onClose}
+            onModelSelect={handleModelSelect}
+            onThinkingSelect={handleThinkingSelect}
+            onAutoTitle={handleAutoTitle}
+          />
+        </Suspense>
+      )}
+    </div>
+  )
+}

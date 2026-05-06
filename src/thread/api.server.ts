@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq, lt } from "drizzle-orm"
 import { getDb } from "@/db/index.server"
 import { thread } from "@/db/schema"
 import type { NewThread } from "./types"
@@ -10,13 +10,26 @@ export async function createThread(data: Omit<NewThread, "id" | "createdAt" | "u
   return id
 }
 
-export async function listThreads(userId: string) {
+export async function listThreads(userId: string, opts?: { cursor?: string; limit?: number }) {
+  const limit = opts?.limit ?? 20
   const db = getDb()
-  return db
+
+  const rows = await db
     .select()
     .from(thread)
-    .where(eq(thread.userId, userId))
+    .where(
+      opts?.cursor
+        ? and(eq(thread.userId, userId), lt(thread.updatedAt, new Date(opts.cursor)))
+        : eq(thread.userId, userId),
+    )
     .orderBy(desc(thread.updatedAt))
+    .limit(limit + 1)
+
+  const hasMore = rows.length > limit
+  return {
+    threads: hasMore ? rows.slice(0, limit) : rows,
+    nextCursor: hasMore ? rows[limit - 1].updatedAt.toISOString() : null,
+  }
 }
 
 export async function getThread(id: string) {

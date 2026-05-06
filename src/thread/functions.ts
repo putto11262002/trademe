@@ -5,14 +5,15 @@ import { createThreadSchema, updateThreadSchema } from "./schemas"
 
 export const createThreadFn = createServerFn({ method: "POST" })
   .inputValidator(createThreadSchema)
-  .handler(async ({ data }) => {
-    const id = await api.createThread(data)
-    return id
-  })
+  .handler(async ({ data }) => api.createThread(data))
 
 export const listThreadsFn = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ userId: z.string().min(1) }))
-  .handler(async ({ data }) => api.listThreads(data.userId))
+  .inputValidator(z.object({
+    userId: z.string().min(1),
+    cursor: z.string().optional(),
+    limit: z.number().int().min(1).max(50).default(20),
+  }))
+  .handler(async ({ data }) => api.listThreads(data.userId, { cursor: data.cursor, limit: data.limit }))
 
 export const getThreadFn = createServerFn({ method: "GET" })
   .inputValidator(z.object({ id: z.string().min(1) }))
@@ -28,3 +29,7 @@ export const updateThreadFn = createServerFn({ method: "POST" })
 export const deleteThreadFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string().min(1) }))
   .handler(async ({ data }) => api.deleteThread(data.id))
+
+export const touchThreadFn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ id: z.string().min(1) }))
+  .handler(async ({ data }) => api.touchThread(data.id))
