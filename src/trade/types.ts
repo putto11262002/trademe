@@ -1,5 +1,5 @@
 export type TradeSide = "buy" | "sell"
-export type TradeSource = "manual"
+export type TradeSource = "manual" | "slip"
 
 export type Trade = {
   id: string

@@ -8,9 +8,10 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { marketCompanyProfile } from "./market-company-profile"
+import { tradeSlip } from "./trade-slip"
 
 export const tradeSide = pgEnum("trade_side", ["buy", "sell"])
-export const tradeSource = pgEnum("trade_source", ["manual"])
+export const tradeSource = pgEnum("trade_source", ["manual", "slip"])
 
 export const trade = pgTable(
   "trade",
@@ -29,6 +30,8 @@ export const trade = pgTable(
     fees: numeric({ precision: 18, scale: 4 }).notNull().default("0"),
     fxRate: numeric("fx_rate", { precision: 18, scale: 6 }),
     tradedAt: timestamp("traded_at", { withTimezone: true }).notNull(),
+    broker: text(),
+    slipId: uuid("slip_id").references(() => tradeSlip.id, { onDelete: "set null" }),
     source: tradeSource().notNull().default("manual"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

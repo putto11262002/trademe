@@ -1,4 +1,5 @@
 export * from "./trade"
+export * from "./trade-slip"
 export * from "./market-bar"
 export * from "./market-fx-bar"
 export * from "./market-news-article"

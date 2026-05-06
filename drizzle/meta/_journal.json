@@ -36,6 +36,13 @@
       "when": 1778037378081,
       "tag": "0004_nostalgic_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778054070657,
+      "tag": "0005_smart_songbird",
+      "breakpoints": true
     }
   ]
 }
