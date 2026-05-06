@@ -229,14 +229,21 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   // Single layout pass: set spacer height then scroll — order matters, space must exist before scroll
   useLayoutEffect(() => {
     if (!scrollContainerRef.current || !lastUserMsgRef.current) return
-    const containerH = scrollContainerRef.current.clientHeight
+    const container = scrollContainerRef.current
+    const containerStyle = window.getComputedStyle(container)
+    const paddingTop = parseFloat(containerStyle.paddingTop)
+    const paddingBottom = parseFloat(containerStyle.paddingBottom)
+    const containerH = container.clientHeight
     const userMsgH = lastUserMsgRef.current.offsetHeight
-    const height = Math.max(0, containerH - userMsgH - 16) // 16 = space-y-4 gap
 
-    // Clear stale min-height from the previously styled element before moving to the new one
     if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = ""
     const target = spacerRef.current ?? lastAssistantRef.current
-    if (target) { target.style.minHeight = `${height}px`; prevSpacedElRef.current = target }
+    if (target) {
+      const gap = parseFloat(window.getComputedStyle(target).marginTop)
+      const height = Math.max(0, containerH - paddingTop - paddingBottom - userMsgH - gap)
+      target.style.minHeight = `${height}px`
+      prevSpacedElRef.current = target
+    }
 
     if (open && justSubmittedRef.current) {
       justSubmittedRef.current = false
