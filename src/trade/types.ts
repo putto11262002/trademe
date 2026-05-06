@@ -1,3 +1,5 @@
+import type { BrokerSlug } from "./brokers"
+
 export type TradeSide = "buy" | "sell"
 export type TradeSource = "manual" | "slip"
 
@@ -11,6 +13,8 @@ export type Trade = {
   fees: number
   fxRate: number | null
   tradedAt: Date
+  broker: BrokerSlug | null
+  slipId: string | null
   source: TradeSource
   createdAt: Date
 }

@@ -16,6 +16,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "seed:profiles": "tsx --env-file=.dev.vars scripts/seed-profiles.ts",
+    "test:slip": "tsx --env-file=.dev.vars scripts/test-slip-extraction.ts",
     "cf:dev": "wrangler dev",
     "cf:types": "wrangler types",
     "deploy": "vite build && wrangler deploy"

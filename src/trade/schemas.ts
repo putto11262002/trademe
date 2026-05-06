@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { brokerSchema } from "./brokers"
 
 export const addTradeSchema = z.object({
   ticker: z
@@ -12,6 +13,8 @@ export const addTradeSchema = z.object({
   fees: z.coerce.number().min(0).default(0),
   fxRate: z.union([z.coerce.number().positive(), z.literal("").transform(() => undefined)]).optional(),
   tradedAt: z.coerce.date(),
+  broker: z.union([brokerSchema, z.literal("").transform(() => undefined)]).optional(),
+  slipId: z.string().uuid().optional(),
 })
 
 export type AddTradeFormValues = z.input<typeof addTradeSchema>
