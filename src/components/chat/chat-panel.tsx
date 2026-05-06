@@ -185,7 +185,7 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
           )
         }
         return (
-          <div key={gi} className="prose prose-sm dark:prose-invert max-w-[85%]">
+          <div key={gi} className="prose prose-sm dark:prose-invert w-full">
             <Streamdown isAnimating={isStreaming} components={markdownComponents}>{group.part.text}</Streamdown>
           </div>
         )
