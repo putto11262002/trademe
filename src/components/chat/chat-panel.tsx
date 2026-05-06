@@ -268,7 +268,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="relative flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex h-14 shrink-0 items-center justify-end px-3 gap-1 border-b border-border">
         {messages.length > 0 && (
