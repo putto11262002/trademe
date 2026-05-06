@@ -230,18 +230,17 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   useLayoutEffect(() => {
     if (!scrollContainerRef.current || !lastUserMsgRef.current) return
     const container = scrollContainerRef.current
-    const containerStyle = window.getComputedStyle(container)
-    const paddingTop = parseFloat(containerStyle.paddingTop)
-    const paddingBottom = parseFloat(containerStyle.paddingBottom)
-    const containerH = container.clientHeight
-    const userMsgH = lastUserMsgRef.current.offsetHeight
+    const el = lastUserMsgRef.current
 
-    if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = ""
+    if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = "0px"
     const target = spacerRef.current ?? lastAssistantRef.current
     if (target) {
-      const gap = parseFloat(window.getComputedStyle(target).marginTop)
-      const height = Math.max(0, containerH - paddingTop - paddingBottom - userMsgH - gap)
-      target.style.minHeight = `${height}px`
+      target.style.minHeight = "0px"
+      // How far down the user message sits (accounts for all previous content above it)
+      const elOffsetFromTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+      // scrollHeight needed so elOffsetFromTop is the maximum scrollTop (user msg lands exactly at top)
+      const needed = Math.max(0, container.clientHeight + elOffsetFromTop - container.scrollHeight)
+      target.style.minHeight = `${needed}px`
       prevSpacedElRef.current = target
     }
 
