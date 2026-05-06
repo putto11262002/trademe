@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink, TrendingDown, TrendingUp } from "lucide-react"
 import type { CompanyProfile, Quote } from "@/market"
+import { logoUrl } from "@/market"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ export function DetailHeader({
 }) {
   const isUp = quote.change >= 0
   const Icon = isUp ? TrendingUp : TrendingDown
+  const src = logoUrl(profile, { size: 128 })
 
   return (
     <div className="space-y-3">
@@ -29,8 +31,8 @@ export function DetailHeader({
       </Button>
       <div className="flex flex-wrap items-start gap-4">
         <Avatar className="size-12 rounded-xl">
-          {profile.logoUrl ? (
-            <AvatarImage src={profile.logoUrl} alt="" className="object-contain" />
+          {src ? (
+            <AvatarImage src={src} alt="" className="object-contain" />
           ) : null}
           <AvatarFallback className="rounded-xl text-sm">
             {ticker.slice(0, 2)}
