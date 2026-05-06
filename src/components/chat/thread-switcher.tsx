@@ -3,8 +3,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { MessagesSquare, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { listThreadsFn, deleteThreadFn, createThreadFn } from "@/thread/functions"
-import { DEFAULT_GENERAL_CHAT_MODEL } from "@/agent/general-chat-models"
+import { listThreadsFn, deleteThreadFn } from "@/thread/functions"
 import type { Thread } from "@/thread/types"
 
 type SidebarProps = {
@@ -13,10 +12,10 @@ type SidebarProps = {
   userId: string
   activeThreadId: string | null
   onSelect: (thread: Thread) => void
-  onCreate: (threadId: string) => void
+  onNew: () => void
 }
 
-export function ConversationSidebar({ open, onClose, userId, activeThreadId, onSelect, onCreate }: SidebarProps) {
+export function ConversationSidebar({ open, onClose, userId, activeThreadId, onSelect, onNew }: SidebarProps) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
 
@@ -31,15 +30,6 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
 
   const threads = data?.pages.flatMap((p) => p.threads) ?? []
 
-  const createMutation = useMutation({
-    mutationFn: () => createThreadFn({ data: { userId, modelKey: DEFAULT_GENERAL_CHAT_MODEL, providerOptions: {} } }),
-    onSuccess: (id) => {
-      qc.invalidateQueries({ queryKey: ["threads", userId] })
-      onCreate(id)
-      onClose()
-    },
-  })
-
   const deleteMutation = useMutation({
     mutationFn: (threadId: string) => deleteThreadFn({ data: { id: threadId } }),
     onSuccess: (_data, threadId) => {
@@ -49,8 +39,7 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
         if (remaining.length > 0) {
           onSelect(remaining[0])
         } else {
-          createMutation.mutate()
-          return
+          onNew()
         }
       }
       onClose()
@@ -89,8 +78,7 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
           <Button
             variant="outline"
             size="sm"
-            onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending}
+            onClick={() => { onNew(); onClose() }}
             className="w-full gap-2 rounded-2xl text-xs"
           >
             <Plus className="size-3.5" />
