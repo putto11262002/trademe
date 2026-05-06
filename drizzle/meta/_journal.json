@@ -43,6 +43,13 @@
       "when": 1778054070657,
       "tag": "0005_smart_songbird",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778070876319,
+      "tag": "0006_orange_human_torch",
+      "breakpoints": true
     }
   ]
 }
