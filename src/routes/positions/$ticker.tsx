@@ -8,8 +8,8 @@ import {
   EarningsCard,
   KeyStatsCard,
   NewsFeedCard,
+  PriceHistoryChart,
   TradeHistoryCard,
-  TradingViewChart,
   YourPositionCard,
 } from "@/components/position-detail"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
@@ -49,7 +49,11 @@ function PositionDetail({ ticker }: { ticker: string }) {
         quote={data.quote}
       />
 
-      <TradingViewChart ticker={data.ticker} />
+      <PriceHistoryChart
+        ticker={data.ticker}
+        quote={data.quote}
+        trades={data.trades}
+      />
 
       <AnalystSignalsCard
         quote={data.quote}

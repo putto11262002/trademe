@@ -1,4 +1,5 @@
 export { getQuote, getQuotes } from "./services/quote.server"
+export { getDailyBars } from "./services/bars.server"
 export { getFXRate } from "./services/fx.server"
 export { getNews } from "./services/news.server"
 export { getNextEarnings, getPastEarnings } from "./services/earnings.server"

@@ -14,6 +14,34 @@ export const finnhubQuoteSchema = z.object({
 
 export type FinnhubQuote = z.infer<typeof finnhubQuoteSchema>
 
+// Finnhub /stock/candle — https://finnhub.io/docs/api/stock-candles
+export const finnhubCandleSchema = z.object({
+  c: z.array(z.number()).optional(), // close
+  h: z.array(z.number()).optional(), // high
+  l: z.array(z.number()).optional(), // low
+  o: z.array(z.number()).optional(), // open
+  s: z.string(), // ok | no_data
+  t: z.array(z.number()).optional(), // unix seconds
+  v: z.array(z.number()).optional(), // volume
+})
+
+export type FinnhubCandle = z.infer<typeof finnhubCandleSchema>
+
+// FMP /stable/historical-price-eod/full
+export const fmpHistoricalPriceSchema = z.array(
+  z.object({
+    symbol: z.string().optional(),
+    date: z.string(),
+    open: z.number(),
+    high: z.number(),
+    low: z.number(),
+    close: z.number(),
+    volume: z.number(),
+  }),
+)
+
+export type FmpHistoricalPrice = z.infer<typeof fmpHistoricalPriceSchema>
+
 // Frankfurter /latest — https://www.frankfurter.app/docs/
 export const frankfurterLatestSchema = z.object({
   amount: z.number(),

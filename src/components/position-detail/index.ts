@@ -1,5 +1,6 @@
 export { DetailHeader } from "./detail-header"
 export { TradingViewChart } from "./tradingview-chart"
+export { PriceHistoryChart } from "./price-history-chart"
 export { YourPositionCard } from "./your-position-card"
 export { KeyStatsCard } from "./key-stats-card"
 export { AnalystSignalsCard } from "./analyst-signals-card"
