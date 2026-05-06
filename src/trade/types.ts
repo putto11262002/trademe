@@ -1,4 +1,5 @@
 import type { BrokerSlug } from "./brokers"
+import type { SettlementCurrency } from "./schemas"
 
 export type TradeSide = "buy" | "sell"
 export type TradeSource = "manual" | "slip"
@@ -12,6 +13,7 @@ export type Trade = {
   pricePerShare: number
   fees: number
   fxRate: number | null
+  settlementCurrency: SettlementCurrency
   tradedAt: Date
   broker: BrokerSlug | null
   slipId: string | null

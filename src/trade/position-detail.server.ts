@@ -39,9 +39,13 @@ function enrich(
   fxAsOf: Date,
 ): EnrichedPosition {
   const avgCost = p.totalBought > 0 ? p.totalCost / p.totalBought : 0
-  const avgCostTHB = p.totalBought > 0 && p.totalCostTHB != null
-    ? p.totalCostTHB / p.totalBought
-    : avgCost * fxRate
+  // USD-funded buys contribute 0 to totalCostTHB. For positions with any
+  // THB-funded history use the recorded basis; otherwise fall back to current
+  // FX so the UI has a sensible THB indicator.
+  const avgCostTHB =
+    p.totalBought > 0 && p.totalCostTHB > 0
+      ? p.totalCostTHB / p.totalBought
+      : avgCost * fxRate
   const valueUSD = p.netQuantity * quote.price
   const valueTHB = valueUSD * fxRate
   const costForOpenLeg = avgCost * p.netQuantity

@@ -43,6 +43,13 @@
       "when": 1778054070657,
       "tag": "0005_smart_songbird",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778076265641,
+      "tag": "0006_harsh_killer_shrike",
+      "breakpoints": true
     }
   ]
 }

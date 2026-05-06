@@ -22,7 +22,14 @@ function enrich(
   fx: FXRate,
 ): EnrichedPosition {
   const avgCost = p.totalBought > 0 ? p.totalCost / p.totalBought : 0
-  const avgCostTHB = p.totalBought > 0 ? p.totalCostTHB / p.totalBought : 0
+  // USD-funded buys contribute 0 to totalCostTHB. Fall back to current FX so
+  // pure-USD positions still surface a sensible THB basis. This means fxPnLTHB
+  // on USD-funded trades will read as ~0 (we don't track when the user
+  // originally acquired their USD, so honest attribution isn't possible).
+  const avgCostTHB =
+    p.totalBought > 0 && p.totalCostTHB > 0
+      ? p.totalCostTHB / p.totalBought
+      : avgCost * fx.rate
   const valueUSD = p.netQuantity * quote.price
   const valueTHB = valueUSD * fx.rate
   const costForOpenLeg = avgCost * p.netQuantity
@@ -75,6 +82,11 @@ function computeSectorAllocation(
  *   realizedTHB = sum( totalProceedsTHB - avgCostTHB * totalSold )
  * Avg cost is computed from the total buys *to date*, which is a reasonable
  * approximation when buys precede sells. Pure FIFO can refine this later.
+ *
+ * Note: realizedPnLTHB is approximate for positions with mixed
+ * THB-funded and USD-funded legs — totalCostTHB / totalBought blends
+ * a THB-only numerator over an all-shares denominator. Pure-currency
+ * positions are exact.
  */
 function computeRealizedPnL(positions: Array<Position>): {
   realizedPnLUSD: number

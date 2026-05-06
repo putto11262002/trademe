@@ -20,6 +20,7 @@ function toTrade(row: TradeRow): Trade {
     pricePerShare: parseFloat(row.pricePerShare),
     fees: parseFloat(row.fees),
     fxRate: row.fxRate ? parseFloat(row.fxRate) : null,
+    settlementCurrency: row.settlementCurrency,
     tradedAt: row.tradedAt,
     broker: (row.broker as BrokerSlug | null) ?? null,
     slipId: row.slipId ?? null,
@@ -54,6 +55,7 @@ export async function addTrade(input: AddTradeInput): Promise<Trade> {
       pricePerShare: input.pricePerShare.toString(),
       fees: input.fees.toString(),
       fxRate: input.fxRate != null ? input.fxRate.toString() : null,
+      settlementCurrency: input.settlementCurrency,
       tradedAt: input.tradedAt,
       broker: input.broker ?? null,
       slipId: input.slipId ?? null,
@@ -105,22 +107,23 @@ export async function getPositions(): Promise<Array<Position>> {
         totalProceedsTHB: 0,
         tradeCount: 0,
       } satisfies Position)
-    // For older rows without an FX rate captured at trade time, fall back to 1
-    // so THB totals at least equal USD totals (a no-op rather than NaN/0).
-    const fx = t.fxRate ?? 1
+    // USD-funded trades contribute 0 to THB cost basis (no FX happened at
+    // this trade — user already held USD). THB-funded trades use the rate
+    // they actually paid; their schema guarantees fxRate is non-null.
+    const fxForTHB = t.settlementCurrency === "THB" ? (t.fxRate ?? 0) : 0
     const grossUSD = t.quantity * t.pricePerShare
     if (t.side === "buy") {
       const costUSD = grossUSD + t.fees
       p.netQuantity += t.quantity
       p.totalBought += t.quantity
       p.totalCost += costUSD
-      p.totalCostTHB += costUSD * fx
+      p.totalCostTHB += costUSD * fxForTHB
     } else {
       const proceedsUSD = grossUSD - t.fees
       p.netQuantity -= t.quantity
       p.totalSold += t.quantity
       p.totalProceeds += proceedsUSD
-      p.totalProceedsTHB += proceedsUSD * fx
+      p.totalProceedsTHB += proceedsUSD * fxForTHB
     }
     p.tradeCount += 1
     byTicker.set(t.ticker, p)

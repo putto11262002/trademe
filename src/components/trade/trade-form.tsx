@@ -149,14 +149,22 @@ function NumberStepper({
 }
 
 function LiveTotal({ control }: { control: Control<AddTradeFormValues> }) {
-  const [qtyRaw, priceRaw, feesRaw, fxRaw, side] = useWatch({
+  const [qtyRaw, priceRaw, feesRaw, fxRaw, side, settlementCurrency] = useWatch({
     control,
-    name: ["quantity", "pricePerShare", "fees", "fxRate", "side"],
+    name: [
+      "quantity",
+      "pricePerShare",
+      "fees",
+      "fxRate",
+      "side",
+      "settlementCurrency",
+    ],
   })
   const qty = toNum(qtyRaw)
   const price = toNum(priceRaw)
   const fees = toNum(feesRaw)
   const fx = toNum(fxRaw)
+  const isTHBFunded = settlementCurrency !== "USD"
 
   if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0 || price <= 0) {
     return (
@@ -169,7 +177,8 @@ function LiveTotal({ control }: { control: Control<AddTradeFormValues> }) {
   const gross = qty * price
   const safeFees = Number.isFinite(fees) ? fees : 0
   const totalUSD = side === "buy" ? gross + safeFees : gross - safeFees
-  const totalTHB = Number.isFinite(fx) && fx > 0 ? totalUSD * fx : null
+  const totalTHB =
+    isTHBFunded && Number.isFinite(fx) && fx > 0 ? totalUSD * fx : null
   const verb = side === "buy" ? "You'll pay" : "You'll receive"
 
   return (
@@ -183,10 +192,12 @@ function LiveTotal({ control }: { control: Control<AddTradeFormValues> }) {
           <span className="text-muted-foreground tabular-nums">
             ≈ {thb.format(totalTHB)}
           </span>
-        ) : (
+        ) : isTHBFunded ? (
           <span className="text-muted-foreground text-xs">
             add FX rate for THB
           </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">USD-funded</span>
         )}
       </div>
       <div className="text-muted-foreground mt-1 text-xs tabular-nums">
@@ -225,10 +236,14 @@ export function TradeForm({
     defaultValues: {
       side: "buy",
       fees: 0,
+      settlementCurrency: "THB",
       tradedAt: new Date(),
       ...defaultValues,
     },
   })
+
+  const settlementCurrency = useWatch({ control, name: "settlementCurrency" })
+  const isTHBFunded = settlementCurrency !== "USD"
 
   const mutation = useMutation({
     mutationFn: (data: AddTradeInput) => addTradeFn({ data }),
@@ -345,7 +360,44 @@ export function TradeForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <Field data-invalid={!!errors.settlementCurrency}>
+          <FieldLabel>Settled in</FieldLabel>
+          <Controller
+            control={control}
+            name="settlementCurrency"
+            render={({ field }) => (
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                spacing={0}
+                value={field.value ?? "THB"}
+                onValueChange={(v) => v && field.onChange(v)}
+                className="w-full"
+              >
+                <ToggleGroupItem value="THB" aria-label="THB" className="flex-1">
+                  THB
+                </ToggleGroupItem>
+                <ToggleGroupItem value="USD" aria-label="USD" className="flex-1">
+                  USD
+                </ToggleGroupItem>
+              </ToggleGroup>
+            )}
+          />
+          <FieldDescription>
+            {isTHBFunded
+              ? "Broker converted THB to USD at the FX rate below."
+              : "You already held USD — no FX conversion at trade time."}
+          </FieldDescription>
+          <FieldError>{errors.settlementCurrency?.message}</FieldError>
+        </Field>
+
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-6",
+            isTHBFunded && "sm:grid-cols-2",
+          )}
+        >
           <Field data-invalid={!!errors.fees}>
             <FieldLabel htmlFor="fees">Fees</FieldLabel>
             <Controller
@@ -366,25 +418,27 @@ export function TradeForm({
             <FieldError>{errors.fees?.message}</FieldError>
           </Field>
 
-          <Field data-invalid={!!errors.fxRate}>
-            <FieldLabel htmlFor="fxRate">FX rate</FieldLabel>
-            <Controller
-              control={control}
-              name="fxRate"
-              render={({ field }) => (
-                <NumberStepper
-                  id="fxRate"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  invalid={!!errors.fxRate}
-                  {...NUMBER_FIELDS.fxRate}
-                />
-              )}
-            />
-            <FieldDescription>Optional. USD → THB.</FieldDescription>
-            <FieldError>{errors.fxRate?.message}</FieldError>
-          </Field>
+          {isTHBFunded ? (
+            <Field data-invalid={!!errors.fxRate}>
+              <FieldLabel htmlFor="fxRate">FX rate</FieldLabel>
+              <Controller
+                control={control}
+                name="fxRate"
+                render={({ field }) => (
+                  <NumberStepper
+                    id="fxRate"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    invalid={!!errors.fxRate}
+                    {...NUMBER_FIELDS.fxRate}
+                  />
+                )}
+              />
+              <FieldDescription>Rate broker charged you.</FieldDescription>
+              <FieldError>{errors.fxRate?.message}</FieldError>
+            </Field>
+          ) : null}
         </div>
 
         <Field data-invalid={!!errors.broker}>

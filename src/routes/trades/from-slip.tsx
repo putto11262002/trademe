@@ -59,6 +59,7 @@ function extractionToFormValues(
     quantity: extraction.quantity ?? undefined,
     pricePerShare: extraction.pricePerShare ?? undefined,
     fees: extraction.fees ?? 0,
+    settlementCurrency: extraction.fxRate != null ? "THB" : "USD",
     fxRate: extraction.fxRate ?? undefined,
     tradedAt,
     broker: extraction.broker ?? undefined,
