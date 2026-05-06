@@ -194,11 +194,8 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
 }
 
 export function ChatPanel({ onClose }: { onClose: () => void }) {
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const lastUserMsgRef = useRef<HTMLDivElement>(null)
-  const spacerRef = useRef<HTMLDivElement>(null)
-  const lastAssistantRef = useRef<HTMLDivElement>(null)
-  const prevSpacedElRef = useRef<HTMLDivElement | null>(null)
+  const lastPairRef = useRef<HTMLDivElement>(null)
+  const prevLastPairRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
@@ -224,31 +221,31 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     }
   }, [messages])
 
-  // Single layout pass: set spacer height then scroll — order matters, space must exist before scroll
+  // The last user+assistant pair gets minHeight = containerH - paddingBottom so the pair fills
+  // the visible area. This means scrollTop = pairTop is always the scroll maximum — the user
+  // literally cannot scroll past the user message.
   useLayoutEffect(() => {
-    if (!scrollContainerRef.current || !lastUserMsgRef.current) return
+    if (!scrollContainerRef.current) return
     const container = scrollContainerRef.current
-    const containerStyle = window.getComputedStyle(container)
-    const paddingTop = parseFloat(containerStyle.paddingTop)
-    const paddingBottom = parseFloat(containerStyle.paddingBottom)
-    const containerH = container.clientHeight
-    const userMsgH = lastUserMsgRef.current.offsetHeight
 
-    if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = ""
-    const target = spacerRef.current ?? lastAssistantRef.current
-    if (target) {
-      const gap = parseFloat(window.getComputedStyle(target).marginTop)
-      const height = Math.max(0, containerH - paddingTop - paddingBottom - userMsgH - gap)
-      target.style.minHeight = `${height}px`
-      prevSpacedElRef.current = target
+    // Clear previous last pair's minHeight when a new pair takes over
+    if (prevLastPairRef.current && prevLastPairRef.current !== lastPairRef.current) {
+      prevLastPairRef.current.style.minHeight = ""
+    }
+
+    if (lastPairRef.current) {
+      const paddingBottom = parseFloat(window.getComputedStyle(container).paddingBottom)
+      lastPairRef.current.style.minHeight = `${container.clientHeight - paddingBottom}px`
+      prevLastPairRef.current = lastPairRef.current
     }
 
     if (justSubmittedRef.current) {
       justSubmittedRef.current = false
-      const el = lastUserMsgRef.current
-      const container = scrollContainerRef.current
-      const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
-      container.scrollTop = elTop
+      if (lastPairRef.current) {
+        const el = lastPairRef.current
+        const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+        container.scrollTop = elTop
+      }
     }
   }, [messages])
 
@@ -268,60 +265,92 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="relative flex flex-col h-full">
-      {/* Header */}
-      <div className="flex h-14 shrink-0 items-center justify-end px-3 gap-1 border-b border-border">
-        {messages.length > 0 && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground size-8"
-            onClick={clearHistory}
-            disabled={isStreaming}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground size-8"
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
-
+    <div className="relative h-full">
       {/* Messages */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-none px-4 py-4 pb-36">
+      <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 pb-36">
         {messages.length === 0 ? (
           <p className="text-muted-foreground text-center text-sm mt-8">
             Ask me about your portfolio, a stock price, or recent news.
           </p>
         ) : (
-          <div className="space-y-6">
-            {messages.map((m, i) => {
-              const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
-              const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
+          <div>
+            {(() => {
+              // Group into pairs: leading assistant messages (e.g. initial greeting) render as-is;
+              // each user message + optional following assistant forms a "pair" container.
+              type Pair = { user: UIMessage; userIdx: number; assistant: UIMessage | null; assistantIdx: number | null }
+              const leading: { msg: UIMessage; idx: number }[] = []
+              const pairs: Pair[] = []
+              let i = 0
+              while (i < messages.length && messages[i].role === "assistant") {
+                leading.push({ msg: messages[i], idx: i++ })
+              }
+              while (i < messages.length) {
+                if (messages[i].role === "user") {
+                  const user = messages[i]; const userIdx = i++
+                  const hasAssistant = i < messages.length && messages[i].role === "assistant"
+                  const assistant = hasAssistant ? messages[i] : null
+                  const assistantIdx = hasAssistant ? i++ : null
+                  pairs.push({ user, userIdx, assistant, assistantIdx })
+                } else { i++ }
+              }
               return (
-                <div
-                  key={m.id}
-                  ref={isLastUser ? lastUserMsgRef : isLastAssistant ? lastAssistantRef : undefined}
-                >
-                  <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
-                </div>
+                <>
+                  {leading.map(({ msg, idx }) => (
+                    <div key={msg.id}>
+                      <Message message={msg} isStreaming={isStreaming && idx === messages.length - 1} />
+                    </div>
+                  ))}
+                  {pairs.map((pair, pi) => {
+                    const isLast = pi === pairs.length - 1
+                    return (
+                      <div key={pair.user.id} ref={isLast ? lastPairRef : undefined} className="space-y-6 pt-6">
+                        <div>
+                          <Message message={pair.user} isStreaming={false} />
+                        </div>
+                        {pair.assistant && (
+                          <div>
+                            <Message
+                              message={pair.assistant}
+                              isStreaming={isStreaming && pair.assistantIdx === messages.length - 1}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </>
               )
-            })}
-            {messages.length > 0 && messages[messages.length - 1].role === "user" && (
-              <div ref={spacerRef} />
-            )}
-            <div ref={bottomRef} />
+            })()}
           </div>
         )}
       </div>
 
       {/* Floating input */}
-      <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
+      <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+        {/* Action row */}
+        <div className="pointer-events-auto flex items-center justify-end gap-1">
+          {messages.length > 0 && (
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={clearHistory}
+              disabled={isStreaming}
+              className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive"
+              aria-label="Clear history"
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          )}
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={onClose}
+            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground"
+            aria-label="Close chat"
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
         <div className="pointer-events-auto">
           <InputGroup className="border-border bg-background/80 backdrop-blur-sm shadow-xl">
             <InputGroupTextarea
@@ -392,3 +421,4 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     </div>
   )
 }
+
