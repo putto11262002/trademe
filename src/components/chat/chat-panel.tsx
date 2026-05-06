@@ -178,6 +178,8 @@ type ConnectedChatProps = {
   modelKey: GeneralChatModelKey
   providerOptions: ProviderOptions
   activeTitle: string | null
+  initialMessage?: string | null
+  onInitialMessageSent?: () => void
   onClose: () => void
   onModelSelect: (key: GeneralChatModelKey) => void
   onThinkingSelect: (opts: ProviderOptions) => void
@@ -186,6 +188,7 @@ type ConnectedChatProps = {
 
 function ConnectedChat({
   threadId, modelKey, providerOptions, activeTitle,
+  initialMessage, onInitialMessageSent,
   onClose, onModelSelect, onThinkingSelect, onAutoTitle,
 }: ConnectedChatProps) {
   const lastPairRef = useRef<HTMLDivElement>(null)
@@ -230,6 +233,14 @@ function ConnectedChat({
       hasInitialScrolledRef.current = true
     }
   }, [messages])
+
+  // Send queued first message once on mount (partysocket buffers until WS opens)
+  useEffect(() => {
+    if (!initialMessage) return
+    sendMessage({ text: initialMessage })
+    onInitialMessageSent?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Refocus textarea when streaming ends
   useEffect(() => {
@@ -408,6 +419,119 @@ function ConnectedChat({
 }
 
 // ---------------------------------------------------------------------------
+// PreChatInput — shown when no thread exists yet; creates thread on first send
+// ---------------------------------------------------------------------------
+
+type PreChatInputProps = {
+  modelKey: GeneralChatModelKey
+  providerOptions: ProviderOptions
+  isLoading: boolean
+  onModelSelect: (key: GeneralChatModelKey) => void
+  onThinkingSelect: (opts: ProviderOptions) => void
+  onSubmit: (text: string) => void
+  onClose: () => void
+}
+
+function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onThinkingSelect, onSubmit, onClose }: PreChatInputProps) {
+  const [input, setInput] = useState("")
+  const [modelOpen, setModelOpen] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const floatingRef = useRef<HTMLDivElement>(null)
+
+  const selectedModel = generalChatModels[modelKey] as GeneralChatModel
+  const thinkingLevels = selectedModel.thinking?.levels ?? []
+  const currentThinkingKey = thinkingLevels.find(
+    (l) => JSON.stringify(l.providerOptions) === JSON.stringify(providerOptions)
+  )?.key ?? null
+
+  function submit() {
+    const text = input.trim()
+    if (!text || isLoading) return
+    setInput("")
+    onSubmit(text)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() }
+  }
+
+  return (
+    <>
+      <p className="text-muted-foreground text-center text-sm mt-8 px-4">Ask me about your portfolio, a stock price, or recent news.</p>
+
+      <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+        <div className="pointer-events-auto flex items-center justify-end gap-1">
+          <Button type="button" size="icon-sm" variant="ghost" onClick={onClose}
+            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground" aria-label="Close chat">
+            <X className="size-3.5" />
+          </Button>
+        </div>
+        <div className="pointer-events-auto">
+          <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
+            <InputGroupTextarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your portfolio…"
+              className="max-h-32 px-4 pt-4 text-sm"
+              rows={2}
+              disabled={isLoading}
+            />
+            <InputGroupAddon align="block-end" className="justify-between">
+              <div className="flex items-center gap-1">
+                <Popover open={modelOpen} onOpenChange={setModelOpen}>
+                  <PopoverTrigger asChild>
+                    <button type="button" disabled={isLoading}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                      {selectedModel.label}
+                      <ChevronDown className="size-3 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-48 p-1 gap-0">
+                    {(Object.keys(generalChatModels) as GeneralChatModelKey[]).map((key) => (
+                      <button type="button" key={key} onClick={() => { onModelSelect(key); setModelOpen(false) }}
+                        className={cn("w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                          key === modelKey ? "text-foreground font-medium" : "text-muted-foreground")}>
+                        {generalChatModels[key].label}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+
+                {thinkingLevels.length > 0 && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" disabled={isLoading}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                        Think: {thinkingLevels.find((l) => l.key === currentThinkingKey)?.label ?? "Off"}
+                        <ChevronDown className="size-3 opacity-60" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-36 p-1 gap-0">
+                      {thinkingLevels.map((level) => (
+                        <button type="button" key={level.key} onClick={() => onThinkingSelect(level.providerOptions)}
+                          className={cn("w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                            level.key === currentThinkingKey ? "text-foreground font-medium" : "text-muted-foreground")}>
+                          {level.label}
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+              <InputGroupButton size="icon-sm" variant="default" onClick={submit} disabled={isLoading || !input.trim()}>
+                {isLoading ? <Loader2 className="animate-spin" /> : <ArrowUp />}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // ChatPanel — thread management shell
 // ---------------------------------------------------------------------------
 
@@ -418,16 +542,14 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const [activeTitle, setActiveTitle] = useState<string | null>(null)
   const [modelKey, setModelKey] = useState<GeneralChatModelKey>(DEFAULT_GENERAL_CHAT_MODEL)
   const [providerOptions, setProviderOptions] = useState<ProviderOptions>({})
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
 
   const createMutation = useMutation({
-    mutationFn: () => createThreadFn({ data: { userId: MOCK_USER_ID, modelKey: DEFAULT_GENERAL_CHAT_MODEL, providerOptions: {} } }),
+    mutationFn: () => createThreadFn({ data: { userId: MOCK_USER_ID, modelKey, providerOptions } }),
     onSuccess: (id) => {
       setActiveThreadId(id)
       setActiveTitle(null)
-      setModelKey(DEFAULT_GENERAL_CHAT_MODEL)
-      setProviderOptions({})
       localStorage.setItem(THREAD_LS_KEY, id)
-      setInitialized(true)
     },
   })
 
@@ -435,7 +557,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     mutationFn: (vars: Parameters<typeof updateThreadFn>[0]) => updateThreadFn(vars),
   })
 
-  // Thread initialization
+  // Init — restore last thread if available, otherwise show empty (no server call)
   useEffect(() => {
     const stored = localStorage.getItem(THREAD_LS_KEY)
     if (stored) {
@@ -447,14 +569,14 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
             setModelKey((t.modelKey as GeneralChatModelKey) ?? DEFAULT_GENERAL_CHAT_MODEL)
             setProviderOptions((t.providerOptions as ProviderOptions) ?? {})
             localStorage.setItem(THREAD_LS_KEY, t.id)
-            setInitialized(true)
           } else {
-            createMutation.mutate()
+            localStorage.removeItem(THREAD_LS_KEY)
           }
         })
-        .catch(() => createMutation.mutate())
+        .catch(() => localStorage.removeItem(THREAD_LS_KEY))
+        .finally(() => setInitialized(true))
     } else {
-      createMutation.mutate()
+      setInitialized(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -464,15 +586,17 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     setActiveTitle(t.title ?? null)
     setModelKey((t.modelKey as GeneralChatModelKey) ?? DEFAULT_GENERAL_CHAT_MODEL)
     setProviderOptions((t.providerOptions as ProviderOptions) ?? {})
+    setPendingMessage(null)
     localStorage.setItem(THREAD_LS_KEY, t.id)
   }
 
-  function handleThreadCreate(id: string) {
-    setActiveThreadId(id)
+  function handleNewConversation() {
+    setActiveThreadId(null)
     setActiveTitle(null)
     setModelKey(DEFAULT_GENERAL_CHAT_MODEL)
     setProviderOptions({})
-    localStorage.setItem(THREAD_LS_KEY, id)
+    setPendingMessage(null)
+    localStorage.removeItem(THREAD_LS_KEY)
   }
 
   function handleModelSelect(key: GeneralChatModelKey) {
@@ -498,6 +622,12 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // Called from the pre-chat input — create thread then hand off the message
+  function handleFirstMessage(text: string) {
+    setPendingMessage(text)
+    createMutation.mutate()
+  }
+
   return (
     <div className="relative h-full">
       {/* Top-left toggle */}
@@ -512,10 +642,21 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         userId={MOCK_USER_ID}
         activeThreadId={activeThreadId}
         onSelect={handleThreadSelect}
-        onCreate={handleThreadCreate}
+        onNew={handleNewConversation}
       />
 
-      {/* Connected chat — remounts cleanly on thread switch */}
+      {initialized && !activeThreadId && (
+        <PreChatInput
+          modelKey={modelKey}
+          providerOptions={providerOptions}
+          isLoading={createMutation.isPending}
+          onModelSelect={handleModelSelect}
+          onThinkingSelect={handleThinkingSelect}
+          onSubmit={handleFirstMessage}
+          onClose={onClose}
+        />
+      )}
+
       {initialized && activeThreadId && (
         <Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>}>
           <ConnectedChat
@@ -524,6 +665,8 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
             modelKey={modelKey}
             providerOptions={providerOptions}
             activeTitle={activeTitle}
+            initialMessage={pendingMessage}
+            onInitialMessageSent={() => setPendingMessage(null)}
             onClose={onClose}
             onModelSelect={handleModelSelect}
             onThinkingSelect={handleThinkingSelect}
