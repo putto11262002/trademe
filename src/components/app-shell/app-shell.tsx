@@ -8,8 +8,15 @@ import { AppHeader } from "./app-header"
 import { AppSidebar } from "./app-sidebar"
 import { AuthError } from "./auth-error"
 import { AuthSplash } from "./auth-splash"
-import { MessageSquare } from "lucide-react"
+import { ChevronDown, LayoutDashboard, MessageSquare, PieChart, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Link } from "@tanstack/react-router"
 
 const MIN_CHAT_WIDTH = 320
 const MAX_CHAT_WIDTH = 640
@@ -102,17 +109,41 @@ function AppShellInner({ children }: { children: ReactNode }) {
         {/* Floating pill */}
         <div className="absolute top-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border bg-background/80 backdrop-blur-sm shadow-lg p-1">
-            <button
-              onClick={() => setMobileView("app")}
-              className={cn(
-                "rounded-full px-4 py-1 text-sm font-medium transition-colors",
-                mobileView === "app"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              App
-            </button>
+            {/* App dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={() => setMobileView("app")}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-4 py-1 text-sm font-medium transition-colors",
+                    mobileView === "app"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  App <ChevronDown className="size-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                  <Link to="/" onClick={() => setMobileView("app")} className="flex items-center gap-2">
+                    <LayoutDashboard className="size-4" /> Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/positions" onClick={() => setMobileView("app")} className="flex items-center gap-2">
+                    <PieChart className="size-4" /> Positions
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/trades" onClick={() => setMobileView("app")} className="flex items-center gap-2">
+                    <TrendingUp className="size-4" /> Trades
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Chat toggle */}
             <button
               onClick={() => setMobileView("chat")}
               className={cn(
@@ -130,7 +161,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
         {/* Active view — full bleed, pill floats above */}
         {mobileView === "app" ? (
           <div className="flex h-full w-full overflow-hidden">
-            <AppSidebar />
+            <div className="hidden lg:block"><AppSidebar /></div>
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
               <AppHeader />
               <main className="flex-1 overflow-y-auto">{children}</main>
