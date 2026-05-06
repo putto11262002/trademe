@@ -192,6 +192,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const prevLastPairRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const floatingRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
@@ -216,6 +217,11 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
       hasInitialScrolledRef.current = true
     }
   }, [messages])
+
+  // Refocus textarea when streaming ends so user can type immediately
+  useEffect(() => {
+    if (!isStreaming) textareaRef.current?.focus()
+  }, [isStreaming])
 
   // Keep scroll container paddingBottom in sync with the floating input height so the
   // minHeight calc (which reads paddingBottom via getComputedStyle) stays accurate automatically.
@@ -278,7 +284,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="relative h-full">
       {/* Messages */}
-      <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4">
+      <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {messages.length === 0 ? (
           <p className="text-muted-foreground text-center text-sm mt-8">
             Ask me about your portfolio, a stock price, or recent news.
@@ -365,6 +371,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         <div className="pointer-events-auto">
           <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
             <InputGroupTextarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}

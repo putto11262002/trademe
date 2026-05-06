@@ -87,12 +87,12 @@ function AppShellInner({ children }: { children: ReactNode }) {
         {chatOpen ? (
           <div
             style={{ width: chatWidth }}
-            className={cn("shrink-0 flex my-2 mr-2 rounded-2xl overflow-hidden border-2 shadow-lg transition-colors", isDragging ? "border-primary" : "border-primary/70")}
+            className={cn("shrink-0 flex my-2 mr-2 rounded-4xl overflow-hidden border-2 shadow-lg transition-colors", isDragging ? "border-primary" : "border-primary/70")}
           >
             {/* Drag handle — left edge of the card */}
             <div
               onPointerDown={startResize}
-              className="w-1 shrink-0 cursor-col-resize rounded-l-2xl"
+              className="w-1 shrink-0 cursor-col-resize rounded-l-4xl"
             />
             {/* Chat content */}
             <div className="flex-1 flex flex-col min-w-0">
