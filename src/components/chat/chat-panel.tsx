@@ -197,6 +197,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const lastPairRef = useRef<HTMLDivElement>(null)
   const prevLastPairRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const floatingRef = useRef<HTMLDivElement>(null)
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
@@ -220,6 +221,21 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
       hasInitialScrolledRef.current = true
     }
   }, [messages])
+
+  // Keep scroll container paddingBottom in sync with the floating input height so the
+  // minHeight calc (which reads paddingBottom via getComputedStyle) stays accurate automatically.
+  useEffect(() => {
+    const floating = floatingRef.current
+    const scroll = scrollContainerRef.current
+    if (!floating || !scroll) return
+    const update = () => {
+      scroll.style.paddingBottom = `${floating.offsetHeight + 16}px` // +16 = bottom-4 gap
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(floating)
+    return () => ro.disconnect()
+  }, [])
 
   // The last user+assistant pair gets minHeight = containerH - paddingBottom so the pair fills
   // the visible area. This means scrollTop = pairTop is always the scroll maximum — the user
@@ -267,7 +283,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="relative h-full">
       {/* Messages */}
-      <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 pb-36">
+      <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4">
         {messages.length === 0 ? (
           <p className="text-muted-foreground text-center text-sm mt-8">
             Ask me about your portfolio, a stock price, or recent news.
@@ -326,7 +342,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Floating input */}
-      <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+      <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
         {/* Action row */}
         <div className="pointer-events-auto flex items-center justify-end gap-1">
           {messages.length > 0 && (
