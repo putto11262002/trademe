@@ -304,7 +304,7 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
                 Ask me about your portfolio, a stock price, or recent news.
               </p>
             ) : (
-              <div className="mx-auto max-w-3xl space-y-4">
+              <div className="mx-auto max-w-3xl space-y-6">
                 {messages.map((m, i) => {
                   const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
                   const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
