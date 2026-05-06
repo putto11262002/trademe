@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { LayoutDashboard, MessageSquare, PieChart, TrendingUp } from "lucide-react"
+import { LayoutDashboard, PieChart, TrendingUp } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
@@ -9,13 +9,7 @@ const NAV = [
   { to: "/trades", label: "Trades", icon: TrendingUp },
 ] as const
 
-export function AppSidebar({
-  chatOpen,
-  onChatToggle,
-}: {
-  chatOpen: boolean
-  onChatToggle: () => void
-}) {
+export function AppSidebar() {
   const location = useLocation()
   return (
     <nav
@@ -52,24 +46,6 @@ export function AppSidebar({
         )
       })}
 
-      {/* Chat toggle — pinned to bottom */}
-      <div className="mt-auto">
-        <Tooltip delayDuration={150}>
-          <TooltipTrigger asChild>
-            <button
-              aria-label="Toggle chat"
-              onClick={onChatToggle}
-              className={cn(
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex size-9 items-center justify-center rounded-md transition-colors",
-                chatOpen && "bg-sidebar-accent text-sidebar-accent-foreground",
-              )}
-            >
-              <MessageSquare className="size-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Chat</TooltipContent>
-        </Tooltip>
-      </div>
     </nav>
   )
 }

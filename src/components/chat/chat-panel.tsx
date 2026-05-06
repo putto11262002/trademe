@@ -2,10 +2,9 @@ import { useRef, useEffect, useLayoutEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
-import { AlertCircle, ArrowUp, Bot, Brain, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2, Trash2, X } from "lucide-react"
 import { Streamdown, type Components } from "streamdown"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   InputGroup,
   InputGroupAddon,
@@ -194,7 +193,7 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
   )
 }
 
-export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+export function ChatPanel({ onClose }: { onClose: () => void }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastUserMsgRef = useRef<HTMLDivElement>(null)
   const spacerRef = useRef<HTMLDivElement>(null)
@@ -216,15 +215,14 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   const isStreaming = status === "streaming" || status === "submitted"
   const selectedModel = MODELS[modelKey]
 
-  // On open: scroll to bottom once (no smooth — instant jump to latest)
+  // On mount: scroll to bottom once
   useEffect(() => {
-    if (!open) { hasInitialScrolledRef.current = false; return }
     if (hasInitialScrolledRef.current || messages.length === 0) return
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
       hasInitialScrolledRef.current = true
     }
-  }, [open, messages])
+  }, [messages])
 
   // Single layout pass: set spacer height then scroll — order matters, space must exist before scroll
   useLayoutEffect(() => {
@@ -245,14 +243,14 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
       prevSpacedElRef.current = target
     }
 
-    if (open && justSubmittedRef.current) {
+    if (justSubmittedRef.current) {
       justSubmittedRef.current = false
       const el = lastUserMsgRef.current
       const container = scrollContainerRef.current
       const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
       container.scrollTop = elTop
     }
-  }, [messages, open])
+  }, [messages])
 
   function submit() {
     const text = input.trim()
@@ -270,154 +268,127 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   }
 
   return (
-    <>
-      {/* Full-screen chat overlay — true full screen, covers sidebar too */}
-      {open && (
-        <div className="fixed inset-0 z-40 bg-background flex flex-col">
-          {/* Header — no border */}
-          <div className="flex h-14 shrink-0 items-center justify-end px-4 gap-1">
-            {messages.length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground size-8"
-                onClick={clearHistory}
-                disabled={isStreaming}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground size-8"
-              onClick={onToggle}
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-
-          {/* Messages — padded bottom so content clears the floating input */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-none px-6 py-4 pb-36">
-            {messages.length === 0 ? (
-              <p className="text-muted-foreground text-center text-sm mt-8">
-                Ask me about your portfolio, a stock price, or recent news.
-              </p>
-            ) : (
-              <div className="mx-auto max-w-3xl space-y-6">
-                {messages.map((m, i) => {
-                  const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
-                  const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
-                  return (
-                    <div
-                      key={m.id}
-                      ref={isLastUser ? lastUserMsgRef : isLastAssistant ? lastAssistantRef : undefined}
-                    >
-                      <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
-                    </div>
-                  )
-                })}
-                {messages.length > 0 && messages[messages.length - 1].role === "user" && (
-                  <div ref={spacerRef} />
-                )}
-                <div ref={bottomRef} />
-              </div>
-            )}
-          </div>
-
-          {/* Floating input — absolute so it has no background region of its own */}
-          <div className="absolute bottom-6 left-6 right-6 pointer-events-none">
-            <div className="mx-auto max-w-3xl pointer-events-auto">
-              <InputGroup className="border-border bg-background shadow-xl">
-                <InputGroupTextarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask about your portfolio…"
-                  className="max-h-32 px-4 pt-4 text-sm"
-                  rows={2}
-                  disabled={isStreaming}
-                  autoFocus
-                />
-                <InputGroupAddon align="block-end" className="justify-between">
-                  {/* Model + thinking selectors — bottom left */}
-                  <div className="flex items-center gap-1.5">
-                    <Select
-                      value={modelKey}
-                      onValueChange={(v) => {
-                        const k = v as ModelKey
-                        setModelKey(k)
-                        if (!MODELS[k].supportsThinking) setThinking("off")
-                      }}
-                      disabled={isStreaming}
-                    >
-                      <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(MODELS) as ModelKey[]).map((key) => (
-                          <SelectItem key={key} value={key}>
-                            <span className="font-medium">{MODELS[key].label}</span>
-                            <span className="text-muted-foreground ml-1.5">{MODELS[key].description}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
-                      <Select
-                        value={thinking}
-                        onValueChange={(v) => setThinking(v as ThinkingLevel)}
-                        disabled={isStreaming}
-                      >
-                        <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedModel.thinkingLevels.map((level) => (
-                            <SelectItem key={level} value={level}>
-                              {THINKING_LABELS[level]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-
-                  {/* Send button — bottom right */}
-                  <InputGroupButton
-                    size="icon-sm"
-                    variant="default"
-                    onClick={submit}
-                    disabled={isStreaming || !input.trim()}
-                  >
-                    <ArrowUp />
-                  </InputGroupButton>
-                </InputGroupAddon>
-              </InputGroup>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating pill — hidden when chat is open */}
-      {!open && (
-        <div className="fixed bottom-5 left-0 right-0 z-50 flex justify-center pointer-events-none">
-          <button
-            onClick={onToggle}
-            className="pointer-events-auto border-border bg-background hover:bg-muted flex items-center gap-2 rounded-full border px-3.5 py-2 shadow-lg transition-colors"
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="flex h-14 shrink-0 items-center justify-end px-3 gap-1 border-b border-border">
+        {messages.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground size-8"
+            onClick={clearHistory}
+            disabled={isStreaming}
           >
-            <Bot className="text-muted-foreground size-4" />
-            <span className="text-sm font-medium">Assistant</span>
-            {isStreaming ? (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">thinking…</Badge>
-            ) : (
-              <span className="bg-green-500 size-1.5 rounded-full" />
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground size-8"
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+
+      {/* Messages */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-none px-4 py-4 pb-36">
+        {messages.length === 0 ? (
+          <p className="text-muted-foreground text-center text-sm mt-8">
+            Ask me about your portfolio, a stock price, or recent news.
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {messages.map((m, i) => {
+              const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
+              const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
+              return (
+                <div
+                  key={m.id}
+                  ref={isLastUser ? lastUserMsgRef : isLastAssistant ? lastAssistantRef : undefined}
+                >
+                  <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
+                </div>
+              )
+            })}
+            {messages.length > 0 && messages[messages.length - 1].role === "user" && (
+              <div ref={spacerRef} />
             )}
-            <ChevronUp className="text-muted-foreground size-3.5" />
-          </button>
+            <div ref={bottomRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Floating input */}
+      <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
+        <div className="pointer-events-auto">
+          <InputGroup className="border-border bg-background shadow-xl">
+            <InputGroupTextarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your portfolio…"
+              className="max-h-32 px-4 pt-4 text-sm"
+              rows={2}
+              disabled={isStreaming}
+            />
+            <InputGroupAddon align="block-end" className="justify-between">
+              <div className="flex items-center gap-1.5">
+                <Select
+                  value={modelKey}
+                  onValueChange={(v) => {
+                    const k = v as ModelKey
+                    setModelKey(k)
+                    if (!MODELS[k].supportsThinking) setThinking("off")
+                  }}
+                  disabled={isStreaming}
+                >
+                  <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(MODELS) as ModelKey[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        <span className="font-medium">{MODELS[key].label}</span>
+                        <span className="text-muted-foreground ml-1.5">{MODELS[key].description}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
+                  <Select
+                    value={thinking}
+                    onValueChange={(v) => setThinking(v as ThinkingLevel)}
+                    disabled={isStreaming}
+                  >
+                    <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedModel.thinkingLevels.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {THINKING_LABELS[level]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <InputGroupButton
+                size="icon-sm"
+                variant="default"
+                onClick={submit}
+                disabled={isStreaming || !input.trim()}
+              >
+                <ArrowUp />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   )
 }
