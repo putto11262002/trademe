@@ -2,10 +2,9 @@ import { useRef, useEffect, useLayoutEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
-import { AlertCircle, ArrowUp, Bot, Brain, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2, Trash2, X } from "lucide-react"
 import { Streamdown, type Components } from "streamdown"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   InputGroup,
   InputGroupAddon,
@@ -23,13 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   MODELS,
   THINKING_LABELS,
@@ -185,7 +178,7 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
           )
         }
         return (
-          <div key={gi} className="prose prose-sm dark:prose-invert w-full">
+          <div key={gi} className="prose prose-sm dark:prose-invert w-full text-sm">
             <Streamdown isAnimating={isStreaming} components={markdownComponents}>{group.part.text}</Streamdown>
           </div>
         )
@@ -194,18 +187,18 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
   )
 }
 
-export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const lastUserMsgRef = useRef<HTMLDivElement>(null)
-  const spacerRef = useRef<HTMLDivElement>(null)
-  const lastAssistantRef = useRef<HTMLDivElement>(null)
-  const prevSpacedElRef = useRef<HTMLDivElement | null>(null)
+export function ChatPanel({ onClose }: { onClose: () => void }) {
+  const lastPairRef = useRef<HTMLDivElement>(null)
+  const prevLastPairRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const floatingRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
   const [modelKey, setModelKey] = useState<ModelKey>(DEFAULT_MODEL)
   const [thinking, setThinking] = useState<ThinkingLevel>(DEFAULT_THINKING)
+  const [modelOpen, setModelOpen] = useState(false)
 
   const agent = useAgent({ agent: "chat", name: MOCK_USER_ID })
   const { messages, sendMessage, status, clearHistory } = useAgentChat({
@@ -216,43 +209,62 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   const isStreaming = status === "streaming" || status === "submitted"
   const selectedModel = MODELS[modelKey]
 
-  // On open: scroll to bottom once (no smooth — instant jump to latest)
+  // On mount: scroll to bottom once
   useEffect(() => {
-    if (!open) { hasInitialScrolledRef.current = false; return }
     if (hasInitialScrolledRef.current || messages.length === 0) return
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
       hasInitialScrolledRef.current = true
     }
-  }, [open, messages])
+  }, [messages])
 
-  // Single layout pass: set spacer height then scroll — order matters, space must exist before scroll
+  // Refocus textarea when streaming ends so user can type immediately
+  useEffect(() => {
+    if (!isStreaming) textareaRef.current?.focus()
+  }, [isStreaming])
+
+  // Keep scroll container paddingBottom in sync with the floating input height so the
+  // minHeight calc (which reads paddingBottom via getComputedStyle) stays accurate automatically.
+  useEffect(() => {
+    const floating = floatingRef.current
+    const scroll = scrollContainerRef.current
+    if (!floating || !scroll) return
+    const update = () => {
+      scroll.style.paddingBottom = `${floating.offsetHeight + 16}px` // +16 = bottom-4 gap
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(floating)
+    return () => ro.disconnect()
+  }, [])
+
+  // The last user+assistant pair gets minHeight = containerH - paddingBottom so the pair fills
+  // the visible area. This means scrollTop = pairTop is always the scroll maximum — the user
+  // literally cannot scroll past the user message.
   useLayoutEffect(() => {
-    if (!scrollContainerRef.current || !lastUserMsgRef.current) return
+    if (!scrollContainerRef.current) return
     const container = scrollContainerRef.current
-    const containerStyle = window.getComputedStyle(container)
-    const paddingTop = parseFloat(containerStyle.paddingTop)
-    const paddingBottom = parseFloat(containerStyle.paddingBottom)
-    const containerH = container.clientHeight
-    const userMsgH = lastUserMsgRef.current.offsetHeight
 
-    if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = ""
-    const target = spacerRef.current ?? lastAssistantRef.current
-    if (target) {
-      const gap = parseFloat(window.getComputedStyle(target).marginTop)
-      const height = Math.max(0, containerH - paddingTop - paddingBottom - userMsgH - gap)
-      target.style.minHeight = `${height}px`
-      prevSpacedElRef.current = target
+    // Clear previous last pair's minHeight when a new pair takes over
+    if (prevLastPairRef.current && prevLastPairRef.current !== lastPairRef.current) {
+      prevLastPairRef.current.style.minHeight = ""
     }
 
-    if (open && justSubmittedRef.current) {
+    if (lastPairRef.current) {
+      const paddingBottom = parseFloat(window.getComputedStyle(container).paddingBottom)
+      lastPairRef.current.style.minHeight = `${container.clientHeight - paddingBottom}px`
+      prevLastPairRef.current = lastPairRef.current
+    }
+
+    if (justSubmittedRef.current) {
       justSubmittedRef.current = false
-      const el = lastUserMsgRef.current
-      const container = scrollContainerRef.current
-      const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
-      container.scrollTop = elTop
+      if (lastPairRef.current) {
+        const el = lastPairRef.current
+        const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+        container.scrollTop = elTop
+      }
     }
-  }, [messages, open])
+  }, [messages])
 
   function submit() {
     const text = input.trim()
@@ -270,154 +282,178 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   }
 
   return (
-    <>
-      {/* Full-screen chat overlay — true full screen, covers sidebar too */}
-      {open && (
-        <div className="fixed inset-0 z-40 bg-background flex flex-col">
-          {/* Header — no border */}
-          <div className="flex h-14 shrink-0 items-center justify-end px-4 gap-1">
-            {messages.length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground size-8"
-                onClick={clearHistory}
-                disabled={isStreaming}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground size-8"
-              onClick={onToggle}
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-
-          {/* Messages — padded bottom so content clears the floating input */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-none px-6 py-4 pb-36">
-            {messages.length === 0 ? (
-              <p className="text-muted-foreground text-center text-sm mt-8">
-                Ask me about your portfolio, a stock price, or recent news.
-              </p>
-            ) : (
-              <div className="mx-auto max-w-3xl space-y-6">
-                {messages.map((m, i) => {
-                  const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
-                  const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
-                  return (
-                    <div
-                      key={m.id}
-                      ref={isLastUser ? lastUserMsgRef : isLastAssistant ? lastAssistantRef : undefined}
-                    >
-                      <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
+    <div className="relative h-full">
+      {/* Messages */}
+      <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {messages.length === 0 ? (
+          <p className="text-muted-foreground text-center text-sm mt-8">
+            Ask me about your portfolio, a stock price, or recent news.
+          </p>
+        ) : (
+          <div>
+            {(() => {
+              // Group into pairs: leading assistant messages (e.g. initial greeting) render as-is;
+              // each user message + optional following assistant forms a "pair" container.
+              type Pair = { user: UIMessage; userIdx: number; assistant: UIMessage | null; assistantIdx: number | null }
+              const leading: { msg: UIMessage; idx: number }[] = []
+              const pairs: Pair[] = []
+              let i = 0
+              while (i < messages.length && messages[i].role === "assistant") {
+                leading.push({ msg: messages[i], idx: i++ })
+              }
+              while (i < messages.length) {
+                if (messages[i].role === "user") {
+                  const user = messages[i]; const userIdx = i++
+                  const hasAssistant = i < messages.length && messages[i].role === "assistant"
+                  const assistant = hasAssistant ? messages[i] : null
+                  const assistantIdx = hasAssistant ? i++ : null
+                  pairs.push({ user, userIdx, assistant, assistantIdx })
+                } else { i++ }
+              }
+              return (
+                <>
+                  {leading.map(({ msg, idx }) => (
+                    <div key={msg.id}>
+                      <Message message={msg} isStreaming={isStreaming && idx === messages.length - 1} />
                     </div>
-                  )
-                })}
-                {messages.length > 0 && messages[messages.length - 1].role === "user" && (
-                  <div ref={spacerRef} />
-                )}
-                <div ref={bottomRef} />
-              </div>
-            )}
+                  ))}
+                  {pairs.map((pair, pi) => {
+                    const isLast = pi === pairs.length - 1
+                    return (
+                      <div key={pair.user.id} ref={isLast ? lastPairRef : undefined} className="space-y-6 pt-6">
+                        <div>
+                          <Message message={pair.user} isStreaming={false} />
+                        </div>
+                        {pair.assistant && (
+                          <div>
+                            <Message
+                              message={pair.assistant}
+                              isStreaming={isStreaming && pair.assistantIdx === messages.length - 1}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </>
+              )
+            })()}
           </div>
+        )}
+      </div>
 
-          {/* Floating input — absolute so it has no background region of its own */}
-          <div className="absolute bottom-6 left-6 right-6 pointer-events-none">
-            <div className="mx-auto max-w-3xl pointer-events-auto">
-              <InputGroup className="border-border bg-background shadow-xl">
-                <InputGroupTextarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask about your portfolio…"
-                  className="max-h-32 px-4 pt-4 text-sm"
-                  rows={2}
-                  disabled={isStreaming}
-                  autoFocus
-                />
-                <InputGroupAddon align="block-end" className="justify-between">
-                  {/* Model + thinking selectors — bottom left */}
-                  <div className="flex items-center gap-1.5">
-                    <Select
-                      value={modelKey}
-                      onValueChange={(v) => {
-                        const k = v as ModelKey
-                        setModelKey(k)
-                        if (!MODELS[k].supportsThinking) setThinking("off")
-                      }}
-                      disabled={isStreaming}
-                    >
-                      <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(MODELS) as ModelKey[]).map((key) => (
-                          <SelectItem key={key} value={key}>
-                            <span className="font-medium">{MODELS[key].label}</span>
-                            <span className="text-muted-foreground ml-1.5">{MODELS[key].description}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
-                      <Select
-                        value={thinking}
-                        onValueChange={(v) => setThinking(v as ThinkingLevel)}
-                        disabled={isStreaming}
-                      >
-                        <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border-0 bg-transparent px-2.5 text-xs shadow-none focus:ring-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedModel.thinkingLevels.map((level) => (
-                            <SelectItem key={level} value={level}>
-                              {THINKING_LABELS[level]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-
-                  {/* Send button — bottom right */}
-                  <InputGroupButton
-                    size="icon-sm"
-                    variant="default"
-                    onClick={submit}
-                    disabled={isStreaming || !input.trim()}
-                  >
-                    <ArrowUp />
-                  </InputGroupButton>
-                </InputGroupAddon>
-              </InputGroup>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating pill — hidden when chat is open */}
-      {!open && (
-        <div className="fixed bottom-5 left-0 right-0 z-50 flex justify-center pointer-events-none">
-          <button
-            onClick={onToggle}
-            className="pointer-events-auto border-border bg-background hover:bg-muted flex items-center gap-2 rounded-full border px-3.5 py-2 shadow-lg transition-colors"
+      {/* Floating input */}
+      <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+        {/* Action row */}
+        <div className="pointer-events-auto flex items-center justify-end gap-1">
+          {messages.length > 0 && (
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={clearHistory}
+              disabled={isStreaming}
+              className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive"
+              aria-label="Clear history"
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          )}
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={onClose}
+            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground"
+            aria-label="Close chat"
           >
-            <Bot className="text-muted-foreground size-4" />
-            <span className="text-sm font-medium">Assistant</span>
-            {isStreaming ? (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">thinking…</Badge>
-            ) : (
-              <span className="bg-green-500 size-1.5 rounded-full" />
-            )}
-            <ChevronUp className="text-muted-foreground size-3.5" />
-          </button>
+            <X className="size-3.5" />
+          </Button>
         </div>
-      )}
-    </>
+        <div className="pointer-events-auto">
+          <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
+            <InputGroupTextarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your portfolio…"
+              className="max-h-32 px-4 pt-4 text-sm"
+              rows={2}
+              disabled={isStreaming}
+            />
+            <InputGroupAddon align="block-end" className="justify-between">
+              <div className="flex items-center gap-1">
+                <Popover open={modelOpen} onOpenChange={setModelOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      disabled={isStreaming}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      {selectedModel.label}
+                      <ChevronDown className="size-3 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-48 p-1 gap-0">
+                    {(Object.keys(MODELS) as ModelKey[]).map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setModelKey(key)
+                          if (!MODELS[key].supportsThinking) setThinking("off")
+                          setModelOpen(false)
+                        }}
+                        className={cn(
+                          "w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                          key === modelKey ? "text-foreground font-medium" : "text-muted-foreground",
+                        )}
+                      >
+                        {MODELS[key].label}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+
+                {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        disabled={isStreaming}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                      >
+                        Think: {THINKING_LABELS[thinking]}
+                        <ChevronDown className="size-3 opacity-60" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-36 p-1 gap-0">
+                      {selectedModel.thinkingLevels.map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setThinking(level)}
+                          className={cn(
+                            "w-full rounded-2xl px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+                            level === thinking ? "text-foreground font-medium" : "text-muted-foreground",
+                          )}
+                        >
+                          {THINKING_LABELS[level]}
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+
+              <InputGroupButton
+                size="icon-sm"
+                variant="default"
+                onClick={submit}
+                disabled={isStreaming || !input.trim()}
+              >
+                <ArrowUp />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    </div>
   )
 }
+
