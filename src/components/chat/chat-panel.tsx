@@ -199,6 +199,7 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   const lastUserMsgRef = useRef<HTMLDivElement>(null)
   const spacerRef = useRef<HTMLDivElement>(null)
   const lastAssistantRef = useRef<HTMLDivElement>(null)
+  const prevSpacedElRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
@@ -231,8 +232,11 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
     const containerH = scrollContainerRef.current.clientHeight
     const userMsgH = lastUserMsgRef.current.offsetHeight
     const height = Math.max(0, containerH - userMsgH - 16) // 16 = space-y-4 gap
-    if (spacerRef.current) spacerRef.current.style.minHeight = `${height}px`
-    if (lastAssistantRef.current) lastAssistantRef.current.style.minHeight = `${height}px`
+
+    // Clear stale min-height from the previously styled element before moving to the new one
+    if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = ""
+    const target = spacerRef.current ?? lastAssistantRef.current
+    if (target) { target.style.minHeight = `${height}px`; prevSpacedElRef.current = target }
 
     if (open && justSubmittedRef.current) {
       justSubmittedRef.current = false
