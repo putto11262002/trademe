@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useState } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
@@ -195,10 +195,7 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
 }
 
 export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const lastUserMsgRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const justSubmittedRef = useRef(false)
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
   const [modelKey, setModelKey] = useState<ModelKey>(DEFAULT_MODEL)
@@ -213,40 +210,27 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
   const isStreaming = status === "streaming" || status === "submitted"
   const selectedModel = MODELS[modelKey]
 
-  // Scroll to bottom on open — fires once messages load into DOM
+  function scrollToBottom() {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+    }
+  }
+
+  // On open: scroll to bottom once (no smooth — instant jump to latest)
   useEffect(() => {
     if (!open) { hasInitialScrolledRef.current = false; return }
     if (hasInitialScrolledRef.current || messages.length === 0) return
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-      hasInitialScrolledRef.current = true
-    }
+    scrollToBottom()
+    hasInitialScrolledRef.current = true
   }, [open, messages])
-
-  // After submit: scroll user message to top of container before paint (no flash)
-  useLayoutEffect(() => {
-    if (!open || !justSubmittedRef.current || !lastUserMsgRef.current || !scrollContainerRef.current) return
-    justSubmittedRef.current = false
-    const el = lastUserMsgRef.current
-    const container = scrollContainerRef.current
-    const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
-    container.scrollTop = elTop
-  }, [messages, open])
-
-  // Auto-scroll to bottom while assistant is responding (not while waiting for first token)
-  useEffect(() => {
-    if (!open || !isStreaming) return
-    if (messages[messages.length - 1]?.role === "assistant") {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [messages, open, isStreaming])
 
   function submit() {
     const text = input.trim()
     if (!text || isStreaming) return
     setInput("")
-    justSubmittedRef.current = true
     sendMessage({ text })
+    // Scroll to bottom after new message hits the DOM
+    requestAnimationFrame(() => scrollToBottom())
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -292,26 +276,11 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
               </p>
             ) : (
               <div className="mx-auto max-w-3xl space-y-4">
-                {messages.map((m, i) => {
-                  const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
-                  // Last assistant block (no user after it) gets min-h so user message stays at top.
-                  // Header = 3.5rem, scroll container bottom padding = 9rem.
-                  const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
-                  return (
-                    <div
-                      key={m.id}
-                      ref={isLastUser ? lastUserMsgRef : undefined}
-                      style={isLastAssistant ? { minHeight: "calc(100dvh - 3.5rem - 9rem)" } : undefined}
-                    >
-                      <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
-                    </div>
-                  )
-                })}
-                {/* Spacer while waiting for assistant response — creates scroll room so user message lands at top */}
-                {messages.length > 0 && messages[messages.length - 1].role === "user" && (
-                  <div style={{ minHeight: "calc(100dvh - 3.5rem - 9rem)" }} />
-                )}
-                <div ref={bottomRef} />
+                {messages.map((m, i) => (
+                  <div key={m.id}>
+                    <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
+                  </div>
+                ))}
               </div>
             )}
           </div>
