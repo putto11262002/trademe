@@ -132,6 +132,9 @@ export const finnhub = {
       name: p.name,
       exchange: p.exchange,
       industry: p.finnhubIndustry || undefined,
+      country: p.country || undefined,
+      currency: p.currency || undefined,
+      ipoDate: p.ipo ? new Date(p.ipo) : undefined,
       logoUrl: p.logo || undefined,
       website: p.weburl || undefined,
     }

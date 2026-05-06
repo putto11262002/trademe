@@ -7,6 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core"
+import { marketCompanyProfile } from "./market-company-profile"
 
 export const tradeSide = pgEnum("trade_side", ["buy", "sell"])
 export const tradeSource = pgEnum("trade_source", ["manual"])
@@ -16,7 +17,9 @@ export const trade = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     userId: text("user_id").notNull(),
-    ticker: text().notNull(),
+    ticker: text()
+      .notNull()
+      .references(() => marketCompanyProfile.ticker),
     side: tradeSide().notNull(),
     quantity: numeric({ precision: 18, scale: 8 }).notNull(),
     pricePerShare: numeric("price_per_share", {

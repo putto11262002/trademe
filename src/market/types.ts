@@ -76,9 +76,13 @@ export type CompanyProfile = {
   exchange: string
   sector?: string
   industry?: string
+  country?: string
+  currency?: string
+  ipoDate?: Date
   logoUrl?: string
   website?: string
   description?: string
+  lastRefreshedAt?: Date
 }
 
 export type FXRate = {

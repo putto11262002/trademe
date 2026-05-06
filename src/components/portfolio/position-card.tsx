@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { TrendingDown, TrendingUp } from "lucide-react"
 import type { EnrichedPosition } from "@/trade"
+import { logoUrl } from "@/market"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -18,6 +19,7 @@ import { pct, qty, thb, usd } from "./format"
 export function PositionCard({ position }: { position: EnrichedPosition }) {
   const isUp = position.unrealizedPnLUSD >= 0
   const Icon = isUp ? TrendingUp : TrendingDown
+  const src = logoUrl(position, { size: 96 })
 
   return (
     <Item
@@ -32,8 +34,8 @@ export function PositionCard({ position }: { position: EnrichedPosition }) {
      >
       <ItemMedia variant="image">
         <Avatar className="size-full rounded-none">
-          {position.logoUrl ? (
-            <AvatarImage src={position.logoUrl} alt="" className="object-contain" />
+          {src ? (
+            <AvatarImage src={src} alt="" className="object-contain" />
           ) : null}
           <AvatarFallback className="rounded-xl text-xs">
             {position.ticker.slice(0, 2)}
