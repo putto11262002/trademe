@@ -1,9 +1,9 @@
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect, useLayoutEffect, useState } from "react"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import type { UIMessage, UIDataTypes, UITools } from "ai"
 import { AlertCircle, ArrowUp, Bot, Brain, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2, X } from "lucide-react"
-import { Streamdown } from "streamdown"
+import { Streamdown, type Components } from "streamdown"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -15,6 +15,14 @@ import {
 import { cn } from "@/lib/utils"
 import { toolDisplayRegistry } from "@/agent/tool-display"
 import { Separator } from "@/components/ui/separator"
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -32,6 +40,23 @@ import {
 } from "@/agent/models"
 
 const MOCK_USER_ID = "usr_demo_01"
+
+const markdownComponents: Components = {
+  h1: ({ node: _n, ...props }) => <h1 className="text-base font-semibold mt-3 mb-1" {...props} />,
+  h2: ({ node: _n, ...props }) => <h2 className="text-sm font-semibold mt-2 mb-1" {...props} />,
+  h3: ({ node: _n, ...props }) => <h3 className="text-sm font-medium mt-2 mb-0.5" {...props} />,
+  table: ({ node: _n, ...props }) => (
+    <ScrollArea className="w-full rounded-4xl border">
+      <table className="min-w-full caption-bottom text-sm" {...props} />
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
+  ),
+  thead: ({ node: _n, ...props }) => <TableHeader {...props} />,
+  tbody: ({ node: _n, ...props }) => <TableBody {...props} />,
+  tr: ({ node: _n, ...props }) => <TableRow {...props} />,
+  th: ({ node: _n, ...props }) => <TableHead {...props} />,
+  td: ({ node: _n, ...props }) => <TableCell {...props} />,
+}
 
 type AnyPart = UIMessage<unknown, UIDataTypes, UITools>["parts"][number]
 
@@ -160,8 +185,8 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
           )
         }
         return (
-          <div key={gi} className="prose prose-sm dark:prose-invert max-w-[85%]">
-            <Streamdown isAnimating={isStreaming}>{group.part.text}</Streamdown>
+          <div key={gi} className="prose prose-sm dark:prose-invert w-full">
+            <Streamdown isAnimating={isStreaming} components={markdownComponents}>{group.part.text}</Streamdown>
           </div>
         )
       })}
@@ -171,6 +196,13 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
 
 export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastUserMsgRef = useRef<HTMLDivElement>(null)
+  const spacerRef = useRef<HTMLDivElement>(null)
+  const lastAssistantRef = useRef<HTMLDivElement>(null)
+  const prevSpacedElRef = useRef<HTMLDivElement | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const justSubmittedRef = useRef(false)
+  const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
   const [modelKey, setModelKey] = useState<ModelKey>(DEFAULT_MODEL)
   const [thinking, setThinking] = useState<ThinkingLevel>(DEFAULT_THINKING)
@@ -183,14 +215,50 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
 
   const isStreaming = status === "streaming" || status === "submitted"
   const selectedModel = MODELS[modelKey]
+
+  // On open: scroll to bottom once (no smooth — instant jump to latest)
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (!open) { hasInitialScrolledRef.current = false; return }
+    if (hasInitialScrolledRef.current || messages.length === 0) return
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+      hasInitialScrolledRef.current = true
+    }
+  }, [open, messages])
+
+  // Single layout pass: set spacer height then scroll — order matters, space must exist before scroll
+  useLayoutEffect(() => {
+    if (!scrollContainerRef.current || !lastUserMsgRef.current) return
+    const container = scrollContainerRef.current
+    const containerStyle = window.getComputedStyle(container)
+    const paddingTop = parseFloat(containerStyle.paddingTop)
+    const paddingBottom = parseFloat(containerStyle.paddingBottom)
+    const containerH = container.clientHeight
+    const userMsgH = lastUserMsgRef.current.offsetHeight
+
+    if (prevSpacedElRef.current) prevSpacedElRef.current.style.minHeight = ""
+    const target = spacerRef.current ?? lastAssistantRef.current
+    if (target) {
+      const gap = parseFloat(window.getComputedStyle(target).marginTop)
+      const height = Math.max(0, containerH - paddingTop - paddingBottom - userMsgH - gap)
+      target.style.minHeight = `${height}px`
+      prevSpacedElRef.current = target
+    }
+
+    if (open && justSubmittedRef.current) {
+      justSubmittedRef.current = false
+      const el = lastUserMsgRef.current
+      const container = scrollContainerRef.current
+      const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+      container.scrollTop = elTop
+    }
   }, [messages, open])
 
   function submit() {
     const text = input.trim()
     if (!text || isStreaming) return
     setInput("")
+    justSubmittedRef.current = true
     sendMessage({ text })
   }
 
@@ -230,20 +298,28 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
           </div>
 
           {/* Messages — padded bottom so content clears the floating input */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 pb-36">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-none px-6 py-4 pb-36">
             {messages.length === 0 ? (
               <p className="text-muted-foreground text-center text-sm mt-8">
                 Ask me about your portfolio, a stock price, or recent news.
               </p>
             ) : (
-              <div className="mx-auto max-w-3xl space-y-4">
-                {messages.map((m, i) => (
-                  <Message
-                    key={m.id}
-                    message={m}
-                    isStreaming={isStreaming && i === messages.length - 1}
-                  />
-                ))}
+              <div className="mx-auto max-w-3xl space-y-6">
+                {messages.map((m, i) => {
+                  const isLastUser = m.role === "user" && !messages.slice(i + 1).some(msg => msg.role === "user")
+                  const isLastAssistant = m.role === "assistant" && !messages.slice(i + 1).some(msg => msg.role === "user")
+                  return (
+                    <div
+                      key={m.id}
+                      ref={isLastUser ? lastUserMsgRef : isLastAssistant ? lastAssistantRef : undefined}
+                    >
+                      <Message message={m} isStreaming={isStreaming && i === messages.length - 1} />
+                    </div>
+                  )
+                })}
+                {messages.length > 0 && messages[messages.length - 1].role === "user" && (
+                  <div ref={spacerRef} />
+                )}
                 <div ref={bottomRef} />
               </div>
             )}
