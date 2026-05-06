@@ -27,6 +27,21 @@ export const finnhubCandleSchema = z.object({
 
 export type FinnhubCandle = z.infer<typeof finnhubCandleSchema>
 
+// FMP /stable/historical-price-eod/full
+export const fmpHistoricalPriceSchema = z.array(
+  z.object({
+    symbol: z.string().optional(),
+    date: z.string(),
+    open: z.number(),
+    high: z.number(),
+    low: z.number(),
+    close: z.number(),
+    volume: z.number(),
+  }),
+)
+
+export type FmpHistoricalPrice = z.infer<typeof fmpHistoricalPriceSchema>
+
 // Frankfurter /latest — https://www.frankfurter.app/docs/
 export const frankfurterLatestSchema = z.object({
   amount: z.number(),

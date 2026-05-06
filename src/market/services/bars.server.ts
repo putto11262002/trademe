@@ -2,6 +2,8 @@ import { and, asc, eq, gte, lte, sql } from "drizzle-orm"
 import { getDb } from "@/db/index.server"
 import { marketBar } from "@/db/schema"
 import { kvCache } from "../cache/kv.server"
+import { MarketRateLimitError, MarketUpstreamError } from "../errors"
+import { fmp } from "../vendors/fmp.server"
 import { finnhub } from "../vendors/finnhub.server"
 import type { Bar } from "../types"
 
@@ -95,10 +97,11 @@ async function fetchAndMerge(
   const alreadyFetched = await kvCache.get<boolean>(key)
   if (alreadyFetched) return
 
-  const fresh = await finnhub.fetchDailyBars(ticker, {
+  const fetchRange = {
     from: startOfUTCDay(from),
     to: endOfUTCDay(to),
-  })
+  }
+  const fresh = await fetchVendorDailyBars(ticker, fetchRange)
 
   if (fresh.length > 0) {
     await getDb()
@@ -123,6 +126,23 @@ async function fetchAndMerge(
     true,
     includesToday(from, to) ? CURRENT_BAR_TTL_SECONDS : HISTORICAL_GAP_TTL_SECONDS,
   )
+}
+
+async function fetchVendorDailyBars(
+  ticker: string,
+  opts: { from: Date; to: Date },
+): Promise<Array<Bar>> {
+  try {
+    return await finnhub.fetchDailyBars(ticker, opts)
+  } catch (err) {
+    if (
+      err instanceof MarketUpstreamError ||
+      err instanceof MarketRateLimitError
+    ) {
+      return fmp.fetchDailyBars(ticker, opts)
+    }
+    throw err
+  }
 }
 
 export async function getDailyBars(
