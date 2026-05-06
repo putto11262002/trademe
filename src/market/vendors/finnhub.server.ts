@@ -1,6 +1,7 @@
 import { MarketNotFoundError, MarketRateLimitError, MarketUpstreamError } from "../errors"
 import {
   finnhubEarningsSchema,
+  finnhubCandleSchema,
   finnhubMetricSchema,
   finnhubNewsItemSchema,
   finnhubPriceTargetSchema,
@@ -10,6 +11,7 @@ import {
 } from "../schemas"
 import type {
   CompanyProfile,
+  Bar,
   EarningsEvent,
   Fundamentals,
   NewsItem,
@@ -42,6 +44,55 @@ async function get<T>(path: string): Promise<T> {
 const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 
 export const finnhub = {
+  async fetchDailyBars(
+    ticker: string,
+    opts: { from: Date; to: Date },
+  ): Promise<Array<Bar>> {
+    const from = Math.floor(opts.from.getTime() / 1000)
+    const to = Math.floor(opts.to.getTime() / 1000)
+    const raw = await get<unknown>(
+      `/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=D&from=${from}&to=${to}`,
+    )
+    const parsed = finnhubCandleSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new MarketUpstreamError("finnhub", "invalid /stock/candle response", {
+        cause: parsed.error,
+      })
+    }
+    const candles = parsed.data
+    if (candles.s === "no_data") return []
+    if (candles.s !== "ok") {
+      throw new MarketUpstreamError("finnhub", `unexpected /stock/candle status ${candles.s}`)
+    }
+
+    const closes = candles.c ?? []
+    const highs = candles.h ?? []
+    const lows = candles.l ?? []
+    const opens = candles.o ?? []
+    const times = candles.t ?? []
+    const volumes = candles.v ?? []
+    const len = times.length
+    if (
+      closes.length !== len ||
+      highs.length !== len ||
+      lows.length !== len ||
+      opens.length !== len ||
+      volumes.length !== len
+    ) {
+      throw new MarketUpstreamError("finnhub", "invalid /stock/candle response lengths")
+    }
+
+    return times.map((time, i) => ({
+      date: new Date(time * 1000),
+      open: opens[i],
+      high: highs[i],
+      low: lows[i],
+      close: closes[i],
+      volume: volumes[i],
+      adjustedClose: closes[i],
+    }))
+  },
+
   async fetchQuote(ticker: string): Promise<Quote> {
     const raw = await get<unknown>(`/quote?symbol=${encodeURIComponent(ticker)}`)
     const parsed = finnhubQuoteSchema.safeParse(raw)
