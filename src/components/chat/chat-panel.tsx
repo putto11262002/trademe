@@ -298,7 +298,7 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
           </div>
 
           {/* Messages — padded bottom so content clears the floating input */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-4 pb-36">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-none px-6 py-4 pb-36">
             {messages.length === 0 ? (
               <p className="text-muted-foreground text-center text-sm mt-8">
                 Ask me about your portfolio, a stock price, or recent news.
