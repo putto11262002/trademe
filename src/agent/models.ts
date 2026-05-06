@@ -28,6 +28,13 @@ export const MODELS = {
     description: "262K ctx · multimodal",
     supportsThinking: false,
   },
+  kimiThinking: {
+    id: "moonshotai/kimi-k2-thinking",
+    label: "Kimi K2 Thinking",
+    description: "Always-on reasoning",
+    supportsThinking: true,
+    thinkingLevels: ["off", "high", "max"] as ThinkingLevel[],
+  },
 } satisfies Record<string, ModelConfig>
 
 export type ModelKey = keyof typeof MODELS
