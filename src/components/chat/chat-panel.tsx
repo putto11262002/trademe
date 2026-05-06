@@ -15,6 +15,14 @@ import {
 import { cn } from "@/lib/utils"
 import { toolDisplayRegistry } from "@/agent/tool-display"
 import { Separator } from "@/components/ui/separator"
+import {
+  MODELS,
+  THINKING_LABELS,
+  DEFAULT_MODEL,
+  DEFAULT_THINKING,
+  type ModelKey,
+  type ThinkingLevel,
+} from "@/agent/models"
 
 const MOCK_USER_ID = "usr_demo_01"
 
@@ -122,11 +130,17 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
 export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState("")
+  const [modelKey, setModelKey] = useState<ModelKey>(DEFAULT_MODEL)
+  const [thinking, setThinking] = useState<ThinkingLevel>(DEFAULT_THINKING)
 
   const agent = useAgent({ agent: "chat", name: MOCK_USER_ID })
-  const { messages, sendMessage, status, clearHistory } = useAgentChat({ agent })
+  const { messages, sendMessage, status, clearHistory } = useAgentChat({
+    agent,
+    body: () => ({ model: modelKey, thinking }),
+  })
 
   const isStreaming = status === "streaming" || status === "submitted"
+  const selectedModel = MODELS[modelKey]
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, open])
@@ -151,26 +165,75 @@ export function ChatPanel({ open, onToggle }: { open: boolean; onToggle: () => v
       {open && (
         <div className="fixed inset-0 z-40 bg-background flex flex-col">
           {/* Header — no border */}
-          <div className="flex h-14 shrink-0 items-center justify-end px-4 gap-1">
-            {messages.length > 0 && (
+          <div className="flex h-14 shrink-0 items-center justify-between px-4">
+            {/* Model + thinking selectors */}
+            <div className="flex items-center gap-1.5">
+              {/* Model toggle */}
+              <div className="border-border flex items-center gap-0.5 rounded-full border p-0.5">
+                {(Object.keys(MODELS) as ModelKey[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setModelKey(key)
+                      if (!MODELS[key].supportsThinking) setThinking("off")
+                    }}
+                    disabled={isStreaming}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                      modelKey === key
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {MODELS[key].label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Thinking toggle — only when Pro is selected */}
+              {selectedModel.supportsThinking && selectedModel.thinkingLevels && (
+                <div className="border-border flex items-center gap-0.5 rounded-full border p-0.5">
+                  {selectedModel.thinkingLevels.map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setThinking(level)}
+                      disabled={isStreaming}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        thinking === level
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {THINKING_LABELS[level]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-8"
+                  onClick={clearHistory}
+                  disabled={isStreaming}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground size-8"
-                onClick={clearHistory}
-                disabled={isStreaming}
+                onClick={onToggle}
               >
-                <Trash2 className="size-4" />
+                <X className="size-4" />
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground size-8"
-              onClick={onToggle}
-            >
-              <X className="size-4" />
-            </Button>
+            </div>
           </div>
 
           {/* Messages — padded bottom so content clears the floating input */}
