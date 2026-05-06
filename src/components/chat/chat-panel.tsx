@@ -234,9 +234,11 @@ function ConnectedChat({
     }
   }, [messages])
 
-  // Send queued first message once on mount (partysocket buffers until WS opens)
+  // Send queued first message exactly once on mount (ref guards against Strict Mode double-invoke)
+  const hasSentInitialRef = useRef(false)
   useEffect(() => {
-    if (!initialMessage) return
+    if (!initialMessage || hasSentInitialRef.current) return
+    hasSentInitialRef.current = true
     sendMessage({ text: initialMessage })
     onInitialMessageSent?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
