@@ -11,16 +11,22 @@ export type ModelConfig = {
 export const MODELS = {
   flash: {
     id: "deepseek/deepseek-v4-flash",
-    label: "Flash",
+    label: "DeepSeek V4 Flash",
     description: "Fast · lightweight",
     supportsThinking: false,
   },
   pro: {
     id: "deepseek/deepseek-v4-pro",
-    label: "Pro",
+    label: "DeepSeek V4 Pro",
     description: "Smarter · optional thinking",
     supportsThinking: true,
     thinkingLevels: ["off", "high", "max"] as ThinkingLevel[],
+  },
+  kimi: {
+    id: "moonshotai/kimi-k2.5",
+    label: "Kimi K2.5",
+    description: "262K ctx · multimodal",
+    supportsThinking: false,
   },
 } satisfies Record<string, ModelConfig>
 
