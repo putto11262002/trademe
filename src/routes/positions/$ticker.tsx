@@ -62,7 +62,7 @@ function PositionDetail({ ticker }: { ticker: string }) {
       />
       <KeyStatsCard quote={data.quote} fundamentals={data.fundamentals} />
 
-      <YourPositionCard position={data.position} fxRate={data.fxRate} />
+      <YourPositionCard position={data.position} />
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Trade history</h2>

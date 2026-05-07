@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import { pct, qty, thb0, usd2 } from "./format"
+import { pct, qty, usd2 } from "./format"
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -18,10 +18,8 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 
 export function YourPositionCard({
   position,
-  fxRate,
 }: {
   position: EnrichedPosition | null
-  fxRate: number
 }) {
   if (!position) {
     return (
@@ -40,7 +38,6 @@ export function YourPositionCard({
 
   const isUp = position.unrealizedPnLUSD >= 0
   const Icon = isUp ? TrendingUp : TrendingDown
-  const pnlTHB = position.unrealizedPnLUSD * fxRate
   const costUSD = position.avgCost * position.netQuantity
 
   return (
@@ -53,9 +50,6 @@ export function YourPositionCard({
           <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">Market value</div>
             <div className="text-2xl font-semibold tabular-nums">
-              {thb0.format(position.valueTHB)}
-            </div>
-            <div className="text-muted-foreground text-sm tabular-nums">
               {usd2.format(position.valueUSD)}
             </div>
           </div>
@@ -70,15 +64,12 @@ export function YourPositionCard({
                 {usd2.format(position.unrealizedPnLUSD)} ({pct(position.unrealizedPnLPct)})
               </span>
             </Badge>
-            <div className="text-muted-foreground text-xs tabular-nums">
-              {thb0.format(pnlTHB)} unrealized
-            </div>
           </div>
         </div>
 
         <Separator />
 
-        <div className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm sm:grid-cols-6">
+        <div className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm sm:grid-cols-5">
           <Stat label="Quantity" value={`${qty.format(position.netQuantity)} sh`} />
           <Stat label="Avg cost" value={usd2.format(position.avgCost)} />
           <Stat label="Cost basis" value={usd2.format(costUSD)} />
@@ -88,7 +79,6 @@ export function YourPositionCard({
             sub={`bought ${qty.format(position.totalBought)} · sold ${qty.format(position.totalSold)}`}
           />
           <Stat label="Last price" value={usd2.format(position.currentPriceUSD)} />
-          <Stat label="USD/THB" value={position.fxRate.toFixed(2)} sub="Current rate" />
         </div>
       </CardContent>
     </Card>

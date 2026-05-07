@@ -1,4 +1,4 @@
-// Compact USD ($1.2B / $3.4M) and plain USD/THB/qty/pct formatters reused
+// Compact USD ($1.2B / $3.4M) and plain USD/qty/pct formatters reused
 // across the position-detail page. The /portfolio/format helpers are stricter
 // (always 2 decimals) so we layer on top with our own compact helpers here.
 
@@ -11,12 +11,6 @@ export const usd2 = new Intl.NumberFormat("en-US", {
 export const usd0 = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-  maximumFractionDigits: 0,
-})
-
-export const thb0 = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "THB",
   maximumFractionDigits: 0,
 })
 

@@ -24,15 +24,13 @@ export type Position = {
   totalBought: number
   totalSold: number
   totalCost: number
-  totalCostTHB: number
   totalProceeds: number
-  totalProceedsTHB: number
   tradeCount: number
 }
 
 export type SectorAllocation = {
   sector: string
-  valueTHB: number
+  valueUSD: number
   pct: number
 }
 
@@ -43,34 +41,22 @@ export type EnrichedPosition = Position & {
   currentPriceUSD: number
   priceAsOf: Date
   avgCost: number
-  avgCostTHB: number
   valueUSD: number
-  valueTHB: number
   unrealizedPnLUSD: number
   unrealizedPnLPct: number
-  fxRate: number
-  fxAsOf: Date
 }
 
 export type PortfolioSummary = {
   totalValueUSD: number
-  totalValueTHB: number
   totalCostUSD: number
-  totalCostTHB: number
   unrealizedPnLUSD: number
   unrealizedPnLPct: number
-  unrealizedPnLTHB: number
-  /** THB P&L attributable to stock price moves (= unrealizedPnLUSD * blended entry FX). */
-  stockPnLTHB: number
-  /** THB P&L attributable to USD/THB moves (= unrealizedPnLTHB - stockPnLTHB). */
-  fxPnLTHB: number
   /** Realized P&L in USD using avg-cost method across all closed/partially-closed positions. */
   realizedPnLUSD: number
-  /** Realized P&L in THB using each trade's FX rate (entry FX for cost, exit FX for proceeds). */
-  realizedPnLTHB: number
   sectorAllocation: Array<SectorAllocation>
   positionCount: number
   asOf: Date
+  /** Current USD→THB rate, kept solely for display ("≈฿X at today's rate"). Not used in P&L math. */
   fxRate: number
   fxAsOf: Date
 }
@@ -102,6 +88,4 @@ export type PositionDetail = {
   nextEarnings: EarningsEvent | null
   pastEarnings: Array<EarningsEvent>
   trades: Array<Trade>
-  fxRate: number
-  fxAsOf: Date
 }
