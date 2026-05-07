@@ -20,12 +20,12 @@ export const generalChatModels = {
   flash: {
     id: "deepseek/deepseek-v4-flash",
     label: "DeepSeek V4 Flash",
-    contextWindow: 65536,
+    contextWindow: 1_000_000,
   },
   pro: {
     id: "deepseek/deepseek-v4-pro",
     label: "DeepSeek V4 Pro",
-    contextWindow: 65536,
+    contextWindow: 1_000_000,
     thinking: {
       levels: [
         { key: "off",  label: "Off",  providerOptions: {} },
