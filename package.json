@@ -40,6 +40,7 @@
     "@tanstack/react-start": "^1.166.15",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/router-plugin": "^1.166.13",
+    "@tanstack/start-storage-context": "^1.166.35",
     "agents": "^0.12.3",
     "ai": "^6.0.175",
     "class-variance-authority": "^0.7.1",
