@@ -1,6 +1,6 @@
 # architecture.md — technical design
 
-> Branched from [IDEA.md](IDEA.md). High-level technical architecture. Implementation details left to engineering. Cross-references [v0.md](v0.md) for what's in scope right now. Last updated 2026-05-01.
+> Branched from [IDEA.md](IDEA.md). High-level technical architecture. Implementation details left to engineering. Cross-references [v0.md](v0.md) for what's in scope right now. Last updated 2026-05-07.
 
 ---
 
@@ -39,7 +39,7 @@ External APIs (vendors per v0.md)  +  shared DB (per-module schemas)
 
 Owns the user's portfolio data + logic.
 
-- **Entities:** `Trade` (immutable log of buys/sells — source of truth), `Position` (current state per ticker, derived from Trades), `Lot` (per-buy lots for FIFO + FX-decomposition), `Portfolio` (1 per user in v0).
+- **Entities:** `Trade` (immutable log of buys/sells — source of truth), `Position` (current state per ticker, derived from Trades), `Lot` (per-buy lots for FIFO cost basis), `Portfolio` (1 per user in v0).
 - **Reads** (return app-shaped views): `getPortfolioSnapshot`, `getPositionDetail`, `getAllPositions`, `listTrades`.
 - **Writes:** `addTrade`, `editTrade`, `deleteTrade`, `rebuildPositions`.
 - DB queries directly. Trade is source of truth (audit + lot tracking + slip provenance); Position is derived (cached or recomputed; same answer either way).
@@ -101,8 +101,9 @@ HomeScreen
   → portfolio.getPortfolioSnapshot(userId)
        → DB query: trades for portfolio
        → derive positions from trades
-       → for each position: dal.getQuote(ticker) + dal.getFXRate
-       → compute totals + composition + P&L
+       → for each position: dal.getQuote(ticker)
+       → dal.getFXRate (once, USD→THB) — display-only sticker, not used in P&L math
+       → compute totals + composition + P&L (USD-native)
        → return app-shaped snapshot
   → render
 ```
@@ -145,7 +146,7 @@ DAL handles all external-data caching. Per-type freshness rules:
 | News | 1 hour TTL |
 | Filings | Never stale (filings are immutable) |
 | Earnings calendar | 1 day TTL |
-| FX rate | 5 min TTL |
+| FX rate (USD↔THB, display sticker only) | 5 min TTL |
 
 Modules and analytics do NOT cache external data — that's the DAL's job. Modules may cache derived state (e.g., Position from Trades) locally.
 
