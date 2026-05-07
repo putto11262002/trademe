@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   generalChatModels,
   DEFAULT_GENERAL_CHAT_MODEL,
@@ -166,6 +167,68 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
         )
       })}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// ContextRing — circular usage indicator with hover tooltip
+// ---------------------------------------------------------------------------
+
+function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
+  pct: number
+  inputTokens: number
+  outputTokens: number
+  contextWindow: number
+}) {
+  const r = 9
+  const circ = 2 * Math.PI * r
+  const offset = circ * (1 - pct / 100)
+  const color = pct >= 80 ? "text-destructive" : pct >= 60 ? "text-yellow-500" : "text-muted-foreground"
+  const total = inputTokens + outputTokens
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className={cn("relative size-7 shrink-0 cursor-default", color)}>
+          <svg className="size-full -rotate-90" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="2" strokeOpacity="0.2" />
+            <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="2"
+              strokeDasharray={circ} strokeDashoffset={offset}
+              strokeLinecap="round" className="transition-all duration-500" />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[7px] font-medium tabular-nums leading-none">
+            {pct}%
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="end" className="w-48 p-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Input</span>
+            <span>{inputTokens.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Output</span>
+            <span>{outputTokens.toLocaleString()}</span>
+          </div>
+          <div className="border-t border-border pt-2">
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-muted-foreground">Context used</span>
+              <span className={cn("font-medium", pct >= 80 ? "text-destructive" : pct >= 60 ? "text-yellow-500" : "")}>{pct}%</span>
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-border/40">
+              <div
+                className={cn("h-full rounded-full transition-all duration-500", pct >= 80 ? "bg-destructive" : pct >= 60 ? "bg-yellow-500" : "bg-primary/60")}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="mt-1 text-right text-[10px] text-muted-foreground tabular-nums">
+              {total.toLocaleString()} / {contextWindow.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -353,20 +416,15 @@ function ConnectedChat({
 
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
-        {contextPct !== null && contextPct >= 80 && (
-          <div className="pointer-events-auto rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            Context {contextPct}% full — start a new conversation to continue.
-          </div>
-        )}
-        {contextPct !== null && (
-          <div className="pointer-events-none h-1 w-full overflow-hidden rounded-full bg-border/40">
-            <div
-              className={cn("h-full rounded-full transition-all duration-500", contextPct >= 80 ? "bg-destructive" : contextPct >= 60 ? "bg-yellow-500" : "bg-primary/60")}
-              style={{ width: `${contextPct}%` }}
-            />
-          </div>
-        )}
         <div className="pointer-events-auto flex items-center justify-end gap-1">
+          {contextUsage && contextPct !== null && (
+            <ContextRing
+              pct={contextPct}
+              inputTokens={contextUsage.inputTokens}
+              outputTokens={contextUsage.outputTokens}
+              contextWindow={selectedModel.contextWindow}
+            />
+          )}
           {messages.length > 0 && (
             <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
               className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive" aria-label="Clear history">
