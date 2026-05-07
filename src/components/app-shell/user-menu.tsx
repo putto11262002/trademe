@@ -42,7 +42,7 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>Settings</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => signOut({ redirectUrl: "https://trademe.sabaiscale.com" })}>Sign out</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/sign-in" })}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

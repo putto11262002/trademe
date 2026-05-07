@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const Route = createFileRoute("/positions/")({ component: PositionsPage })
+export const Route = createFileRoute("/_app/positions/")({ component: PositionsPage })
 
 function PositionsPage() {
   return (

@@ -10,7 +10,6 @@ import { TanStackDevtools } from "@tanstack/react-devtools"
 import { QueryClient } from "@tanstack/react-query"
 import { ClerkProvider } from "@clerk/tanstack-react-start"
 
-import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/sonner"
 import { getCurrentUserFn } from "@/auth"
 import appCss from "../styles.css?url"
@@ -18,24 +17,16 @@ import appCss from "../styles.css?url"
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
 }>()({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
+    if (location.pathname.startsWith("/sign-")) return
     const user = await getCurrentUserFn()
-    if (!user) {
-      throw redirect({ href: `https://accounts.clerk.com/sign-in?redirect_url=${encodeURIComponent(typeof window !== "undefined" ? window.location.origin : "https://trademe.sabaiscale.com")}` })
-    }
+    if (!user) throw redirect({ to: "/sign-in" })
   },
   head: () => ({
     meta: [
-      {
-        charSet: "utf-8",
-      },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      {
-        title: "TradeMe",
-      },
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "TradeMe" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -55,30 +46,21 @@ export const Route = createRootRouteWithContext<{
 
 function RootDocument() {
   return (
-    <ClerkProvider>
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <AppShell>
+    <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/sign-in">
+      <html lang="en">
+        <head>
+          <HeadContent />
+        </head>
+        <body>
           <Outlet />
-        </AppShell>
-        <Toaster />
-        <TanStackDevtools
-          config={{
-            position: "bottom-right",
-          }}
-          plugins={[
-            {
-              name: "Tanstack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
-        <Scripts />
-      </body>
-    </html>
+          <Toaster />
+          <TanStackDevtools
+            config={{ position: "bottom-right" }}
+            plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+          />
+          <Scripts />
+        </body>
+      </html>
     </ClerkProvider>
   )
 }

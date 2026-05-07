@@ -9,82 +9,108 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ChatRouteImport } from './routes/chat'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as TradesIndexRouteImport } from './routes/trades/index'
-import { Route as PositionsIndexRouteImport } from './routes/positions/index'
-import { Route as TradesNewRouteImport } from './routes/trades/new'
-import { Route as TradesFromSlipRouteImport } from './routes/trades/from-slip'
-import { Route as PositionsTickerRouteImport } from './routes/positions/$ticker'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppChatRouteImport } from './routes/_app/chat'
+import { Route as AppTradesIndexRouteImport } from './routes/_app/trades/index'
+import { Route as AppPositionsIndexRouteImport } from './routes/_app/positions/index'
+import { Route as AppTradesNewRouteImport } from './routes/_app/trades/new'
+import { Route as AppTradesFromSlipRouteImport } from './routes/_app/trades/from-slip'
+import { Route as AppPositionsTickerRouteImport } from './routes/_app/positions/$ticker'
 
-const ChatRoute = ChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const TradesIndexRoute = TradesIndexRouteImport.update({
+const AppChatRoute = AppChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTradesIndexRoute = AppTradesIndexRouteImport.update({
   id: '/trades/',
   path: '/trades/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const PositionsIndexRoute = PositionsIndexRouteImport.update({
+const AppPositionsIndexRoute = AppPositionsIndexRouteImport.update({
   id: '/positions/',
   path: '/positions/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const TradesNewRoute = TradesNewRouteImport.update({
+const AppTradesNewRoute = AppTradesNewRouteImport.update({
   id: '/trades/new',
   path: '/trades/new',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const TradesFromSlipRoute = TradesFromSlipRouteImport.update({
+const AppTradesFromSlipRoute = AppTradesFromSlipRouteImport.update({
   id: '/trades/from-slip',
   path: '/trades/from-slip',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const PositionsTickerRoute = PositionsTickerRouteImport.update({
+const AppPositionsTickerRoute = AppPositionsTickerRouteImport.update({
   id: '/positions/$ticker',
   path: '/positions/$ticker',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
-  '/positions/$ticker': typeof PositionsTickerRoute
-  '/trades/from-slip': typeof TradesFromSlipRoute
-  '/trades/new': typeof TradesNewRoute
-  '/positions/': typeof PositionsIndexRoute
-  '/trades/': typeof TradesIndexRoute
+  '/': typeof AppIndexRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/chat': typeof AppChatRoute
+  '/positions/$ticker': typeof AppPositionsTickerRoute
+  '/trades/from-slip': typeof AppTradesFromSlipRoute
+  '/trades/new': typeof AppTradesNewRoute
+  '/positions/': typeof AppPositionsIndexRoute
+  '/trades/': typeof AppTradesIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
-  '/positions/$ticker': typeof PositionsTickerRoute
-  '/trades/from-slip': typeof TradesFromSlipRoute
-  '/trades/new': typeof TradesNewRoute
-  '/positions': typeof PositionsIndexRoute
-  '/trades': typeof TradesIndexRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/chat': typeof AppChatRoute
+  '/': typeof AppIndexRoute
+  '/positions/$ticker': typeof AppPositionsTickerRoute
+  '/trades/from-slip': typeof AppTradesFromSlipRoute
+  '/trades/new': typeof AppTradesNewRoute
+  '/positions': typeof AppPositionsIndexRoute
+  '/trades': typeof AppTradesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
-  '/positions/$ticker': typeof PositionsTickerRoute
-  '/trades/from-slip': typeof TradesFromSlipRoute
-  '/trades/new': typeof TradesNewRoute
-  '/positions/': typeof PositionsIndexRoute
-  '/trades/': typeof TradesIndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/_app/chat': typeof AppChatRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/positions/$ticker': typeof AppPositionsTickerRoute
+  '/_app/trades/from-slip': typeof AppTradesFromSlipRoute
+  '/_app/trades/new': typeof AppTradesNewRoute
+  '/_app/positions/': typeof AppPositionsIndexRoute
+  '/_app/trades/': typeof AppTradesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/sign-in'
+    | '/sign-up'
     | '/chat'
     | '/positions/$ticker'
     | '/trades/from-slip'
@@ -93,8 +119,10 @@ export interface FileRouteTypes {
     | '/trades/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/sign-in'
+    | '/sign-up'
     | '/chat'
+    | '/'
     | '/positions/$ticker'
     | '/trades/from-slip'
     | '/trades/new'
@@ -102,97 +130,136 @@ export interface FileRouteTypes {
     | '/trades'
   id:
     | '__root__'
-    | '/'
-    | '/chat'
-    | '/positions/$ticker'
-    | '/trades/from-slip'
-    | '/trades/new'
-    | '/positions/'
-    | '/trades/'
+    | '/_app'
+    | '/sign-in'
+    | '/sign-up'
+    | '/_app/chat'
+    | '/_app/'
+    | '/_app/positions/$ticker'
+    | '/_app/trades/from-slip'
+    | '/_app/trades/new'
+    | '/_app/positions/'
+    | '/_app/trades/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ChatRoute: typeof ChatRoute
-  PositionsTickerRoute: typeof PositionsTickerRoute
-  TradesFromSlipRoute: typeof TradesFromSlipRoute
-  TradesNewRoute: typeof TradesNewRoute
-  PositionsIndexRoute: typeof PositionsIndexRoute
-  TradesIndexRoute: typeof TradesIndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatRouteImport
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/trades/': {
-      id: '/trades/'
+    '/_app/chat': {
+      id: '/_app/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AppChatRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/trades/': {
+      id: '/_app/trades/'
       path: '/trades'
       fullPath: '/trades/'
-      preLoaderRoute: typeof TradesIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTradesIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/positions/': {
-      id: '/positions/'
+    '/_app/positions/': {
+      id: '/_app/positions/'
       path: '/positions'
       fullPath: '/positions/'
-      preLoaderRoute: typeof PositionsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppPositionsIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/trades/new': {
-      id: '/trades/new'
+    '/_app/trades/new': {
+      id: '/_app/trades/new'
       path: '/trades/new'
       fullPath: '/trades/new'
-      preLoaderRoute: typeof TradesNewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTradesNewRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/trades/from-slip': {
-      id: '/trades/from-slip'
+    '/_app/trades/from-slip': {
+      id: '/_app/trades/from-slip'
       path: '/trades/from-slip'
       fullPath: '/trades/from-slip'
-      preLoaderRoute: typeof TradesFromSlipRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTradesFromSlipRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/positions/$ticker': {
-      id: '/positions/$ticker'
+    '/_app/positions/$ticker': {
+      id: '/_app/positions/$ticker'
       path: '/positions/$ticker'
       fullPath: '/positions/$ticker'
-      preLoaderRoute: typeof PositionsTickerRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppPositionsTickerRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppChatRoute: typeof AppChatRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppPositionsTickerRoute: typeof AppPositionsTickerRoute
+  AppTradesFromSlipRoute: typeof AppTradesFromSlipRoute
+  AppTradesNewRoute: typeof AppTradesNewRoute
+  AppPositionsIndexRoute: typeof AppPositionsIndexRoute
+  AppTradesIndexRoute: typeof AppTradesIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppChatRoute: AppChatRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppPositionsTickerRoute: AppPositionsTickerRoute,
+  AppTradesFromSlipRoute: AppTradesFromSlipRoute,
+  AppTradesNewRoute: AppTradesNewRoute,
+  AppPositionsIndexRoute: AppPositionsIndexRoute,
+  AppTradesIndexRoute: AppTradesIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  ChatRoute: ChatRoute,
-  PositionsTickerRoute: PositionsTickerRoute,
-  TradesFromSlipRoute: TradesFromSlipRoute,
-  TradesNewRoute: TradesNewRoute,
-  PositionsIndexRoute: PositionsIndexRoute,
-  TradesIndexRoute: TradesIndexRoute,
+  AppRoute: AppRouteWithChildren,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
