@@ -1,7 +1,11 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronsUpDownIcon, Loader2Icon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import { logoUrl, searchCompanyProfilesFn } from "@/market"
+import {
+  getCompanyProfileFn,
+  logoUrl,
+  searchCompanyProfilesFn,
+} from "@/market"
 import type { CompanyProfile } from "@/market"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -43,11 +47,49 @@ export function TickerCombobox({
   const [query, setQuery] = useState("")
   const [debounced, setDebounced] = useState("")
   const [selected, setSelected] = useState<CompanyProfile | null>(null)
+  const [unresolved, setUnresolved] = useState(false)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), 150)
     return () => clearTimeout(t)
   }, [query])
+
+  useEffect(() => {
+    const t = value.trim().toUpperCase()
+    if (!t) {
+      setSelected(null)
+      setUnresolved(false)
+      return
+    }
+    if (selected?.ticker === t) return
+    let cancelled = false
+    setUnresolved(false)
+    queryClient
+      .fetchQuery({
+        queryKey: ["ticker-profile", t],
+        queryFn: () => getCompanyProfileFn({ data: { ticker: t } }),
+        staleTime: 5 * 60 * 1000,
+      })
+      .then((profile) => {
+        if (cancelled) return
+        if (profile) {
+          setSelected(profile)
+          setUnresolved(false)
+        } else {
+          setSelected(null)
+          setUnresolved(true)
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        setSelected(null)
+        setUnresolved(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [value, selected?.ticker, queryClient])
 
   const { data, isFetching, isFetchingNextPage, fetchNextPage, hasNextPage } =
     useInfiniteQuery({
@@ -101,7 +143,7 @@ export function TickerCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          aria-invalid={rest["aria-invalid"]}
+          aria-invalid={rest["aria-invalid"] || unresolved}
           className={cn(
             "w-full justify-between font-normal",
             !value && "text-muted-foreground",
@@ -161,8 +203,13 @@ export function TickerCombobox({
                       key={p.ticker}
                       value={p.ticker}
                       onSelect={() => {
+                        queryClient.setQueryData(
+                          ["ticker-profile", p.ticker],
+                          p,
+                        )
                         onChange(p.ticker)
                         setSelected(p)
+                        setUnresolved(false)
                         setOpen(false)
                       }}
                     >
