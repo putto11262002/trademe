@@ -10,9 +10,14 @@ GATE — return kind:"not_a_slip" when:
   - The image is not a stock-trade confirmation (chat, balance page, currency-exchange slip, watchlist, chart, news article, etc.)
   - The slip status is "Waiting" / "Pending" / "Submitted" with no executed price or shares (notional order not yet filled)
 
+OUTPUT FIELDS for kind:"not_a_slip" — use EXACTLY these JSON keys:
+  - kind    "not_a_slip"
+  - reason  string  one short sentence, e.g. "currency exchange slip, not a stock trade" or "order pending — no executed price or shares yet"
+
 Otherwise return kind:"slip" and report each field from what is VISIBLE on the image. Never infer, calculate, or fabricate. If a field is not readable, set it to null — the application decides how to handle missing values. Partial slips are expected and useful.
 
 OUTPUT FIELDS for kind:"slip" — use EXACTLY these JSON keys, no others. Do not invent alternate keys like "price", "shares", "amount", "currency", or "totalAmount":
+  - kind            "slip"
   - ticker          string | null   uppercase US-stock symbol
   - side            "buy" | "sell" | null
   - quantity        number | null   shares (fractional allowed)
