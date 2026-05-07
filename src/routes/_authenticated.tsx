@@ -24,6 +24,12 @@ function AuthenticatedLayout() {
     throw redirect({ to: "/sign-in" })
   }
 
+  const { user } = Route.useRouteContext()
+
+  if (!user) {
+    throw redirect({ to: "/welcome" })
+  }
+
   return (
     <AppShell>
       <Outlet />

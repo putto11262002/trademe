@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -20,6 +21,11 @@ import { Route as AuthenticatedTradesNewRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTradesFromSlipRouteImport } from './routes/_authenticated/trades/from-slip'
 import { Route as AuthenticatedPositionsTickerRouteImport } from './routes/_authenticated/positions/$ticker'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/welcome': typeof WelcomeRoute
   '/chat': typeof AuthenticatedChatRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/welcome': typeof WelcomeRoute
   '/chat': typeof AuthenticatedChatRoute
   '/': typeof AuthenticatedIndexRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/welcome': typeof WelcomeRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
+    | '/welcome'
     | '/chat'
     | '/positions/$ticker'
     | '/trades/from-slip'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/sign-in'
     | '/sign-up'
+    | '/welcome'
     | '/chat'
     | '/'
     | '/positions/$ticker'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/sign-in'
     | '/sign-up'
+    | '/welcome'
     | '/_authenticated/chat'
     | '/_authenticated/'
     | '/_authenticated/positions/$ticker'
@@ -150,10 +162,18 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-up': {
       id: '/sign-up'
       path: '/sign-up'
@@ -255,6 +275,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
