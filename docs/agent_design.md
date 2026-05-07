@@ -959,14 +959,14 @@ For now they use `SANDBOX_API_TOKEN` bearer auth. This is a testing bridge, not 
 
 ## Code execution slice
 
-`analysis_run_code` runs generated Python inside Cloudflare Sandbox. The Worker fetches the requested dataset through existing modules, writes `/workspace/input.json`, writes a small `trademe_sdk.py`, runs `/workspace/run_analysis.py`, and reads `/workspace/output.json`.
+`analysis_run_code` runs generated Python inside Cloudflare Sandbox. The sandbox image installs the local `trademe_sdk` package. The Worker fetches the requested dataset through existing modules, writes `/workspace/input.json`, writes `/workspace/run_analysis.py`, runs it, and reads `/workspace/output.json`.
 
 Status: prototype only. Normal compact tools are useful today, but code execution still needs a redesign/hardening pass before it is dependable. Known current issues:
 
 - Local runs can get stuck pending.
 - The agent can make several failed analysis attempts.
 - There is not enough structured logging/debug visibility.
-- The current SDK still includes helper indicators, while the latest design direction is a data-access/output SDK plus installed Python analysis libraries.
+- The SDK is now packaged into the sandbox image, but its generated reference docs are still maintained manually.
 
 The generated Python contract:
 

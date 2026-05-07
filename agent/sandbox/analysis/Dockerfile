@@ -2,7 +2,10 @@ FROM docker.io/cloudflare/sandbox:0.9.3-python
 
 WORKDIR /workspace
 
+COPY sdk /opt/trademe-sdk
+
 RUN python3 -m pip install --no-cache-dir \
+  /opt/trademe-sdk \
   numpy \
   pandas \
   scipy \

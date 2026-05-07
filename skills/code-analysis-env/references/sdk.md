@@ -6,7 +6,7 @@ Inside `analysis_run_code`, generated Python runs in `/workspace` with:
 import trademe_sdk as trademe
 ```
 
-The Worker writes `/workspace/input.json`, writes `/workspace/trademe_sdk.py`, runs `/workspace/run_analysis.py`, then reads `/workspace/output.json`.
+The sandbox image installs `trademe_sdk`. The Worker writes `/workspace/input.json`, writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
 
 Available analysis libraries:
 

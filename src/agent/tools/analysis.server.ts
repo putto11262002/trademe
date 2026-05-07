@@ -10,7 +10,6 @@ import {
 } from "@/market/api.server"
 import { createUserApiToken } from "@/auth/api-token.server"
 import { getPortfolioDashboard } from "@/trade/portfolio.server"
-import { PYTHON_ANALYSIS_SDK } from "./analysis-sdk.server"
 import { AgentToolError } from "./errors.server"
 import type { AnalysisSandbox } from "@/agent/runtime/analysis-sandbox.server"
 
@@ -265,7 +264,6 @@ export function createAnalysisTools(userId: string) {
         await withTimeout(
           Promise.all([
             sandbox.writeFile("/workspace/input.json", inputJson),
-            sandbox.writeFile("/workspace/trademe_sdk.py", PYTHON_ANALYSIS_SDK),
             sandbox.writeFile("/workspace/run_analysis.py", code),
           ]),
           SANDBOX_IO_TIMEOUT_MS,
@@ -275,7 +273,6 @@ export function createAnalysisTools(userId: string) {
         logAnalysis("files_written", {
           runId,
           inputBytes: byteLength(inputJson),
-          sdkBytes: byteLength(PYTHON_ANALYSIS_SDK),
           codeBytes: byteLength(code),
         })
 
