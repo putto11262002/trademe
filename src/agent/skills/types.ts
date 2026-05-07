@@ -1,5 +1,3 @@
-export type AgentSkillStatus = "active" | "draft"
-
 export type SkillFileType = "entry" | "reference" | "asset"
 
 export type SkillManifestFile = {
@@ -11,14 +9,10 @@ export type SkillManifestFile = {
   bytes: number
 }
 
-export type SkillVersionManifest = {
+export type SkillManifest = {
   name: string
   title: string
   description: string
-  version: string
-  commit: string | null
-  skillContractVersion: number
-  status: AgentSkillStatus
   entry: string
   files: SkillManifestFile[]
   allowedTools?: string[]
@@ -26,25 +20,22 @@ export type SkillVersionManifest = {
 
 export type SkillRegistryEntry = {
   name: string
-  title: string
-  description: string
-  activeVersion: string
-  status: AgentSkillStatus
-  manifestPath: string
-  checksum: string
-  commit: string | null
-  skillContractVersion: number
-  updatedAt: string
+  entry: string
+  manifest: string
 }
 
 export type SkillRegistryManifest = {
   schemaVersion: 1
   generatedAt: string
-  commit: string | null
   skills: SkillRegistryEntry[]
 }
 
-export type AgentSkillMetadata = SkillRegistryEntry & {
+export type AgentSkillMetadata = {
+  name: string
+  title: string
+  description: string
+  entry: string
+  manifest: string
   references: Array<Pick<SkillManifestFile, "id" | "path" | "title" | "sha256" | "bytes">>
   assets: Array<Pick<SkillManifestFile, "id" | "path" | "title" | "sha256" | "bytes">>
   allowedTools: string[]

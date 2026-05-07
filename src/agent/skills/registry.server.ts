@@ -2,13 +2,14 @@ import { env } from "cloudflare:workers"
 import { z } from "zod"
 import type {
   AgentSkillMetadata,
+  SkillManifest,
   SkillManifestFile,
   SkillRegistryManifest,
-  SkillVersionManifest,
 } from "./types"
-import { requiredAgentSkills, requiredSkill } from "./requirements.server"
+import { R2JsonStore } from "./r2.server"
 
 const ROOT_MANIFEST_KEY = "skills/manifest.json"
+export const SUPPORTED_SKILL_NAMES = ["code-analysis-env"] as const
 
 const manifestFileSchema = z.object({
   id: z.string(),
@@ -19,216 +20,145 @@ const manifestFileSchema = z.object({
   bytes: z.number(),
 })
 
-const skillVersionManifestSchema = z.object({
+const skillManifestSchema = z.object({
   name: z.string(),
   title: z.string(),
   description: z.string(),
-  version: z.string(),
-  commit: z.string().nullable(),
-  skillContractVersion: z.number().int().positive(),
-  status: z.enum(["active", "draft"]),
   entry: z.string(),
   files: z.array(manifestFileSchema),
   allowedTools: z.array(z.string()).optional(),
-}) satisfies z.ZodType<SkillVersionManifest>
+}) satisfies z.ZodType<SkillManifest>
 
 const skillRegistryManifestSchema = z.object({
   schemaVersion: z.literal(1),
   generatedAt: z.string(),
-  commit: z.string().nullable(),
   skills: z.array(z.object({
     name: z.string(),
-    title: z.string(),
-    description: z.string(),
-    activeVersion: z.string(),
-    status: z.enum(["active", "draft"]),
-    manifestPath: z.string(),
-    checksum: z.string(),
-    commit: z.string().nullable(),
-    skillContractVersion: z.number().int().positive(),
-    updatedAt: z.string(),
+    entry: z.string(),
+    manifest: z.string(),
   })),
 }) satisfies z.ZodType<SkillRegistryManifest>
 
-export type SkillRegistryResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: string }
+export class SkillRegistry {
+  constructor(
+    private readonly store = new R2JsonStore(env.STORAGE_BUCKET),
+  ) {}
 
-export function renderSkillCatalogPrompt(): string {
-  return [
-    "Skills:",
-    ...requiredAgentSkills.map((skill) => (
-      `- ${skill.name}: ${skill.description} Required skill contract version: ${skill.skillContractVersion}.`
-    )),
-    "",
-    "When a task would benefit from a skill, call skill_load before doing the work. skill_load returns only SKILL.md. If the loaded skill lists reference files you need, call skill_read_file for the specific file. Do not assume all skill files are already in context.",
-  ].join("\n")
-}
+  async list(): Promise<AgentSkillMetadata[]> {
+    const root = await this.rootManifest()
+    const skills: AgentSkillMetadata[] = []
 
-export async function listAgentSkills(): Promise<SkillRegistryResult<AgentSkillMetadata[]>> {
-  const root = await readJson(ROOT_MANIFEST_KEY, skillRegistryManifestSchema)
-  if (!root.ok) return root
+    for (const entry of root.skills) {
+      this.assertDeclared(entry.name)
+      const manifest = await this.skillManifest(entry.manifest)
+      skills.push({
+        name: entry.name,
+        title: manifest.title,
+        description: manifest.description,
+        entry: entry.entry,
+        manifest: entry.manifest,
+        references: manifest.files
+          .filter((file) => file.type === "reference")
+          .map(fileMetadata),
+        assets: manifest.files
+          .filter((file) => file.type === "asset")
+          .map(fileMetadata),
+        allowedTools: manifest.allowedTools ?? [],
+      })
+    }
 
-  const skills: AgentSkillMetadata[] = []
-  for (const entry of root.value.skills) {
-    const manifest = await readJson(entry.manifestPath, skillVersionManifestSchema)
-    if (!manifest.ok) return manifest
-    const compatible = assertCompatibleSkill(manifest.value)
-    if (!compatible.ok) return compatible
-    skills.push({
-      ...entry,
-      references: manifest.value.files
-        .filter((file) => file.type === "reference")
-        .map(fileMetadata),
-      assets: manifest.value.files
-        .filter((file) => file.type === "asset")
-        .map(fileMetadata),
-      allowedTools: manifest.value.allowedTools ?? [],
-    })
+    return skills
   }
-  return { ok: true, value: skills }
-}
 
-export async function loadAgentSkill(name: string): Promise<SkillRegistryResult<{
-  manifest: SkillVersionManifest
-  content: string
-}>> {
-  const resolved = await resolveSkill(name)
-  if (!resolved.ok) return resolved
+  async load(name: string): Promise<{
+    manifest: SkillManifest
+    content: string
+  }> {
+    const resolved = await this.resolve(name)
+    const entryFile = resolved.manifest.files.find((file) => file.path === resolved.manifest.entry)
+    if (!entryFile) {
+      throw new Error(`Skill ${name} has no entry file ${resolved.manifest.entry} in its manifest.`)
+    }
 
-  const entryFile = resolved.value.manifest.files.find((file) => file.path === resolved.value.manifest.entry)
-  if (!entryFile) {
     return {
-      ok: false,
-      error: `Skill ${name}@${resolved.value.entry.activeVersion} has no entry file ${resolved.value.manifest.entry} in its manifest.`,
+      manifest: resolved.manifest,
+      content: await this.store.readText(skillFileKey(name, entryFile.path)),
     }
   }
 
-  const content = await readText(skillFileKey(name, resolved.value.entry.activeVersion, entryFile.path))
-  if (!content.ok) return content
-
-  return {
-    ok: true,
-    value: {
-      manifest: resolved.value.manifest,
-      content: content.value,
-    },
-  }
-}
-
-export async function loadAgentSkillFile(skillName: string, pathOrId: string): Promise<SkillRegistryResult<{
-  skillName: string
-  version: string
-  file: SkillManifestFile
-  content: string
-}>> {
-  const resolved = await resolveSkill(skillName)
-  if (!resolved.ok) return resolved
-
-  const file = resolved.value.manifest.files.find((item) => (
-    item.id === pathOrId || item.path === pathOrId
-  ))
-  if (!file) {
-    return {
-      ok: false,
-      error: `Skill file not found: ${skillName}@${resolved.value.entry.activeVersion}/${pathOrId}`,
+  async readFile(skillName: string, pathOrId: string): Promise<{
+    skillName: string
+    file: SkillManifestFile
+    content: string
+  }> {
+    const resolved = await this.resolve(skillName)
+    const file = resolved.manifest.files.find((item) => (
+      item.id === pathOrId || item.path === pathOrId
+    ))
+    if (!file) {
+      throw new Error(`Skill file not found: ${skillName}/${pathOrId}`)
     }
-  }
 
-  const content = await readText(skillFileKey(skillName, resolved.value.entry.activeVersion, file.path))
-  if (!content.ok) return content
-
-  return {
-    ok: true,
-    value: {
+    return {
       skillName,
-      version: resolved.value.entry.activeVersion,
       file,
-      content: content.value,
-    },
+      content: await this.store.readText(skillFileKey(skillName, file.path)),
+    }
+  }
+
+  private async resolve(name: string): Promise<{
+    entry: SkillRegistryManifest["skills"][number]
+    manifest: SkillManifest
+  }> {
+    this.assertDeclared(name)
+
+    const root = await this.rootManifest()
+    const entry = root.skills.find((skill) => skill.name === name)
+    if (!entry) {
+      throw new Error(`Skill not found in R2 manifest ${ROOT_MANIFEST_KEY}: ${name}`)
+    }
+
+    return {
+      entry,
+      manifest: await this.skillManifest(entry.manifest),
+    }
+  }
+
+  private async rootManifest() {
+    return this.store.readJson(ROOT_MANIFEST_KEY, skillRegistryManifestSchema)
+  }
+
+  private async skillManifest(key: string) {
+    return this.store.readJson(key, skillManifestSchema)
+  }
+
+  private assertDeclared(name: string): void {
+    if (!isSupportedSkill(name)) {
+      throw new Error(`Skill ${name} is not declared by this app build.`)
+    }
   }
 }
 
-async function resolveSkill(name: string): Promise<SkillRegistryResult<{
-  entry: SkillRegistryManifest["skills"][number]
-  manifest: SkillVersionManifest
-}>> {
-  const root = await readJson(ROOT_MANIFEST_KEY, skillRegistryManifestSchema)
-  if (!root.ok) return root
+export const skillRegistry = new SkillRegistry()
 
-  const entry = root.value.skills.find((skill) => skill.name === name)
-  if (!entry) {
-    return {
-      ok: false,
-      error: `Skill not found in R2 manifest ${ROOT_MANIFEST_KEY}: ${name}`,
-    }
-  }
-
-  const manifest = await readJson(entry.manifestPath, skillVersionManifestSchema)
-  if (!manifest.ok) return manifest
-  const compatible = assertCompatibleSkill(manifest.value)
-  if (!compatible.ok) return compatible
-
-  return {
-    ok: true,
-    value: { entry, manifest: manifest.value },
-  }
+export function listAgentSkills() {
+  return skillRegistry.list()
 }
 
-async function readText(key: string): Promise<SkillRegistryResult<string>> {
-  const object = await env.STORAGE_BUCKET.get(key)
-  if (!object) {
-    return {
-      ok: false,
-      error: `Skill registry object not found in R2 at ${key}`,
-    }
-  }
-  return { ok: true, value: await object.text() }
+export function loadAgentSkill(name: string) {
+  return skillRegistry.load(name)
 }
 
-async function readJson<T>(key: string, schema: z.ZodType<T>): Promise<SkillRegistryResult<T>> {
-  const content = await readText(key)
-  if (!content.ok) return content
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(content.value)
-  } catch {
-    return {
-      ok: false,
-      error: `Skill registry object is not valid JSON: ${key}`,
-    }
-  }
-
-  const result = schema.safeParse(parsed)
-  if (!result.success) {
-    return {
-      ok: false,
-      error: `Skill registry object failed validation at ${key}: ${z.prettifyError(result.error)}`,
-    }
-  }
-  return { ok: true, value: result.data }
+export function loadAgentSkillFile(skillName: string, pathOrId: string) {
+  return skillRegistry.readFile(skillName, pathOrId)
 }
 
-function skillFileKey(skillName: string, version: string, path: string): string {
-  return `skills/${skillName}/${version}/${path}`
+function skillFileKey(skillName: string, path: string): string {
+  return `skills/${skillName}/${path}`
 }
 
-function assertCompatibleSkill(manifest: SkillVersionManifest): SkillRegistryResult<true> {
-  const required = requiredSkill(manifest.name)
-  if (!required) {
-    return {
-      ok: false,
-      error: `Skill ${manifest.name}@${manifest.version} is not declared by this app build.`,
-    }
-  }
-  if (manifest.skillContractVersion !== required.skillContractVersion) {
-    return {
-      ok: false,
-      error: `Skill ${manifest.name}@${manifest.version} has contract version ${manifest.skillContractVersion}, but this app supports ${required.skillContractVersion}.`,
-    }
-  }
-  return { ok: true, value: true }
+function isSupportedSkill(name: string): boolean {
+  return SUPPORTED_SKILL_NAMES.includes(name as (typeof SUPPORTED_SKILL_NAMES)[number])
 }
 
 function fileMetadata(file: SkillManifestFile) {

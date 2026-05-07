@@ -16,17 +16,9 @@ export const skillTools = {
       "List available agent skills with concise metadata. Use to discover skill names and reference files before loading a skill.",
     inputSchema: z.object({}),
     execute: async () => {
-      const result = await listAgentSkills()
-      if (!result.ok) {
-        return {
-          found: false,
-          error: result.error,
-          skills: [],
-        }
-      }
       return {
         found: true,
-        skills: result.value,
+        skills: await listAgentSkills(),
       }
     },
   }),
@@ -36,23 +28,12 @@ export const skillTools = {
       "Load a skill's SKILL.md entry point by name. This does not load reference files; use skill_read_file for referenced files only when needed.",
     inputSchema: skillNameInput,
     execute: async ({ name }) => {
-      const result = await loadAgentSkill(name)
-      if (!result.ok) {
-        return {
-          found: false,
-          name,
-          error: result.error,
-        }
-      }
-
-      const { manifest, content } = result.value
+      const { manifest, content } = await loadAgentSkill(name)
       return {
         found: true,
         name: manifest.name,
-        version: manifest.version,
         title: manifest.title,
         description: manifest.description,
-        status: manifest.status,
         content,
         references: manifest.files
           .filter((file) => file.type === "reference")
@@ -72,21 +53,10 @@ export const skillTools = {
       file: z.string().trim().min(1).max(160).describe("Reference id or path, e.g. sdk or references/sdk.md"),
     }),
     execute: async ({ name, file }) => {
-      const result = await loadAgentSkillFile(name, file)
-      if (!result.ok) {
-        return {
-          found: false,
-          name,
-          file,
-          error: result.error,
-        }
-      }
-
-      const loaded = result.value
+      const loaded = await loadAgentSkillFile(name, file)
       return {
         found: true,
         skillName: loaded.skillName,
-        version: loaded.version,
         id: loaded.file.id,
         path: loaded.file.path,
         title: loaded.file.title,

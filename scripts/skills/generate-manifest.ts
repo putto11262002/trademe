@@ -1,14 +1,10 @@
 import { createHash } from "node:crypto"
-import { spawnSync } from "node:child_process"
 import { readdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
-
-type SkillStatus = "active" | "draft"
 
 type Frontmatter = {
   name: string
   description: string
-  skillContractVersion?: string
 }
 
 type SkillFile = {
@@ -21,17 +17,15 @@ type SkillFile = {
 }
 
 const SKILLS_DIR = path.join(process.cwd(), "skills")
-const DEFAULT_DEV_VERSION = "dev"
-const DEFAULT_SKILL_CONTRACT_VERSION = 1
 
 async function main() {
-  const version = parseVersion()
-  const commit = parseCommit()
   const skillNames = await readdir(SKILLS_DIR)
   const generatedAt = new Date().toISOString()
   const skills = []
 
   for (const skillName of skillNames.sort()) {
+    if (skillName.startsWith("_")) continue
+
     const skillDir = path.join(SKILLS_DIR, skillName)
     const info = await stat(skillDir)
     if (!info.isDirectory()) continue
@@ -53,62 +47,26 @@ async function main() {
       name: skillName,
       title: titleFromName(skillName),
       description: frontmatter.description,
-      version,
-      commit,
-      skillContractVersion: parseSkillContractVersion(frontmatter.skillContractVersion),
-      status: "active" satisfies SkillStatus,
       entry: "SKILL.md",
       files,
       allowedTools: skillName === "code-analysis-env" ? ["analysis_run_code"] : [],
     }
 
-    const manifestJson = `${JSON.stringify(manifest, null, 2)}\n`
-    await writeFile(path.join(skillDir, "manifest.json"), manifestJson)
+    await writeFile(path.join(skillDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`)
 
     skills.push({
       name: skillName,
-      title: manifest.title,
-      description: manifest.description,
-      activeVersion: version,
-      status: manifest.status,
-      manifestPath: `skills/${skillName}/${version}/manifest.json`,
-      checksum: sha256(manifestJson),
-      commit,
-      skillContractVersion: manifest.skillContractVersion,
-      updatedAt: generatedAt,
+      entry: `skills/${skillName}/SKILL.md`,
+      manifest: `skills/${skillName}/manifest.json`,
     })
   }
 
   const rootManifest = {
     schemaVersion: 1,
     generatedAt,
-    commit,
     skills,
   }
   await writeFile(path.join(SKILLS_DIR, "manifest.json"), `${JSON.stringify(rootManifest, null, 2)}\n`)
-}
-
-function parseVersion(): string {
-  const arg = process.argv.find((item) => item.startsWith("--version="))
-  const version = arg?.slice("--version=".length) ?? process.env.SKILL_VERSION ?? DEFAULT_DEV_VERSION
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/.test(version)) {
-    throw new Error(`Invalid skill version: ${version}`)
-  }
-  return version
-}
-
-function parseCommit(): string | null {
-  const arg = process.argv.find((item) => item.startsWith("--commit="))
-  return arg?.slice("--commit=".length) ?? process.env.GITHUB_SHA ?? gitCommit()
-}
-
-function gitCommit(): string | null {
-  const result = spawnSync("git", ["rev-parse", "HEAD"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  })
-  if (result.status !== 0) return null
-  return result.stdout.trim()
 }
 
 function parseFrontmatter(content: string, filePath: string): Frontmatter {
@@ -133,17 +91,7 @@ function parseFrontmatter(content: string, filePath: string): Frontmatter {
   return {
     name: fields.name,
     description: fields.description,
-    skillContractVersion: fields.skillContractVersion,
   }
-}
-
-function parseSkillContractVersion(value: string | undefined): number {
-  if (!value) return DEFAULT_SKILL_CONTRACT_VERSION
-  const parsed = Number(value)
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new Error(`skillContractVersion must be a positive integer, got: ${value}`)
-  }
-  return parsed
 }
 
 async function nestedFiles(skillDir: string, dirName: "references" | "assets", type: "reference" | "asset"): Promise<SkillFile[]> {
