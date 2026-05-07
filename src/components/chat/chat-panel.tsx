@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   generalChatModels,
   DEFAULT_GENERAL_CHAT_MODEL,
@@ -180,6 +179,7 @@ function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
   outputTokens: number
   contextWindow: number
 }) {
+  const [open, setOpen] = useState(false)
   const r = 9
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - pct / 100)
@@ -187,9 +187,13 @@ function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
   const total = inputTokens + outputTokens
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className={cn("relative size-7 shrink-0 cursor-default", color)}>
+    <Popover open={open}>
+      <PopoverTrigger asChild>
+        <div
+          className={cn("relative size-7 shrink-0 cursor-default", color)}
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
           <svg className="size-full -rotate-90" viewBox="0 0 28 28">
             <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="2" strokeOpacity="0.2" />
             <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="2"
@@ -197,8 +201,14 @@ function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
               strokeLinecap="round" className="transition-all duration-500" />
           </svg>
         </div>
-      </TooltipTrigger>
-      <TooltipContent side="top" align="end" className="w-48 p-3 bg-background border border-border text-foreground shadow-lg">
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        className="w-48 p-3"
+        onMouseLeave={() => setOpen(false)}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="flex flex-col gap-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Input</span>
@@ -224,8 +234,8 @@ function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
             </div>
           </div>
         </div>
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   )
 }
 
