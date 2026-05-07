@@ -6,6 +6,10 @@ dist-ssr
 count.txt
 .env
 .dev.vars
+
+# Generated skill release manifests. Source skill content lives in SKILL.md and references/*.
+skills/manifest.json
+skills/*/manifest.json
 .nitro
 .tanstack
 .wrangler

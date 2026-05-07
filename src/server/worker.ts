@@ -3,6 +3,8 @@ import handler from "@tanstack/react-start/server-entry"
 import { routeAgentRequest } from "agents"
 import { Webhook } from "svix"
 export { ChatAgent } from "@/agent/runtime/chat-agent.server"
+export { AnalysisSandbox } from "@/agent/runtime/analysis-sandbox.server"
+import { handleSandboxApi } from "@/agent/sandbox/api.server"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
 import { upsertUser, deleteUser } from "@/user/api.server"
@@ -34,6 +36,10 @@ export default {
       } catch (e) {
         return jsonError(e)
       }
+    }
+
+    if (url.pathname.startsWith("/api/sandbox/")) {
+      return handleSandboxApi(request, env)
     }
 
     // DEV smoke endpoints — remove once chat/portfolio consume the market layer directly.

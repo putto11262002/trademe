@@ -9,6 +9,7 @@ import {
   TrendingDownIcon,
   TrendingUpIcon,
 } from "lucide-react"
+import { useState } from "react"
 import { Controller, useForm, useWatch, type Control } from "react-hook-form"
 import { toast } from "sonner"
 import {
@@ -17,6 +18,7 @@ import {
   type AddTradeFormValues,
   type AddTradeInput,
 } from "@/trade"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -199,6 +201,7 @@ export function TradeForm({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const {
     control,
     handleSubmit,
@@ -216,6 +219,7 @@ export function TradeForm({
   const mutation = useMutation({
     mutationFn: (data: AddTradeInput) => addTradeFn({ data }),
     onSuccess: () => {
+      setSubmitError(null)
       toast.success("Trade added")
       queryClient.invalidateQueries({ queryKey: ["trades"] })
       queryClient.invalidateQueries({ queryKey: ["positions"] })
@@ -223,7 +227,9 @@ export function TradeForm({
       navigate({ to: "/trades" })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to add trade")
+      setSubmitError(
+        error instanceof Error ? error.message : "Failed to add trade",
+      )
     },
   })
 
@@ -232,6 +238,11 @@ export function TradeForm({
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="space-y-6"
     >
+      {submitError && (
+        <Alert variant="destructive">
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      )}
       <FieldGroup>
         <Field data-invalid={!!errors.ticker}>
           <FieldLabel htmlFor="ticker">Ticker</FieldLabel>
