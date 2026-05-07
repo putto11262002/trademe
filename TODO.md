@@ -45,8 +45,8 @@ Pass goal: make repo-root `skills/` the source of truth, preserve explicit progr
   - [x] `skills/code-analysis-env/references/sdk.md`
 - [x] Use R2 as the runtime source of truth; no Worker fallback.
 - [x] Add skill manifest generation:
-  - [x] root `skills/manifest.json`
-  - [x] per-skill `manifest.json`
+  - [x] root `skills/manifest.json` generated at release time
+  - [x] per-skill `manifest.json` generated at release time
   - [x] file checksums
   - [x] active version field
   - [x] status field (`active` or `draft`)
@@ -65,6 +65,9 @@ Pass goal: make repo-root `skills/` the source of truth, preserve explicit progr
   - [x] create R2 buckets: `trademe` and `trademe-dev`
   - [x] define R2 object key layout under shared app storage, e.g. `skills/{skillName}/{version}/SKILL.md`
   - [x] define `manifest.json` shape with active version, checksum, status, and references
+  - [x] add commit-based production release versions (`git-<shortSha>`)
+  - [x] add skill contract version in `SKILL.md` frontmatter
+  - [x] declare supported skill contract version in app code
   - [ ] add version pinning so a chat run records which skill versions were loaded
   - [x] fail explicitly when R2 manifest/file is missing
   - [ ] decide cache policy for Worker reads later
@@ -76,12 +79,12 @@ Pass goal: make repo-root `skills/` the source of truth, preserve explicit progr
   - [x] `pnpm skills:upload:dev`
   - [x] `pnpm skills:upload:prod`
   - [ ] do not run upload until `code-analysis-env` text is reviewed
-- [ ] Add CI/CD publishing later:
-  - [ ] detect `skills/**` changes
-  - [ ] validate skill manifests
-  - [ ] upload immutable versioned skill files to `trademe-dev` for preview/dev
-  - [ ] upload immutable versioned skill files to `trademe` on `master`
-  - [ ] update active manifest only after all files upload successfully
+- [x] Add separate manual skill deployment workflow:
+  - [x] manual `workflow_dispatch`
+  - [x] deploy selected git ref
+  - [x] upload dev skills to `trademe-dev`
+  - [x] upload production skills to `trademe`
+  - [x] update active manifest only after all versioned files upload successfully
 - [ ] Decide R2 custom domain plan:
   - [ ] confirm domain names
   - [ ] decide public vs private access; default private Worker-only access for skills

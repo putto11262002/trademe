@@ -16,6 +16,8 @@ export type SkillVersionManifest = {
   title: string
   description: string
   version: string
+  commit: string | null
+  skillContractVersion: number
   status: AgentSkillStatus
   entry: string
   files: SkillManifestFile[]
@@ -30,12 +32,15 @@ export type SkillRegistryEntry = {
   status: AgentSkillStatus
   manifestPath: string
   checksum: string
+  commit: string | null
+  skillContractVersion: number
   updatedAt: string
 }
 
 export type SkillRegistryManifest = {
   schemaVersion: 1
   generatedAt: string
+  commit: string | null
   skills: SkillRegistryEntry[]
 }
 

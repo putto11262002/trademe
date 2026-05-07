@@ -1,0 +1,59 @@
+name: Deploy skills
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Skill deployment target
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - production
+      ref:
+        description: Git ref to deploy from. Leave empty to use the workflow ref.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate dev skill manifests
+        if: ${{ inputs.environment == 'dev' }}
+        run: pnpm skills:generate
+
+      - name: Generate production skill manifests
+        if: ${{ inputs.environment == 'production' }}
+        run: pnpm skills:generate:prod
+
+      - name: Upload dev skills
+        if: ${{ inputs.environment == 'dev' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm skills:upload:dev
+
+      - name: Upload production skills
+        if: ${{ inputs.environment == 'production' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm skills:upload:prod

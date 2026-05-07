@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process"
 import path from "node:path"
 
 type RootManifest = {
+  commit?: string | null
   skills: Array<{
     name: string
     activeVersion: string
@@ -25,6 +26,7 @@ async function main() {
   const rootManifest = JSON.parse(
     await readFile(path.join(SKILLS_DIR, "manifest.json"), "utf8"),
   ) as RootManifest
+  validateRelease(envName, rootManifest)
 
   const uploads: Array<{ source: string; key: string }> = []
 
@@ -52,6 +54,23 @@ function parseEnv(): string {
     throw new Error("Usage: tsx scripts/upload-skills-to-r2.ts --env=dev|production")
   }
   return envName
+}
+
+function validateRelease(envName: string, manifest: RootManifest): void {
+  const normalized = envName === "prod" ? "production" : envName
+  for (const skill of manifest.skills) {
+    if (!skill.activeVersion) {
+      throw new Error(`Skill ${skill.name} has no activeVersion`)
+    }
+    if (normalized === "production") {
+      if (!skill.activeVersion.startsWith("git-")) {
+        throw new Error(`Production skill version must be git-based. Got ${skill.name}@${skill.activeVersion}`)
+      }
+      if (!manifest.commit) {
+        throw new Error("Production skill upload requires a commit in skills/manifest.json")
+      }
+    }
+  }
 }
 
 async function bucketForEnv(envName: string): Promise<string> {

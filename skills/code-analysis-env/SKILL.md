@@ -1,6 +1,7 @@
 ---
 name: code-analysis-env
 description: Use for bounded Python analysis over stock, candle, portfolio, market, news, and fundamentals data.
+skillContractVersion: 1
 ---
 
 # Code Analysis Environment

@@ -585,18 +585,27 @@ Top-level manifest should track:
 - description
 - file list
 - content hash/checksum
+- release commit
+- skill contract version
 - updated timestamp
 
 Each chat/tool run should eventually record which skill version was loaded. That matters for debugging, reproducibility, and evaluating whether a bad answer came from the model, the tool data, or stale skill instructions.
+
+There are two different version concepts:
+
+- **Skill contract version** lives in `SKILL.md` frontmatter as `skillContractVersion`. It is a compatibility number for the app/tool contract. Bump it only when the skill starts requiring different tools, SDK behavior, output expectations, or prompt semantics that older app code may not support.
+- **Skill release version** is generated at deploy time. Dev defaults to `dev`. Production releases use `git-<shortSha>` from the selected git commit, for example `git-c15f91c`.
+
+`SKILL.md` should not contain the release version. The same committed skill source can be packaged into different release artifacts by the skill deployment workflow. The app declares supported skills and contract versions in code; if R2 serves an unsupported contract version, skill tools fail explicitly instead of loading incompatible instructions.
 
 Two-pass path:
 
 1. Skill registry finalization:
    - move skill content into repo-root `skills/`
-   - generate manifests from `skills/**`
+   - generate manifests from `skills/**` at release time
    - keep `skill_load` and `skill_read_file` behavior unchanged
    - use R2 buckets `trademe-dev` for non-production and `trademe` for production
-   - add CI/deploy publishing plan for versioned skill artifacts
+   - use a separate manual GitHub Actions workflow for skill deployment
 2. Sandbox SDK package:
    - move Python SDK into repo-root `sandbox-sdk/`
    - manage it as a uv project
@@ -627,6 +636,15 @@ pnpm skills:generate
 pnpm skills:upload:dev
 pnpm dev
 ```
+
+Production skill deployment is separate from app deployment. It should be manual and deterministic from a git ref:
+
+```bash
+pnpm skills:generate:prod
+pnpm skills:upload:prod
+```
+
+The GitHub workflow runs those commands from the selected ref, so production R2 artifacts can be traced back to a commit.
 
 Do not configure public custom domains for skill artifacts until we explicitly decide that the artifacts are safe to expose. Default stance: skills are private and read by the Worker through an R2 binding.
 

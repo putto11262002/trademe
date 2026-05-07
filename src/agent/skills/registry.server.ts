@@ -6,6 +6,7 @@ import type {
   SkillRegistryManifest,
   SkillVersionManifest,
 } from "./types"
+import { requiredAgentSkills, requiredSkill } from "./requirements.server"
 
 const ROOT_MANIFEST_KEY = "skills/manifest.json"
 
@@ -23,6 +24,8 @@ const skillVersionManifestSchema = z.object({
   title: z.string(),
   description: z.string(),
   version: z.string(),
+  commit: z.string().nullable(),
+  skillContractVersion: z.number().int().positive(),
   status: z.enum(["active", "draft"]),
   entry: z.string(),
   files: z.array(manifestFileSchema),
@@ -32,6 +35,7 @@ const skillVersionManifestSchema = z.object({
 const skillRegistryManifestSchema = z.object({
   schemaVersion: z.literal(1),
   generatedAt: z.string(),
+  commit: z.string().nullable(),
   skills: z.array(z.object({
     name: z.string(),
     title: z.string(),
@@ -40,6 +44,8 @@ const skillRegistryManifestSchema = z.object({
     status: z.enum(["active", "draft"]),
     manifestPath: z.string(),
     checksum: z.string(),
+    commit: z.string().nullable(),
+    skillContractVersion: z.number().int().positive(),
     updatedAt: z.string(),
   })),
 }) satisfies z.ZodType<SkillRegistryManifest>
@@ -51,7 +57,9 @@ export type SkillRegistryResult<T> =
 export function renderSkillCatalogPrompt(): string {
   return [
     "Skills:",
-    "- code-analysis-env: Use for bounded Python analysis over stock, candle, portfolio, market, news, and fundamentals data. Reference files may include references/sdk.md.",
+    ...requiredAgentSkills.map((skill) => (
+      `- ${skill.name}: ${skill.description} Required skill contract version: ${skill.skillContractVersion}.`
+    )),
     "",
     "When a task would benefit from a skill, call skill_load before doing the work. skill_load returns only SKILL.md. If the loaded skill lists reference files you need, call skill_read_file for the specific file. Do not assume all skill files are already in context.",
   ].join("\n")
@@ -65,6 +73,8 @@ export async function listAgentSkills(): Promise<SkillRegistryResult<AgentSkillM
   for (const entry of root.value.skills) {
     const manifest = await readJson(entry.manifestPath, skillVersionManifestSchema)
     if (!manifest.ok) return manifest
+    const compatible = assertCompatibleSkill(manifest.value)
+    if (!compatible.ok) return compatible
     skills.push({
       ...entry,
       references: manifest.value.files
@@ -156,6 +166,8 @@ async function resolveSkill(name: string): Promise<SkillRegistryResult<{
 
   const manifest = await readJson(entry.manifestPath, skillVersionManifestSchema)
   if (!manifest.ok) return manifest
+  const compatible = assertCompatibleSkill(manifest.value)
+  if (!compatible.ok) return compatible
 
   return {
     ok: true,
@@ -200,6 +212,23 @@ async function readJson<T>(key: string, schema: z.ZodType<T>): Promise<SkillRegi
 
 function skillFileKey(skillName: string, version: string, path: string): string {
   return `skills/${skillName}/${version}/${path}`
+}
+
+function assertCompatibleSkill(manifest: SkillVersionManifest): SkillRegistryResult<true> {
+  const required = requiredSkill(manifest.name)
+  if (!required) {
+    return {
+      ok: false,
+      error: `Skill ${manifest.name}@${manifest.version} is not declared by this app build.`,
+    }
+  }
+  if (manifest.skillContractVersion !== required.skillContractVersion) {
+    return {
+      ok: false,
+      error: `Skill ${manifest.name}@${manifest.version} has contract version ${manifest.skillContractVersion}, but this app supports ${required.skillContractVersion}.`,
+    }
+  }
+  return { ok: true, value: true }
 }
 
 function fileMetadata(file: SkillManifestFile) {
