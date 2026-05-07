@@ -1,5 +1,7 @@
-# Local secrets for `wrangler dev`. Mirror of .env, consumed by the Worker runtime.
+# Local secrets for `wrangler dev`. Consumed by the Worker runtime.
 # Copy to `.dev.vars` and fill in. Both files are gitignored.
+
+# Neon Postgres — https://console.neon.tech → Project → Connection Details (pooled URL)
 DATABASE_URL=postgres://user:password@ep-xxx.region.neon.tech/dbname?sslmode=require
 
 # Market data vendors
@@ -11,3 +13,9 @@ FMP_API_KEY=
 # AI agent
 # Vercel AI Gateway — https://vercel.com/docs/ai-gateway
 VERCEL_AI_GATEWAY_KEY=
+
+# Auth — Clerk dev instance (https://dashboard.clerk.com → API Keys)
+CLERK_SECRET_KEY=sk_test_
+# Clerk webhook signing secret — create webhook in Clerk dashboard pointing at your CF Tunnel URL
+# Events: user.created, user.updated, user.deleted
+CLERK_WEBHOOK_SECRET=whsec_
