@@ -130,6 +130,15 @@ function ReasoningPart({ part, isStreaming }: { part: AnyPart; isStreaming: bool
   )
 }
 
+function WorkingIndicator() {
+  return (
+    <div className="flex items-center gap-2">
+      <img src="/trademe-ai-logo.png" alt="" className="size-6 animate-bounce" />
+      <span className="text-muted-foreground text-xs">Crunching numbers…</span>
+    </div>
+  )
+}
+
 function Message({ message, isStreaming }: { message: UIMessage; isStreaming: boolean }) {
   const isUser = message.role === "user"
   type Group = { kind: "text"; part: AnyPart; idx: number } | { kind: "reasoning"; part: AnyPart; idx: number } | { kind: "tools"; parts: AnyPart[] }
@@ -380,7 +389,10 @@ function ConnectedChat({
       {/* Messages */}
       <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {messages.length === 0 ? (
-          <p className="text-muted-foreground text-center text-sm mt-8">Ask me about your portfolio, a stock price, or recent news.</p>
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
+            <img src="/trademe-ai-logo.png" alt="" className="size-20" />
+            <p className="text-muted-foreground text-base">How can I help?</p>
+          </div>
         ) : (
           <div>
             {(() => {
@@ -408,6 +420,7 @@ function ConnectedChat({
                     return (
                       <div key={pair.user.id} ref={isLast ? lastPairRef : undefined} className="space-y-6 pt-6">
                         <div><Message message={pair.user} isStreaming={false} /></div>
+                        {isLast && isStreaming && <WorkingIndicator />}
                         {pair.assistant && (
                           <div><Message message={pair.assistant} isStreaming={isStreaming && pair.assistantIdx === messages.length - 1} /></div>
                         )}
@@ -545,7 +558,10 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
 
   return (
     <>
-      <p className="text-muted-foreground text-center text-sm mt-8 px-4">Ask me about your portfolio, a stock price, or recent news.</p>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 text-center pointer-events-none">
+        <img src="/trademe-ai-logo.png" alt="" className="size-20" />
+        <p className="text-muted-foreground text-base">How can I help?</p>
+      </div>
 
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
         <div className="pointer-events-auto flex items-center justify-end gap-1">
