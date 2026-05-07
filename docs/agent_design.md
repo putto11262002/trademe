@@ -538,7 +538,120 @@ The agent should write code for the specific question, not blindly call a large 
 
 ## Skills and Playbooks
 
-The durable workflow knowledge should live in playbooks/skills, not in a large SDK.
+The durable workflow knowledge should live in playbooks/skills, not in a large SDK. Skills follow a progressive-disclosure shape: the base prompt lists concise skill metadata, the model calls a skill tool to load the `SKILL.md` entry point when needed, and referenced files are loaded separately only when the loaded skill asks for them.
+
+Current first-pass implementation: skill tools are mounted in the chat agent. Runtime skill reads are R2-only through the shared `STORAGE_BUCKET` binding. If a manifest or file is missing, the skill tool returns an explicit error instead of falling back to bundled content.
+
+Skill content is shaped like Agent Skills and lives under repo-root `skills/`:
+
+```txt
+skills/
+  manifest.json
+  code-analysis-env/
+    SKILL.md
+    references/sdk.md
+    manifest.json
+```
+
+The model-facing tools are:
+
+- `skill_list`: list skill metadata and available reference files.
+- `skill_load`: load only the `SKILL.md` entry point for one skill.
+- `skill_read_file`: load one referenced skill file by id or path.
+
+Do not add `skill_execute_script` yet. Skill scripts should only be considered after sandbox policy and observability are stronger.
+
+### Skill Registry and R2 Direction
+
+The skill registry uses repo-root `skills/` as source and R2 as the runtime source of truth. There is no skill versioning for now. The active skill set is whatever is currently uploaded at `skills/manifest.json`.
+
+Target R2 object layout inside the shared app storage bucket:
+
+```txt
+skills/
+  manifest.json
+  code-analysis-env/
+    SKILL.md
+    references/sdk.md
+    manifest.json
+```
+
+Top-level manifest is only an index:
+
+- skill name
+- entry path
+- per-skill manifest path
+
+Per-skill manifests track detail:
+
+- skill name
+- title
+- description
+- entry file
+- file list
+- content hashes/checksums
+- allowed tools
+
+Updating a skill is intentionally simple: edit the skill source, generate manifests, and upload to the selected R2 bucket. Dev and production deployment use the same command path; only `--env` changes the target bucket.
+
+```bash
+pnpm skills:deploy --env=dev
+pnpm skills:deploy --env=production
+```
+
+Current path:
+
+1. Skill registry finalization:
+   - move skill content into repo-root `skills/`
+   - generate manifests from `skills/**`
+   - keep `skill_load` and `skill_read_file` behavior unchanged
+   - use R2 buckets `trademe-dev` for non-production and `trademe` for production
+   - deploy skills locally, separate from app deployment
+2. Sandbox SDK package:
+   - move Python SDK into repo-root `sandbox-sdk/`
+   - manage it as a uv project
+   - generate `skills/code-analysis-env/references/sdk.md` from SDK docstrings or structured metadata
+   - install/copy the SDK into the sandbox image
+
+Longer-term path:
+
+- cache active manifests in the Worker
+- consider versioning once skill content stabilizes
+- record loaded skill metadata per chat run for debugging
+- fail explicitly if a requested manifest or skill file is missing
+
+R2 buckets created for this direction:
+
+- `trademe-dev`
+- `trademe`
+
+Current Worker binding:
+
+- `STORAGE_BUCKET` -> `trademe-dev` for local testing in this branch
+
+Skill artifacts live under the `skills/` prefix in this shared app bucket. There is no Worker fallback for skills. Before local testing, generate manifests and upload the reviewed skill content:
+
+```bash
+pnpm skills:deploy --env=dev
+pnpm dev
+```
+
+Production skill deployment is separate from app deployment and is currently local-only:
+
+```bash
+pnpm skills:deploy --env=production
+```
+
+Skill deployment commands always regenerate manifests from repo-root `skills/**` immediately before upload. This prevents release drift between source files and R2 manifests.
+
+Do not wire skill upload into Vite dev/build. The Worker reads skills from R2 at runtime, so generating local manifests during Vite startup would not change what the agent sees. Local testing should explicitly run `pnpm skills:deploy --env=dev` when skill files change.
+
+CI behavior:
+
+- No skill-specific CI or GitHub deployment workflow for now.
+- Skill deploys are deliberate local commands.
+
+Do not configure public custom domains for skill artifacts until we explicitly decide that the artifacts are safe to expose. Default stance: skills are private and read by the Worker through an R2 binding.
 
 Each playbook should define:
 
