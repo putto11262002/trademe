@@ -10,10 +10,14 @@ import {
 } from "@/market/api.server"
 import { getPortfolioDashboard } from "@/trade/portfolio.server"
 import { PYTHON_ANALYSIS_SDK } from "./analysis-sdk.server"
+import { AgentToolError } from "./errors.server"
 import type { AnalysisSandbox } from "@/agent/runtime/analysis-sandbox.server"
 
 const MAX_CANDLE_RANGE_DAYS = 730
-const MAX_OUTPUT_BYTES = 64_000
+const EXEC_TIMEOUT_MS = 15_000
+const SANDBOX_IO_TIMEOUT_MS = 20_000
+const MAX_OUTPUT_BYTES = 256_000
+const MAX_RESULT_BYTES = 128_000
 
 const tickerSchema = z.string().trim().min(1).max(20).regex(/^[A-Za-z0-9.-]+$/)
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -49,6 +53,8 @@ const analysisOutputSchema = z.object({
   summary: z.string().trim().min(1).max(300),
   result: z.unknown(),
 })
+
+type AnalysisPhase = "dataset" | "sandbox_io" | "exec" | "output"
 
 function logAnalysis(event: string, data: Record<string, unknown>) {
   console.info(JSON.stringify({
@@ -145,7 +151,8 @@ async function buildAnalysisDataset(input: DatasetInput) {
 }
 
 function parseAnalysisOutput(content: string): z.infer<typeof analysisOutputSchema> {
-  if (content.length > MAX_OUTPUT_BYTES) {
+  const outputBytes = byteLength(content)
+  if (outputBytes > MAX_OUTPUT_BYTES) {
     throw new Error(`Analysis output cannot exceed ${MAX_OUTPUT_BYTES} bytes`)
   }
 
@@ -160,11 +167,47 @@ function parseAnalysisOutput(content: string): z.infer<typeof analysisOutputSche
   if (!result.success) {
     throw new Error(z.prettifyError(result.error))
   }
+
+  const resultBytes = byteLength(JSON.stringify(result.data.result))
+  if (resultBytes > MAX_RESULT_BYTES) {
+    throw new Error(`Analysis result cannot exceed ${MAX_RESULT_BYTES} bytes`)
+  }
+
   return result.data
 }
 
 function sandboxId(): string {
   return `analysis-${crypto.randomUUID()}`
+}
+
+function byteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength
+}
+
+function clip(value: string, max = 4_000): string {
+  return value.length > max ? `${value.slice(0, max)}…` : value
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+  phase: AnalysisPhase,
+  onTimeout?: () => void,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      onTimeout?.()
+      reject(new AgentToolError(message, "terminal", "analysis_run_code", phase))
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
 }
 
 export const analysisTools = {
@@ -175,123 +218,148 @@ export const analysisTools = {
     execute: async ({ task, code, dataset }) => {
       const runId = crypto.randomUUID()
       const startedAt = Date.now()
-      logAnalysis("start", {
-        runId,
-        task,
-        tickers: dataset.tickers,
-        includePortfolio: dataset.includePortfolio,
-        includeQuotes: dataset.includeQuotes,
-        includeFundamentals: dataset.includeFundamentals,
-        newsDays: dataset.newsDays ?? null,
-        candles: dataset.candles ?? null,
-        codeLength: code.length,
-      })
+      let phase: AnalysisPhase = "dataset"
+      try {
+        logAnalysis("start", {
+          runId,
+          task,
+          tickers: dataset.tickers,
+          includePortfolio: dataset.includePortfolio,
+          includeQuotes: dataset.includeQuotes,
+          includeFundamentals: dataset.includeFundamentals,
+          newsDays: dataset.newsDays ?? null,
+          candles: dataset.candles ?? null,
+          codeLength: code.length,
+          execTimeoutMs: EXEC_TIMEOUT_MS,
+        })
 
-      const analysisDataset = await buildAnalysisDataset(dataset)
-      logAnalysis("dataset_ready", {
-        runId,
-        tickers: analysisDataset.data.tickers,
-        hasPortfolio: analysisDataset.data.portfolio != null,
-        marketTickers: Object.keys(analysisDataset.data.market),
-        newsTickers: Object.keys(analysisDataset.data.news),
-      })
+        phase = "dataset"
+        const analysisDataset = await buildAnalysisDataset(dataset)
+        logAnalysis("dataset_ready", {
+          runId,
+          tickers: analysisDataset.data.tickers,
+          hasPortfolio: analysisDataset.data.portfolio != null,
+          marketTickers: Object.keys(analysisDataset.data.market),
+          newsTickers: Object.keys(analysisDataset.data.news),
+        })
 
-      const sandbox = getSandbox<AnalysisSandbox>(
-        env.ANALYSIS_SANDBOX,
-        sandboxId(),
-        { keepAlive: false },
-      )
+        const sandbox = getSandbox<AnalysisSandbox>(
+          env.ANALYSIS_SANDBOX,
+          sandboxId(),
+          { keepAlive: false },
+        )
 
-      await Promise.all([
-        sandbox.writeFile("/workspace/input.json", JSON.stringify({
+        phase = "sandbox_io"
+        const inputJson = JSON.stringify({
           run: {
             task,
             asOf: analysisDataset.run.asOf,
           },
           data: analysisDataset.data,
-        })),
-        sandbox.writeFile("/workspace/trademe_sdk.py", PYTHON_ANALYSIS_SDK),
-        sandbox.writeFile("/workspace/run_analysis.py", code),
-      ])
-      logAnalysis("files_written", { runId })
-
-      const result = await sandbox.exec("python3 /workspace/run_analysis.py", {
-        cwd: "/workspace",
-        timeout: 15_000,
-        env: {
-          PYTHONPATH: "/workspace",
-        },
-      })
-      logAnalysis("exec_finished", {
-        runId,
-        success: result.success,
-        exitCode: result.exitCode,
-        durationMs: result.duration,
-        stdoutBytes: result.stdout.length,
-        stderrBytes: result.stderr.length,
-      })
-
-      if (!result.success) {
-        const error = result.stderr.trim() || result.stdout.trim() || "Python execution failed"
-        logAnalysis("failed", {
-          runId,
-          phase: "exec",
-          durationMs: Date.now() - startedAt,
-          error: error.slice(0, 1_000),
         })
-        return {
-          success: false,
-          phase: "exec",
-          summary: "Python execution failed.",
-          error,
-          exitCode: result.exitCode,
-          stdout: result.stdout.slice(0, 4_000),
-          stderr: result.stderr.slice(0, 4_000),
-        }
-      }
+        await withTimeout(
+          Promise.all([
+            sandbox.writeFile("/workspace/input.json", inputJson),
+            sandbox.writeFile("/workspace/trademe_sdk.py", PYTHON_ANALYSIS_SDK),
+            sandbox.writeFile("/workspace/run_analysis.py", code),
+          ]),
+          SANDBOX_IO_TIMEOUT_MS,
+          `Timed out writing analysis files after ${SANDBOX_IO_TIMEOUT_MS}ms`,
+          "sandbox_io",
+        )
+        logAnalysis("files_written", {
+          runId,
+          inputBytes: byteLength(inputJson),
+          sdkBytes: byteLength(PYTHON_ANALYSIS_SDK),
+          codeBytes: byteLength(code),
+        })
 
-      let parsed: z.infer<typeof analysisOutputSchema>
-      try {
-        const output = await sandbox.readFile("/workspace/output.json")
-        parsed = parseAnalysisOutput(output.content)
+        phase = "exec"
+        const abortController = new AbortController()
+        const result = await withTimeout(
+          sandbox.exec("python3 /workspace/run_analysis.py", {
+            cwd: "/workspace",
+            timeout: EXEC_TIMEOUT_MS,
+            signal: abortController.signal,
+            env: {
+              PYTHONPATH: "/workspace",
+            },
+          }),
+          EXEC_TIMEOUT_MS + 2_000,
+          `Python execution timed out after ${EXEC_TIMEOUT_MS}ms`,
+          "exec",
+          () => abortController.abort("analysis timeout"),
+        )
+        logAnalysis("exec_finished", {
+          runId,
+          success: result.success,
+          exitCode: result.exitCode,
+          durationMs: result.duration,
+          stdoutBytes: byteLength(result.stdout),
+          stderrBytes: byteLength(result.stderr),
+        })
+
+        if (!result.success) {
+          const error = result.stderr.trim() || result.stdout.trim() || "Python execution failed"
+          throw new AgentToolError(`Python execution failed. ${clip(error)}`, "recoverable", "analysis_run_code", "exec", {
+            exitCode: result.exitCode,
+            stdout: clip(result.stdout),
+            stderr: clip(result.stderr),
+            error: clip(error),
+          })
+        }
+
+        phase = "output"
+        const output = await withTimeout(
+          sandbox.readFile("/workspace/output.json"),
+          SANDBOX_IO_TIMEOUT_MS,
+          `Timed out reading analysis output after ${SANDBOX_IO_TIMEOUT_MS}ms`,
+          "output",
+        )
+        const parsed = parseAnalysisOutput(output.content)
         logAnalysis("output_valid", {
           runId,
-          outputBytes: output.content.length,
+          outputBytes: byteLength(output.content),
           summary: parsed.summary,
         })
-      } catch (err) {
-        const error = err instanceof Error ? err.message : String(err)
-        logAnalysis("failed", {
+
+        logAnalysis("finish", {
           runId,
-          phase: "output",
           durationMs: Date.now() - startedAt,
-          error: error.slice(0, 1_000),
+          execDurationMs: result.duration,
+          status: "success",
         })
         return {
-          success: false,
-          phase: "output",
-          summary: "Analysis ran, but the output was invalid.",
-          exitCode: result.exitCode,
-          stdout: result.stdout.slice(0, 2_000),
-          stderr: result.stderr.slice(0, 2_000),
-          error,
+          success: true,
+          runId,
+          durationMs: result.duration,
+          summary: parsed.summary,
+          result: parsed.result,
+          stdout: clip(result.stdout, 2_000),
+          stderr: clip(result.stderr, 2_000),
         }
-      }
-
-      logAnalysis("finish", {
-        runId,
-        durationMs: Date.now() - startedAt,
-        execDurationMs: result.duration,
-      })
-      return {
-        success: true,
-        runId,
-        durationMs: result.duration,
-        summary: parsed.summary,
-        result: parsed.result,
-        stdout: result.stdout.slice(0, 2_000),
-        stderr: result.stderr.slice(0, 2_000),
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err)
+        const failurePhase = err instanceof AgentToolError ? err.phase ?? phase : phase
+        const details = err instanceof AgentToolError ? err.details : undefined
+        const mode = err instanceof AgentToolError ? err.mode : terminalModeForPhase(failurePhase)
+        logAnalysis("failed", {
+          runId,
+          phase: failurePhase,
+          mode,
+          durationMs: Date.now() - startedAt,
+          error: clip(error, 1_000),
+          details,
+        })
+        if (err instanceof AgentToolError) {
+          throw err
+        }
+        throw new AgentToolError(error, mode, "analysis_run_code", failurePhase)
       }
     },
   }),
+}
+
+function terminalModeForPhase(phase: AnalysisPhase | string): "recoverable" | "terminal" {
+  return phase === "output" ? "recoverable" : "terminal"
 }
