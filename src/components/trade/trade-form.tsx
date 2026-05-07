@@ -50,17 +50,12 @@ import { TickerCombobox } from "@/components/trade/ticker-combobox"
 import { BROKERS } from "@/trade/brokers"
 import { cn } from "@/lib/utils"
 
-const thb = new Intl.NumberFormat("th-TH", {
-  style: "currency",
-  currency: "THB",
-  maximumFractionDigits: 0,
-})
 const usd = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 })
 
-type NumberFieldName = "quantity" | "pricePerShare" | "fees" | "fxRate"
+type NumberFieldName = "quantity" | "pricePerShare" | "fees"
 
 function toNum(v: unknown): number {
   if (typeof v === "number") return v
@@ -149,14 +144,13 @@ function NumberStepper({
 }
 
 function LiveTotal({ control }: { control: Control<AddTradeFormValues> }) {
-  const [qtyRaw, priceRaw, feesRaw, fxRaw, side] = useWatch({
+  const [qtyRaw, priceRaw, feesRaw, side] = useWatch({
     control,
-    name: ["quantity", "pricePerShare", "fees", "fxRate", "side"],
+    name: ["quantity", "pricePerShare", "fees", "side"],
   })
   const qty = toNum(qtyRaw)
   const price = toNum(priceRaw)
   const fees = toNum(feesRaw)
-  const fx = toNum(fxRaw)
 
   if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0 || price <= 0) {
     return (
@@ -169,7 +163,6 @@ function LiveTotal({ control }: { control: Control<AddTradeFormValues> }) {
   const gross = qty * price
   const safeFees = Number.isFinite(fees) ? fees : 0
   const totalUSD = side === "buy" ? gross + safeFees : gross - safeFees
-  const totalTHB = Number.isFinite(fx) && fx > 0 ? totalUSD * fx : null
   const verb = side === "buy" ? "You'll pay" : "You'll receive"
 
   return (
@@ -179,15 +172,6 @@ function LiveTotal({ control }: { control: Control<AddTradeFormValues> }) {
         <span className="text-xl font-semibold tabular-nums">
           {usd.format(totalUSD)}
         </span>
-        {totalTHB !== null ? (
-          <span className="text-muted-foreground tabular-nums">
-            ≈ {thb.format(totalTHB)}
-          </span>
-        ) : (
-          <span className="text-muted-foreground text-xs">
-            add FX rate for THB
-          </span>
-        )}
       </div>
       <div className="text-muted-foreground mt-1 text-xs tabular-nums">
         {qty} sh × {usd.format(price)}
@@ -206,7 +190,6 @@ const NUMBER_FIELDS: Record<
   quantity: { step: 1, rightAddon: "sh", placeholder: "0" },
   pricePerShare: { step: 0.01, precision: 2, rightAddon: "USD", placeholder: "0.00" },
   fees: { step: 1, precision: 2, rightAddon: "USD", placeholder: "0.00" },
-  fxRate: { step: 0.1, precision: 2, rightAddon: "THB/USD", placeholder: "36.50" },
 }
 
 export function TradeForm({
@@ -345,47 +328,25 @@ export function TradeForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <Field data-invalid={!!errors.fees}>
-            <FieldLabel htmlFor="fees">Fees</FieldLabel>
-            <Controller
-              control={control}
-              name="fees"
-              render={({ field }) => (
-                <NumberStepper
-                  id="fees"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  invalid={!!errors.fees}
-                  {...NUMBER_FIELDS.fees}
-                />
-              )}
-            />
-            <FieldDescription>Optional. Defaults to 0.</FieldDescription>
-            <FieldError>{errors.fees?.message}</FieldError>
-          </Field>
-
-          <Field data-invalid={!!errors.fxRate}>
-            <FieldLabel htmlFor="fxRate">FX rate</FieldLabel>
-            <Controller
-              control={control}
-              name="fxRate"
-              render={({ field }) => (
-                <NumberStepper
-                  id="fxRate"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  invalid={!!errors.fxRate}
-                  {...NUMBER_FIELDS.fxRate}
-                />
-              )}
-            />
-            <FieldDescription>Optional. USD → THB.</FieldDescription>
-            <FieldError>{errors.fxRate?.message}</FieldError>
-          </Field>
-        </div>
+        <Field data-invalid={!!errors.fees}>
+          <FieldLabel htmlFor="fees">Fees</FieldLabel>
+          <Controller
+            control={control}
+            name="fees"
+            render={({ field }) => (
+              <NumberStepper
+                id="fees"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                invalid={!!errors.fees}
+                {...NUMBER_FIELDS.fees}
+              />
+            )}
+          />
+          <FieldDescription>Optional. Defaults to 0.</FieldDescription>
+          <FieldError>{errors.fees?.message}</FieldError>
+        </Field>
 
         <Field data-invalid={!!errors.broker}>
           <FieldLabel htmlFor="broker">Broker</FieldLabel>

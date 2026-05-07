@@ -59,7 +59,6 @@ function extractionToFormValues(
     quantity: extraction.quantity ?? undefined,
     pricePerShare: extraction.pricePerShare ?? undefined,
     fees: extraction.fees ?? 0,
-    fxRate: extraction.fxRate ?? undefined,
     tradedAt,
     broker: extraction.broker ?? undefined,
   }

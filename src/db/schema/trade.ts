@@ -28,7 +28,6 @@ export const trade = pgTable(
       scale: 4,
     }).notNull(),
     fees: numeric({ precision: 18, scale: 4 }).notNull().default("0"),
-    fxRate: numeric("fx_rate", { precision: 18, scale: 6 }),
     tradedAt: timestamp("traded_at", { withTimezone: true }).notNull(),
     broker: text(),
     slipId: uuid("slip_id").references(() => tradeSlip.id, { onDelete: "set null" }),

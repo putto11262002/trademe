@@ -11,7 +11,6 @@ export type Trade = {
   quantity: number
   pricePerShare: number
   fees: number
-  fxRate: number | null
   tradedAt: Date
   broker: BrokerSlug | null
   slipId: string | null

@@ -50,6 +50,13 @@
       "when": 1778070876319,
       "tag": "0006_orange_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778113159903,
+      "tag": "0007_left_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

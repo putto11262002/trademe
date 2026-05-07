@@ -11,7 +11,6 @@ export const addTradeSchema = z.object({
   quantity: z.coerce.number().positive("Must be > 0"),
   pricePerShare: z.coerce.number().positive("Must be > 0"),
   fees: z.coerce.number().min(0).default(0),
-  fxRate: z.union([z.coerce.number().positive(), z.literal("").transform(() => undefined)]).optional(),
   tradedAt: z.coerce.date(),
   broker: z.union([brokerSchema, z.literal("").transform(() => undefined)]).optional(),
   slipId: z.string().uuid().optional(),

@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { dash, qty, usd2 } from "./format"
+import { qty, usd2 } from "./format"
 
 const columns: Array<ColumnDef<Trade>> = [
   {
@@ -83,15 +83,6 @@ const columns: Array<ColumnDef<Trade>> = [
     cell: ({ row }) => (
       <div className="text-muted-foreground text-right tabular-nums">
         {usd2.format(row.original.fees)}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "fxRate",
-    header: () => <div className="text-right">FX</div>,
-    cell: ({ row }) => (
-      <div className="text-muted-foreground text-right tabular-nums">
-        {row.original.fxRate != null ? row.original.fxRate.toFixed(2) : dash}
       </div>
     ),
   },
