@@ -196,12 +196,9 @@ function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
               strokeDasharray={circ} strokeDashoffset={offset}
               strokeLinecap="round" className="transition-all duration-500" />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[7px] font-medium tabular-nums leading-none">
-            {pct}%
-          </span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" align="end" className="w-48 p-3">
+      <TooltipContent side="top" align="end" className="w-48 p-3 bg-background border border-border text-foreground shadow-lg">
         <div className="flex flex-col gap-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Input</span>
@@ -417,14 +414,12 @@ function ConnectedChat({
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
         <div className="pointer-events-auto flex items-center justify-end gap-1">
-          {contextUsage && contextPct !== null && (
-            <ContextRing
-              pct={contextPct}
-              inputTokens={contextUsage.inputTokens}
-              outputTokens={contextUsage.outputTokens}
-              contextWindow={selectedModel.contextWindow}
-            />
-          )}
+          <ContextRing
+            pct={contextPct ?? 0}
+            inputTokens={contextUsage?.inputTokens ?? 0}
+            outputTokens={contextUsage?.outputTokens ?? 0}
+            contextWindow={selectedModel.contextWindow}
+          />
           {messages.length > 0 && (
             <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
               className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive" aria-label="Clear history">
