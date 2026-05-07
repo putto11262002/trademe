@@ -561,9 +561,9 @@ The model-facing tools are:
 
 Do not add `skill_execute_script` yet. Skill scripts should only be considered after sandbox policy and observability are stronger.
 
-### Skill Versioning and R2 Direction
+### Skill Registry and R2 Direction
 
-The next registry phase should move from bundled strings toward versioned skill artifacts. The tool contract should stay stable while the backing store changes.
+The skill registry uses repo-root `skills/` as source and R2 as the runtime source of truth. There is no skill versioning for now. The active skill set is whatever is currently uploaded at `skills/manifest.json`.
 
 Target R2 object layout inside the shared app storage bucket:
 
@@ -571,41 +571,42 @@ Target R2 object layout inside the shared app storage bucket:
 skills/
   manifest.json
   code-analysis-env/
-    v1/
-      SKILL.md
-      references/sdk.md
-      manifest.json
+    SKILL.md
+    references/sdk.md
+    manifest.json
 ```
 
-Top-level manifest should track:
+Top-level manifest is only an index:
 
 - skill name
-- active version
-- status (`active` or `draft`)
+- entry path
+- per-skill manifest path
+
+Per-skill manifests track detail:
+
+- skill name
+- title
 - description
+- entry file
 - file list
-- content hash/checksum
-- release commit
-- skill contract version
-- updated timestamp
+- content hashes/checksums
+- allowed tools
 
-Each chat/tool run should eventually record which skill version was loaded. That matters for debugging, reproducibility, and evaluating whether a bad answer came from the model, the tool data, or stale skill instructions.
+Updating a skill is intentionally simple: edit the skill source, generate manifests, and upload to the selected R2 bucket. Dev and production deployment use the same command path; only `--env` changes the target bucket.
 
-There are two different version concepts:
+```bash
+pnpm skills:deploy --env=dev
+pnpm skills:deploy --env=production
+```
 
-- **Skill contract version** lives in `SKILL.md` frontmatter as `skillContractVersion`. It is a compatibility number for the app/tool contract. Bump it only when the skill starts requiring different tools, SDK behavior, output expectations, or prompt semantics that older app code may not support.
-- **Skill release version** is generated at deploy time. Dev defaults to `dev`. Production releases use `git-<shortSha>` from the selected git commit, for example `git-c15f91c`.
-
-`SKILL.md` should not contain the release version. The same committed skill source can be packaged into different release artifacts by the skill deployment workflow. The app declares supported skills and contract versions in code; if R2 serves an unsupported contract version, skill tools fail explicitly instead of loading incompatible instructions.
-
-Two-pass path:
+Current path:
 
 1. Skill registry finalization:
    - move skill content into repo-root `skills/`
-   - generate manifests from `skills/**` at release time
+   - generate manifests from `skills/**`
    - keep `skill_load` and `skill_read_file` behavior unchanged
    - use R2 buckets `trademe-dev` for non-production and `trademe` for production
-   - use a separate manual GitHub Actions workflow for skill deployment
+   - deploy skills locally, separate from app deployment
 2. Sandbox SDK package:
    - move Python SDK into repo-root `sandbox-sdk/`
    - manage it as a uv project
@@ -614,10 +615,9 @@ Two-pass path:
 
 Longer-term path:
 
-- store skill artifacts in R2 under the `skills/` prefix
 - cache active manifests in the Worker
-- pin loaded skill versions per chat run
-- add an admin/deploy path for publishing new skill versions
+- consider versioning once skill content stabilizes
+- record loaded skill metadata per chat run for debugging
 - fail explicitly if a requested manifest or skill file is missing
 
 R2 buckets created for this direction:
@@ -632,27 +632,24 @@ Current Worker binding:
 Skill artifacts live under the `skills/` prefix in this shared app bucket. There is no Worker fallback for skills. Before local testing, generate manifests and upload the reviewed skill content:
 
 ```bash
-pnpm skills:deploy:dev
+pnpm skills:deploy --env=dev
 pnpm dev
 ```
 
-Production skill deployment is separate from app deployment. It should be manual and deterministic from a git ref:
+Production skill deployment is separate from app deployment and is currently local-only:
 
 ```bash
-pnpm skills:deploy:prod
+pnpm skills:deploy --env=production
 ```
-
-The GitHub workflow runs those commands from the selected ref, so production R2 artifacts can be traced back to a commit.
 
 Skill deployment commands always regenerate manifests from repo-root `skills/**` immediately before upload. This prevents release drift between source files and R2 manifests.
 
-Do not wire skill upload into Vite dev/build. The Worker reads skills from R2 at runtime, so generating local manifests during Vite startup would not change what the agent sees. Local testing should explicitly run `pnpm skills:deploy:dev` when skill files change.
+Do not wire skill upload into Vite dev/build. The Worker reads skills from R2 at runtime, so generating local manifests during Vite startup would not change what the agent sees. Local testing should explicitly run `pnpm skills:deploy --env=dev` when skill files change.
 
 CI behavior:
 
-- Pull requests touching `skills/**` validate manifest generation and typecheck.
-- Pushes to `master` touching `skills/**` automatically publish dev skills to `trademe-dev`.
-- Production skill release remains a manual workflow dispatch.
+- No skill-specific CI or GitHub deployment workflow for now.
+- Skill deploys are deliberate local commands.
 
 Do not configure public custom domains for skill artifacts until we explicitly decide that the artifacts are safe to expose. Default stance: skills are private and read by the Worker through an R2 binding.
 

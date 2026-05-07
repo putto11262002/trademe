@@ -6,7 +6,7 @@ import type {
   SkillManifestFile,
   SkillRegistryManifest,
 } from "./types"
-import { R2JsonStore } from "./r2.server"
+import { readR2Json, readR2Text } from "./r2.server"
 
 const ROOT_MANIFEST_KEY = "skills/manifest.json"
 export const SUPPORTED_SKILL_NAMES = ["code-analysis-env"] as const
@@ -41,7 +41,7 @@ const skillRegistryManifestSchema = z.object({
 
 export class SkillRegistry {
   constructor(
-    private readonly store = new R2JsonStore(env.STORAGE_BUCKET),
+    private readonly bucket: R2Bucket = env.STORAGE_BUCKET,
   ) {}
 
   async list(): Promise<AgentSkillMetadata[]> {
@@ -82,7 +82,7 @@ export class SkillRegistry {
 
     return {
       manifest: resolved.manifest,
-      content: await this.store.readText(skillFileKey(name, entryFile.path)),
+      content: await readR2Text(this.bucket, skillFileKey(name, entryFile.path)),
     }
   }
 
@@ -102,7 +102,7 @@ export class SkillRegistry {
     return {
       skillName,
       file,
-      content: await this.store.readText(skillFileKey(skillName, file.path)),
+      content: await readR2Text(this.bucket, skillFileKey(skillName, file.path)),
     }
   }
 
@@ -125,11 +125,11 @@ export class SkillRegistry {
   }
 
   private async rootManifest() {
-    return this.store.readJson(ROOT_MANIFEST_KEY, skillRegistryManifestSchema)
+    return readR2Json(this.bucket, ROOT_MANIFEST_KEY, skillRegistryManifestSchema)
   }
 
   private async skillManifest(key: string) {
-    return this.store.readJson(key, skillManifestSchema)
+    return readR2Json(this.bucket, key, skillManifestSchema)
   }
 
   private assertDeclared(name: string): void {
