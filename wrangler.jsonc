@@ -14,9 +14,6 @@
       "id": "cf7b488ff82a47d7bcf159af68e2d8b8"
     }
   ],
-  "vars": {
-    "VERCEL_AI_GATEWAY_KEY": ""
-  },
   "durable_objects": {
     "bindings": [{ "name": "CHAT", "class_name": "ChatAgent" }]
   },
