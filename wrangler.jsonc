@@ -42,7 +42,7 @@
         {
           "name": "trademe-analysissandbox-dev",
           "class_name": "AnalysisSandbox",
-          "image": "./Dockerfile",
+          "image": "./agent/sandbox/analysis/Dockerfile",
           "instance_type": "lite"
         }
       ],
@@ -60,7 +60,7 @@
   "containers": [
     {
       "class_name": "AnalysisSandbox",
-      "image": "./Dockerfile",
+      "image": "./agent/sandbox/analysis/Dockerfile",
       "instance_type": "lite"
     }
   ],
