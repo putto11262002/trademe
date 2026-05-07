@@ -1,12 +1,12 @@
 import { and, desc, eq } from "drizzle-orm"
 import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
-import { trade, tradeSlip } from "@/db/schema"
-import { getCompanyProfile } from "@/market/api.server"
+import { trade } from "@/db/schema"
 import { markSlipAttached } from "@/slip/api.server"
 import type { BrokerSlug } from "./brokers"
 import type { Position, Trade } from "./types"
 import type { AddTradeInput } from "./schemas"
+import { TradeValidationFailed, validateAddTrade } from "./validation.server"
 
 type TradeRow = typeof trade.$inferSelect
 
@@ -30,18 +30,9 @@ function toTrade(row: TradeRow): Trade {
 export async function addTrade(input: AddTradeInput): Promise<Trade> {
   const user = await requireUser()
   const ticker = input.ticker.toUpperCase()
-  await getCompanyProfile(ticker)
 
-  if (input.slipId) {
-    const [slipRow] = await getDb()
-      .select({ status: tradeSlip.status })
-      .from(tradeSlip)
-      .where(and(eq(tradeSlip.id, input.slipId), eq(tradeSlip.userId, user.id)))
-      .limit(1)
-    if (!slipRow) throw new Error("Slip not found")
-    if (slipRow.status !== "parsed")
-      throw new Error("Slip already attached to a trade")
-  }
+  const { errors } = await validateAddTrade(input, user.id)
+  if (errors.length > 0) throw new TradeValidationFailed(errors)
 
   const [row] = await getDb()
     .insert(trade)
