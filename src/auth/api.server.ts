@@ -1,27 +1,12 @@
-import { clerkClient } from "@clerk/tanstack-react-start/server"
-import { getStartContext } from "@tanstack/start-storage-context"
+import { auth, clerkClient } from "@clerk/tanstack-react-start/server"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/db/index.server"
 import { user } from "@/db/schema"
 import { upsertUser } from "@/user/api.server"
 import type { User } from "./types"
 
-async function getClerkUserId(): Promise<string | null> {
-  try {
-    const request = getStartContext({ throwIfNotFound: false })?.request
-    if (!request) return null
-    const clerk = await clerkClient()
-    const requestState = await clerk.authenticateRequest(request, {
-      secretKey: process.env.CLERK_SECRET_KEY,
-    })
-    return requestState.toAuth()?.userId ?? null
-  } catch {
-    return null
-  }
-}
-
 export async function getCurrentUser(): Promise<User | null> {
-  const userId = await getClerkUserId()
+  const { userId } = await auth()
   if (!userId) return null
 
   const db = getDb()
