@@ -8,6 +8,7 @@ import { analysisTools } from "@/agent/tools/analysis.server"
 import { portfolioTools } from "@/agent/tools/portfolio.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
+import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
 
 const SYSTEM_PROMPT = `You are TradeMe's stock analysis assistant for a retail investor holding US stocks.
 
@@ -68,7 +69,7 @@ export async function runChatAgent(
       ...analysisTools,
     },
     messages: modelMessages,
-    stopWhen: stepCountIs(10),
+    stopWhen: [stopOnTerminalToolError, stepCountIs(10)],
     providerOptions: opts.providerOptions,
     onFinish,
   })
