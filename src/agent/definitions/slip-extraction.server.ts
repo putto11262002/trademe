@@ -18,7 +18,6 @@ OUTPUT FIELDS for kind:"slip" — use EXACTLY these JSON keys, no others. Do not
   - quantity        number | null   shares (fractional allowed)
   - pricePerShare   number | null   USD per share
   - fees            number | null   commission + VAT/tax in USD
-  - fxRate          number | null   USD→THB rate if shown
   - tradedAt        string | null   ISO 8601 timestamp
   - broker          enum slug | null  lowercase, e.g. "dime"
   - confidence      number          self-rated 0..1

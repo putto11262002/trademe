@@ -59,14 +59,6 @@ export const slipExtractionSchema = z.discriminatedUnion("kind", [
       .describe(
         'Total commission/fees in USD. If the slip shows both "Commission" and "VAT"/"Tax", sum them. Null when neither is visible — never guess.',
       ),
-    fxRate: z
-      .coerce
-      .number()
-      .positive()
-      .nullish()
-      .describe(
-        'USD→THB exchange rate from "FX Rate" / "USD/THB" if printed. Null when not shown — never guess.',
-      ),
     tradedAt: z
       .string()
       .nullish()

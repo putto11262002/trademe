@@ -19,7 +19,6 @@ function toTrade(row: TradeRow): Trade {
     quantity: parseFloat(row.quantity),
     pricePerShare: parseFloat(row.pricePerShare),
     fees: parseFloat(row.fees),
-    fxRate: row.fxRate ? parseFloat(row.fxRate) : null,
     tradedAt: row.tradedAt,
     broker: (row.broker as BrokerSlug | null) ?? null,
     slipId: row.slipId ?? null,
@@ -53,7 +52,6 @@ export async function addTrade(input: AddTradeInput): Promise<Trade> {
       quantity: input.quantity.toString(),
       pricePerShare: input.pricePerShare.toString(),
       fees: input.fees.toString(),
-      fxRate: input.fxRate != null ? input.fxRate.toString() : null,
       tradedAt: input.tradedAt,
       broker: input.broker ?? null,
       slipId: input.slipId ?? null,
@@ -105,9 +103,10 @@ export async function getPositions(): Promise<Array<Position>> {
         totalProceedsTHB: 0,
         tradeCount: 0,
       } satisfies Position)
-    // For older rows without an FX rate captured at trade time, fall back to 1
-    // so THB totals at least equal USD totals (a no-op rather than NaN/0).
-    const fx = t.fxRate ?? 1
+    // Transitional: per-trade FX is gone (PR drops trade.fx_rate). THB
+    // aggregates collapse to USD here; the THB tracking fields themselves are
+    // removed in the follow-up PR.
+    const fx = 1
     const grossUSD = t.quantity * t.pricePerShare
     if (t.side === "buy") {
       const costUSD = grossUSD + t.fees
