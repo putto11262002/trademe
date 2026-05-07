@@ -538,7 +538,97 @@ The agent should write code for the specific question, not blindly call a large 
 
 ## Skills and Playbooks
 
-The durable workflow knowledge should live in playbooks/skills, not in a large SDK.
+The durable workflow knowledge should live in playbooks/skills, not in a large SDK. Skills follow a progressive-disclosure shape: the base prompt lists concise skill metadata, the model calls a skill tool to load the `SKILL.md` entry point when needed, and referenced files are loaded separately only when the loaded skill asks for them.
+
+Current first-pass implementation: skill tools are mounted in the chat agent. Runtime skill reads are R2-only through the shared `STORAGE_BUCKET` binding. If a manifest or file is missing, the skill tool returns an explicit error instead of falling back to bundled content.
+
+Skill content is shaped like Agent Skills and lives under repo-root `skills/`:
+
+```txt
+skills/
+  manifest.json
+  code-analysis-env/
+    SKILL.md
+    references/sdk.md
+    manifest.json
+```
+
+The model-facing tools are:
+
+- `skill_list`: list skill metadata and available reference files.
+- `skill_load`: load only the `SKILL.md` entry point for one skill.
+- `skill_read_file`: load one referenced skill file by id or path.
+
+Do not add `skill_execute_script` yet. Skill scripts should only be considered after sandbox policy and observability are stronger.
+
+### Skill Versioning and R2 Direction
+
+The next registry phase should move from bundled strings toward versioned skill artifacts. The tool contract should stay stable while the backing store changes.
+
+Target R2 object layout inside the shared app storage bucket:
+
+```txt
+skills/
+  manifest.json
+  code-analysis-env/
+    v1/
+      SKILL.md
+      references/sdk.md
+      manifest.json
+```
+
+Top-level manifest should track:
+
+- skill name
+- active version
+- status (`active` or `draft`)
+- description
+- file list
+- content hash/checksum
+- updated timestamp
+
+Each chat/tool run should eventually record which skill version was loaded. That matters for debugging, reproducibility, and evaluating whether a bad answer came from the model, the tool data, or stale skill instructions.
+
+Two-pass path:
+
+1. Skill registry finalization:
+   - move skill content into repo-root `skills/`
+   - generate manifests from `skills/**`
+   - keep `skill_load` and `skill_read_file` behavior unchanged
+   - use R2 buckets `trademe-dev` for non-production and `trademe` for production
+   - add CI/deploy publishing plan for versioned skill artifacts
+2. Sandbox SDK package:
+   - move Python SDK into repo-root `sandbox-sdk/`
+   - manage it as a uv project
+   - generate `skills/code-analysis-env/references/sdk.md` from SDK docstrings or structured metadata
+   - install/copy the SDK into the sandbox image
+
+Longer-term path:
+
+- store skill artifacts in R2 under the `skills/` prefix
+- cache active manifests in the Worker
+- pin loaded skill versions per chat run
+- add an admin/deploy path for publishing new skill versions
+- fail explicitly if a requested manifest or skill file is missing
+
+R2 buckets created for this direction:
+
+- `trademe-dev`
+- `trademe`
+
+Current Worker binding:
+
+- `STORAGE_BUCKET` -> `trademe-dev` for local testing in this branch
+
+Skill artifacts live under the `skills/` prefix in this shared app bucket. There is no Worker fallback for skills. Before local testing, generate manifests and upload the reviewed skill content:
+
+```bash
+pnpm skills:generate
+pnpm skills:upload:dev
+pnpm dev
+```
+
+Do not configure public custom domains for skill artifacts until we explicitly decide that the artifacts are safe to expose. Default stance: skills are private and read by the Worker through an R2 binding.
 
 Each playbook should define:
 

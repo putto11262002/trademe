@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "CLOUDFLARE_ENV=dev vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -17,9 +17,14 @@
     "db:studio": "drizzle-kit studio",
     "seed:profiles": "tsx --env-file=.dev.vars scripts/seed-profiles.ts",
     "test:slip": "tsx --env-file=.dev.vars scripts/test-slip-extraction.ts",
+    "skills:generate": "tsx scripts/generate-skills-manifest.ts",
+    "skills:upload": "tsx scripts/upload-skills-to-r2.ts",
+    "skills:upload:dev": "tsx scripts/upload-skills-to-r2.ts --env=dev",
+    "skills:upload:prod": "tsx scripts/upload-skills-to-r2.ts --env=production",
     "cf:dev": "wrangler dev",
     "cf:types": "wrangler types",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "vite build && wrangler deploy",
+    "deploy:prod": "vite build && wrangler deploy"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.60",

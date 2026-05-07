@@ -2,8 +2,10 @@ import { streamText, convertToModelMessages, stepCountIs } from "ai"
 import type { UIMessage, StreamTextOnFinishCallback, ToolSet } from "ai"
 import { createModel } from "@/agent/gateway.server"
 import { generalChatModels, DEFAULT_GENERAL_CHAT_MODEL, type GeneralChatModelKey, type ProviderOptions } from "@/agent/general-chat-models"
+import { renderSkillCatalogPrompt } from "@/agent/skills/registry.server"
 import { analysisTools } from "@/agent/tools/analysis.server"
 import { portfolioTools } from "@/agent/tools/portfolio.server"
+import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 
 const SYSTEM_PROMPT = `You are TradeMe's stock analysis assistant for a retail investor holding US stocks.
@@ -22,10 +24,7 @@ Tools:
 
 Code execution rules:
 - Use analysis_run_code only for stock, market, or portfolio analysis tasks.
-- Do not inspect long candle arrays directly in text. Request the needed dataset and compute inside analysis_run_code.
-- Generated Python should import trademe_sdk as trademe, use namespaced SDK accessors such as trademe.market.candles("NVDA"), and finish with trademe.output.write(summary, result).
-- The summary passed to trademe.output.write must be one short sentence that says what the code did. It is for the tool UI, not the final answer.
-- The analysis output must be JSON-serializable. Keep result compact; large tables or raw candle arrays are not useful to the user.
+- If a task needs detailed code execution guidance, load the relevant skill before using analysis_run_code.
 
 Be concise and direct. Do not use emojis. Ground answers in actual numbers when available. Explain the computed result in plain English, including uncertainty or data gaps.`
 
@@ -45,8 +44,9 @@ export async function runChatAgent(
 
   return streamText({
     model: createModel(modelId),
-    system: SYSTEM_PROMPT,
+    system: [SYSTEM_PROMPT, renderSkillCatalogPrompt()].join("\n\n"),
     tools: {
+      ...skillTools,
       ...portfolioTools,
       ...stockTools,
       ...analysisTools,

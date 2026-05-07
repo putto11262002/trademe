@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-07T07:53:00.863Z",
+  "skills": [
+    {
+      "name": "code-analysis-env",
+      "title": "Code Analysis Env",
+      "description": "Use for bounded Python analysis over stock, candle, portfolio, market, news, and fundamentals data.",
+      "activeVersion": "v1",
+      "status": "active",
+      "manifestPath": "skills/code-analysis-env/v1/manifest.json",
+      "checksum": "37caba59d3145ad8351a40dae7cf2f8b154e8adc472ee2c851255534271dd1d3",
+      "updatedAt": "2026-05-07T07:53:00.863Z"
+    }
+  ]
+}

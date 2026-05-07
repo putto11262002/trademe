@@ -14,6 +14,46 @@
       "id": "cf7b488ff82a47d7bcf159af68e2d8b8"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE_BUCKET",
+      "bucket_name": "trademe"
+    }
+  ],
+  "env": {
+    "dev": {
+      "kv_namespaces": [
+        {
+          "binding": "MARKET_CACHE",
+          "id": "cf7b488ff82a47d7bcf159af68e2d8b8"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "STORAGE_BUCKET",
+          "bucket_name": "trademe-dev",
+          "remote": true
+        }
+      ],
+      "vars": {
+        "SANDBOX_API_TOKEN": ""
+      },
+      "containers": [
+        {
+          "name": "trademe-analysissandbox-dev",
+          "class_name": "AnalysisSandbox",
+          "image": "./Dockerfile",
+          "instance_type": "lite"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "CHAT", "class_name": "ChatAgent" },
+          { "name": "ANALYSIS_SANDBOX", "class_name": "AnalysisSandbox" }
+        ]
+      }
+    }
+  },
   "vars": {
     "SANDBOX_API_TOKEN": ""
   },

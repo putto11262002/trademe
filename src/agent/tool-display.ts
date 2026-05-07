@@ -18,8 +18,41 @@ type PriceTarget = { numberOfAnalysts?: number; targetMean?: number }
 type Recommendation = { trends: unknown[] }
 type FXRate = { from: string; to: string; rate: number }
 type PriceHistorySummary = { ticker: string; range: string; periodReturnPct: number | null; barCount: number }
+type SkillList = { found?: boolean; skills: unknown[] }
+type SkillLoad = { found: boolean; name: string; version?: string; title?: string; references?: unknown[] }
+type SkillFile = { found: boolean; version?: string; title?: string; path?: string }
 
 export const toolDisplayRegistry: Record<string, ToolDisplay> = {
+  skill_list: {
+    label: "Skills",
+    loadingMessage: "Checking available skills…",
+    resultMessage: (out) => {
+      const o = out as SkillList
+      return `${o.skills.length} skill${o.skills.length !== 1 ? "s" : ""} available`
+    },
+  },
+
+  skill_load: {
+    label: "Skill",
+    loadingMessage: (input) => `Loading ${input.name}…`,
+    resultMessage: (out) => {
+      const o = out as SkillLoad
+      if (!o.found) return "Skill not found"
+      const refs = o.references?.length ? ` · ${o.references.length} reference${o.references.length !== 1 ? "s" : ""}` : ""
+      return `${o.title ?? o.name}${o.version ? ` ${o.version}` : ""}${refs}`
+    },
+  },
+
+  skill_read_file: {
+    label: "Skill File",
+    loadingMessage: (input) => `Reading ${input.file}…`,
+    resultMessage: (out) => {
+      const o = out as SkillFile
+      if (!o.found) return "Skill file not found"
+      return `${o.title ?? o.path ?? "Skill file loaded"}${o.version ? ` ${o.version}` : ""}`
+    },
+  },
+
   portfolio_get_summary: {
     label: "Portfolio",
     loadingMessage: "Fetching your portfolio…",
