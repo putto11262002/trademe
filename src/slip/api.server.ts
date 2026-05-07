@@ -19,11 +19,65 @@ function toSlip(row: SlipRow): Slip {
   }
 }
 
+const MAX_IMAGE_BYTES = 8_000_000
+
+function sniffImageFormat(bytes: Uint8Array): "png" | "jpeg" | "webp" | null {
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "png"
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "jpeg"
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "webp"
+  }
+  return null
+}
+
+function declaredFormatOf(contentType: string): "png" | "jpeg" | "webp" | null {
+  if (contentType === "image/png") return "png"
+  if (contentType === "image/jpeg" || contentType === "image/jpg") return "jpeg"
+  if (contentType === "image/webp") return "webp"
+  return null
+}
+
+function validateImageBytes(bytes: Uint8Array, contentType: string): void {
+  const sniffed = sniffImageFormat(bytes)
+  const declared = declaredFormatOf(contentType)
+  if (sniffed === null || sniffed !== declared) {
+    throw new Error("Image data doesn't match declared format")
+  }
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image too large (max 8MB)")
+  }
+}
+
 export async function parseSlip(input: {
   image: Uint8Array
   contentType: string
 }): Promise<ParseSlipResult> {
   const user = await requireUser()
+  validateImageBytes(input.image, input.contentType)
   const { result, modelId } = await runSlipExtraction(input)
 
   if (result.kind === "not_a_slip") {
