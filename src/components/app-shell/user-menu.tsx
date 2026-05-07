@@ -20,9 +20,10 @@ export function UserMenu() {
     staleTime: Infinity,
   })
 
-  if (!user) return null
+  if (!user || user.status !== "ok") return null
 
-  const initial = user.displayName.charAt(0).toUpperCase()
+  const { displayName, email } = user.user
+  const initial = displayName.charAt(0).toUpperCase()
 
   return (
     <DropdownMenu>
@@ -36,8 +37,8 @@ export function UserMenu() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col">
-            <span className="text-sm font-medium">{user.displayName}</span>
-            <span className="text-muted-foreground text-xs">{user.email}</span>
+            <span className="text-sm font-medium">{displayName}</span>
+            <span className="text-muted-foreground text-xs">{email}</span>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
