@@ -3,7 +3,6 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
-  redirect,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
@@ -11,17 +10,13 @@ import { QueryClient } from "@tanstack/react-query"
 import { ClerkProvider } from "@clerk/tanstack-react-start"
 
 import { Toaster } from "@/components/ui/sonner"
-import { getCurrentUserFn } from "@/auth"
+import type { User } from "@/auth"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
+  user: User | null
 }>()({
-  beforeLoad: async ({ location }) => {
-    if (location.pathname.startsWith("/sign-")) return
-    const user = await getCurrentUserFn()
-    if (!user) throw redirect({ to: "/sign-in" })
-  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

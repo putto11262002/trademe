@@ -11,14 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
-import { Route as AppRouteImport } from './routes/_app'
-import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppChatRouteImport } from './routes/_app/chat'
-import { Route as AppTradesIndexRouteImport } from './routes/_app/trades/index'
-import { Route as AppPositionsIndexRouteImport } from './routes/_app/positions/index'
-import { Route as AppTradesNewRouteImport } from './routes/_app/trades/new'
-import { Route as AppTradesFromSlipRouteImport } from './routes/_app/trades/from-slip'
-import { Route as AppPositionsTickerRouteImport } from './routes/_app/positions/$ticker'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
+import { Route as AuthenticatedTradesIndexRouteImport } from './routes/_authenticated/trades/index'
+import { Route as AuthenticatedPositionsIndexRouteImport } from './routes/_authenticated/positions/index'
+import { Route as AuthenticatedTradesNewRouteImport } from './routes/_authenticated/trades/new'
+import { Route as AuthenticatedTradesFromSlipRouteImport } from './routes/_authenticated/trades/from-slip'
+import { Route as AuthenticatedPositionsTickerRouteImport } from './routes/_authenticated/positions/$ticker'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -30,80 +30,84 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AppChatRoute = AppChatRouteImport.update({
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AppTradesIndexRoute = AppTradesIndexRouteImport.update({
-  id: '/trades/',
-  path: '/trades/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPositionsIndexRoute = AppPositionsIndexRouteImport.update({
-  id: '/positions/',
-  path: '/positions/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTradesNewRoute = AppTradesNewRouteImport.update({
+const AuthenticatedTradesIndexRoute =
+  AuthenticatedTradesIndexRouteImport.update({
+    id: '/trades/',
+    path: '/trades/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPositionsIndexRoute =
+  AuthenticatedPositionsIndexRouteImport.update({
+    id: '/positions/',
+    path: '/positions/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTradesNewRoute = AuthenticatedTradesNewRouteImport.update({
   id: '/trades/new',
   path: '/trades/new',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AppTradesFromSlipRoute = AppTradesFromSlipRouteImport.update({
-  id: '/trades/from-slip',
-  path: '/trades/from-slip',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPositionsTickerRoute = AppPositionsTickerRouteImport.update({
-  id: '/positions/$ticker',
-  path: '/positions/$ticker',
-  getParentRoute: () => AppRoute,
-} as any)
+const AuthenticatedTradesFromSlipRoute =
+  AuthenticatedTradesFromSlipRouteImport.update({
+    id: '/trades/from-slip',
+    path: '/trades/from-slip',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPositionsTickerRoute =
+  AuthenticatedPositionsTickerRouteImport.update({
+    id: '/positions/$ticker',
+    path: '/positions/$ticker',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppIndexRoute
+  '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/chat': typeof AppChatRoute
-  '/positions/$ticker': typeof AppPositionsTickerRoute
-  '/trades/from-slip': typeof AppTradesFromSlipRoute
-  '/trades/new': typeof AppTradesNewRoute
-  '/positions/': typeof AppPositionsIndexRoute
-  '/trades/': typeof AppTradesIndexRoute
+  '/chat': typeof AuthenticatedChatRoute
+  '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
+  '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
+  '/trades/new': typeof AuthenticatedTradesNewRoute
+  '/positions/': typeof AuthenticatedPositionsIndexRoute
+  '/trades/': typeof AuthenticatedTradesIndexRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/chat': typeof AppChatRoute
-  '/': typeof AppIndexRoute
-  '/positions/$ticker': typeof AppPositionsTickerRoute
-  '/trades/from-slip': typeof AppTradesFromSlipRoute
-  '/trades/new': typeof AppTradesNewRoute
-  '/positions': typeof AppPositionsIndexRoute
-  '/trades': typeof AppTradesIndexRoute
+  '/chat': typeof AuthenticatedChatRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
+  '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
+  '/trades/new': typeof AuthenticatedTradesNewRoute
+  '/positions': typeof AuthenticatedPositionsIndexRoute
+  '/trades': typeof AuthenticatedTradesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_app': typeof AppRouteWithChildren
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/_app/chat': typeof AppChatRoute
-  '/_app/': typeof AppIndexRoute
-  '/_app/positions/$ticker': typeof AppPositionsTickerRoute
-  '/_app/trades/from-slip': typeof AppTradesFromSlipRoute
-  '/_app/trades/new': typeof AppTradesNewRoute
-  '/_app/positions/': typeof AppPositionsIndexRoute
-  '/_app/trades/': typeof AppTradesIndexRoute
+  '/_authenticated/chat': typeof AuthenticatedChatRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
+  '/_authenticated/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
+  '/_authenticated/trades/new': typeof AuthenticatedTradesNewRoute
+  '/_authenticated/positions/': typeof AuthenticatedPositionsIndexRoute
+  '/_authenticated/trades/': typeof AuthenticatedTradesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,20 +134,20 @@ export interface FileRouteTypes {
     | '/trades'
   id:
     | '__root__'
-    | '/_app'
+    | '/_authenticated'
     | '/sign-in'
     | '/sign-up'
-    | '/_app/chat'
-    | '/_app/'
-    | '/_app/positions/$ticker'
-    | '/_app/trades/from-slip'
-    | '/_app/trades/new'
-    | '/_app/positions/'
-    | '/_app/trades/'
+    | '/_authenticated/chat'
+    | '/_authenticated/'
+    | '/_authenticated/positions/$ticker'
+    | '/_authenticated/trades/from-slip'
+    | '/_authenticated/trades/new'
+    | '/_authenticated/positions/'
+    | '/_authenticated/trades/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRouteWithChildren
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
 }
@@ -164,89 +168,91 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app': {
-      id: '/_app'
+    '/_authenticated': {
+      id: '/_authenticated'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/': {
-      id: '/_app/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_app/chat': {
-      id: '/_app/chat'
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
       path: '/chat'
       fullPath: '/chat'
-      preLoaderRoute: typeof AppChatRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_app/trades/': {
-      id: '/_app/trades/'
+    '/_authenticated/trades/': {
+      id: '/_authenticated/trades/'
       path: '/trades'
       fullPath: '/trades/'
-      preLoaderRoute: typeof AppTradesIndexRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedTradesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_app/positions/': {
-      id: '/_app/positions/'
+    '/_authenticated/positions/': {
+      id: '/_authenticated/positions/'
       path: '/positions'
       fullPath: '/positions/'
-      preLoaderRoute: typeof AppPositionsIndexRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedPositionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_app/trades/new': {
-      id: '/_app/trades/new'
+    '/_authenticated/trades/new': {
+      id: '/_authenticated/trades/new'
       path: '/trades/new'
       fullPath: '/trades/new'
-      preLoaderRoute: typeof AppTradesNewRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedTradesNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_app/trades/from-slip': {
-      id: '/_app/trades/from-slip'
+    '/_authenticated/trades/from-slip': {
+      id: '/_authenticated/trades/from-slip'
       path: '/trades/from-slip'
       fullPath: '/trades/from-slip'
-      preLoaderRoute: typeof AppTradesFromSlipRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedTradesFromSlipRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_app/positions/$ticker': {
-      id: '/_app/positions/$ticker'
+    '/_authenticated/positions/$ticker': {
+      id: '/_authenticated/positions/$ticker'
       path: '/positions/$ticker'
       fullPath: '/positions/$ticker'
-      preLoaderRoute: typeof AppPositionsTickerRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof AuthenticatedPositionsTickerRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
-interface AppRouteChildren {
-  AppChatRoute: typeof AppChatRoute
-  AppIndexRoute: typeof AppIndexRoute
-  AppPositionsTickerRoute: typeof AppPositionsTickerRoute
-  AppTradesFromSlipRoute: typeof AppTradesFromSlipRoute
-  AppTradesNewRoute: typeof AppTradesNewRoute
-  AppPositionsIndexRoute: typeof AppPositionsIndexRoute
-  AppTradesIndexRoute: typeof AppTradesIndexRoute
+interface AuthenticatedRouteChildren {
+  AuthenticatedChatRoute: typeof AuthenticatedChatRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedPositionsTickerRoute: typeof AuthenticatedPositionsTickerRoute
+  AuthenticatedTradesFromSlipRoute: typeof AuthenticatedTradesFromSlipRoute
+  AuthenticatedTradesNewRoute: typeof AuthenticatedTradesNewRoute
+  AuthenticatedPositionsIndexRoute: typeof AuthenticatedPositionsIndexRoute
+  AuthenticatedTradesIndexRoute: typeof AuthenticatedTradesIndexRoute
 }
 
-const AppRouteChildren: AppRouteChildren = {
-  AppChatRoute: AppChatRoute,
-  AppIndexRoute: AppIndexRoute,
-  AppPositionsTickerRoute: AppPositionsTickerRoute,
-  AppTradesFromSlipRoute: AppTradesFromSlipRoute,
-  AppTradesNewRoute: AppTradesNewRoute,
-  AppPositionsIndexRoute: AppPositionsIndexRoute,
-  AppTradesIndexRoute: AppTradesIndexRoute,
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedChatRoute: AuthenticatedChatRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedPositionsTickerRoute: AuthenticatedPositionsTickerRoute,
+  AuthenticatedTradesFromSlipRoute: AuthenticatedTradesFromSlipRoute,
+  AuthenticatedTradesNewRoute: AuthenticatedTradesNewRoute,
+  AuthenticatedPositionsIndexRoute: AuthenticatedPositionsIndexRoute,
+  AuthenticatedTradesIndexRoute: AuthenticatedTradesIndexRoute,
 }
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  AppRoute: AppRouteWithChildren,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
 }

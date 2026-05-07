@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const Route = createFileRoute("/_app/")({ component: HomePage })
+export const Route = createFileRoute("/_authenticated/")({ component: HomePage })
 
 function HomePage() {
   return (
