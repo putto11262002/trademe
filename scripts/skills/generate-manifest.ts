@@ -56,6 +56,7 @@ async function main() {
 
     skills.push({
       name: skillName,
+      description: frontmatter.description,
       entry: `skills/${skillName}/SKILL.md`,
       manifest: `skills/${skillName}/manifest.json`,
     })

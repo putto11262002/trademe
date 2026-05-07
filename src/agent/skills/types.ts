@@ -20,6 +20,7 @@ export type SkillManifest = {
 
 export type SkillRegistryEntry = {
   name: string
+  description: string
   entry: string
   manifest: string
 }

@@ -2,7 +2,8 @@ import { streamText, convertToModelMessages, stepCountIs } from "ai"
 import type { UIMessage, StreamTextOnFinishCallback, ToolSet } from "ai"
 import { createModel } from "@/agent/gateway.server"
 import { generalChatModels, DEFAULT_GENERAL_CHAT_MODEL, type GeneralChatModelKey, type ProviderOptions } from "@/agent/general-chat-models"
-import { SUPPORTED_SKILL_NAMES } from "@/agent/skills/registry.server"
+import { listAgentSkills } from "@/agent/skills/registry.server"
+import type { AgentSkillMetadata } from "@/agent/skills/types"
 import { analysisTools } from "@/agent/tools/analysis.server"
 import { portfolioTools } from "@/agent/tools/portfolio.server"
 import { skillTools } from "@/agent/tools/skills.server"
@@ -26,9 +27,6 @@ Code execution rules:
 - Use analysis_run_code only for stock, market, or portfolio analysis tasks.
 - If a task needs detailed code execution guidance, load the relevant skill before using analysis_run_code.
 
-Skills:
-${SUPPORTED_SKILL_NAMES.map((name) => `- ${name}`).join("\n")}
-
 Skill loading rules:
 - When a task would benefit from a skill, call skill_load before doing the work.
 - skill_load returns only SKILL.md.
@@ -36,6 +34,14 @@ Skill loading rules:
 - Do not assume all skill files are already in context.
 
 Be concise and direct. Do not use emojis. Ground answers in actual numbers when available. Explain the computed result in plain English, including uncertainty or data gaps.`
+
+function renderSystemPrompt(skills: AgentSkillMetadata[]): string {
+  return [
+    SYSTEM_PROMPT,
+    "Skills:",
+    ...skills.map((skill) => `- ${skill.name}: ${skill.description}`),
+  ].join("\n")
+}
 
 export type ChatAgentOptions = {
   modelKey?: GeneralChatModelKey
@@ -50,10 +56,11 @@ export async function runChatAgent(
   const modelKey = (opts.modelKey ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
   const modelMessages = await convertToModelMessages(messages)
+  const skills = await listAgentSkills()
 
   return streamText({
     model: createModel(modelId),
-    system: SYSTEM_PROMPT,
+    system: renderSystemPrompt(skills),
     tools: {
       ...skillTools,
       ...portfolioTools,

@@ -34,6 +34,7 @@ const skillRegistryManifestSchema = z.object({
   generatedAt: z.string(),
   skills: z.array(z.object({
     name: z.string(),
+    description: z.string(),
     entry: z.string(),
     manifest: z.string(),
   })),
@@ -54,7 +55,7 @@ export class SkillRegistry {
       skills.push({
         name: entry.name,
         title: manifest.title,
-        description: manifest.description,
+        description: entry.description,
         entry: entry.entry,
         manifest: entry.manifest,
         references: manifest.files
