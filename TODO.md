@@ -85,6 +85,11 @@ Pass goal: make repo-root `skills/` the source of truth, preserve explicit progr
   - [x] upload dev skills to `trademe-dev`
   - [x] upload production skills to `trademe`
   - [x] update active manifest only after all versioned files upload successfully
+- [x] Add skill CI:
+  - [x] PR validation for `skills/**`
+  - [x] auto publish dev skills from `master` when `skills/**` changes
+  - [x] keep production skill release manual
+- [x] Regenerate manifests from `skills/**` as part of skill deploy commands to prevent drift.
 - [ ] Decide R2 custom domain plan:
   - [ ] confirm domain names
   - [ ] decide public vs private access; default private Worker-only access for skills

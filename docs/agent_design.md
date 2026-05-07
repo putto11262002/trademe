@@ -632,19 +632,27 @@ Current Worker binding:
 Skill artifacts live under the `skills/` prefix in this shared app bucket. There is no Worker fallback for skills. Before local testing, generate manifests and upload the reviewed skill content:
 
 ```bash
-pnpm skills:generate
-pnpm skills:upload:dev
+pnpm skills:deploy:dev
 pnpm dev
 ```
 
 Production skill deployment is separate from app deployment. It should be manual and deterministic from a git ref:
 
 ```bash
-pnpm skills:generate:prod
-pnpm skills:upload:prod
+pnpm skills:deploy:prod
 ```
 
 The GitHub workflow runs those commands from the selected ref, so production R2 artifacts can be traced back to a commit.
+
+Skill deployment commands always regenerate manifests from repo-root `skills/**` immediately before upload. This prevents release drift between source files and R2 manifests.
+
+Do not wire skill upload into Vite dev/build. The Worker reads skills from R2 at runtime, so generating local manifests during Vite startup would not change what the agent sees. Local testing should explicitly run `pnpm skills:deploy:dev` when skill files change.
+
+CI behavior:
+
+- Pull requests touching `skills/**` validate manifest generation and typecheck.
+- Pushes to `master` touching `skills/**` automatically publish dev skills to `trademe-dev`.
+- Production skill release remains a manual workflow dispatch.
 
 Do not configure public custom domains for skill artifacts until we explicitly decide that the artifacts are safe to expose. Default stance: skills are private and read by the Worker through an R2 binding.
 

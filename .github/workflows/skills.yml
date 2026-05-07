@@ -1,0 +1,66 @@
+name: Skills
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'scripts/generate-skills-manifest.ts'
+      - 'scripts/upload-skills-to-r2.ts'
+      - '.github/workflows/skills.yml'
+      - '.github/workflows/deploy-skills.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  push:
+    branches: [master]
+    paths:
+      - 'skills/**'
+      - 'scripts/generate-skills-manifest.ts'
+      - 'scripts/upload-skills-to-r2.ts'
+      - '.github/workflows/skills.yml'
+      - '.github/workflows/deploy-skills.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm skills:generate
+
+      - run: pnpm typecheck
+
+  deploy-dev:
+    if: ${{ github.event_name == 'push' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Upload dev skills
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm skills:deploy:dev
