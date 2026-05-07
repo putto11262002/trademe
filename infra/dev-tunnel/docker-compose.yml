@@ -3,9 +3,6 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: trademe-dev-tunnel
     restart: unless-stopped
-    command: tunnel --config /etc/cloudflared/config.yml run
-    volumes:
-      - ./generated/config.yml:/etc/cloudflared/config.yml:ro
-      - ./generated/credentials.json:/etc/cloudflared/credentials.json:ro
+    command: tunnel --no-autoupdate run --token ${CF_DEV_TUNNEL_TOKEN}
     extra_hosts:
       - "host.docker.internal:host-gateway"
