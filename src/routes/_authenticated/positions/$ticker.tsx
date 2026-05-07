@@ -15,7 +15,7 @@ import {
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const Route = createFileRoute("/positions/$ticker")({
+export const Route = createFileRoute("/_authenticated/positions/$ticker")({
   component: PositionDetailPage,
 })
 

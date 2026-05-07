@@ -6,7 +6,7 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 export function getRouter() {
   const queryClient = new QueryClient()
   const router = createTanStackRouter({
-    context: { queryClient },
+    context: { queryClient, user: null },
     routeTree,
     scrollRestoration: true,
     defaultPreload: "intent",

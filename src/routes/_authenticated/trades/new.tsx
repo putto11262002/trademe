@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react"
 import { TradeForm } from "@/components/trade/trade-form"
 import { Button } from "@/components/ui/button"
 
-export const Route = createFileRoute("/trades/new")({ component: NewTradePage })
+export const Route = createFileRoute("/_authenticated/trades/new")({ component: NewTradePage })
 
 function NewTradePage() {
   return (

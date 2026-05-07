@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { marketCompanyProfile } from "./market-company-profile"
 import { tradeSlip } from "./trade-slip"
+import { user } from "./user"
 
 export const tradeSide = pgEnum("trade_side", ["buy", "sell"])
 export const tradeSource = pgEnum("trade_source", ["manual", "slip"])
@@ -17,7 +18,7 @@ export const trade = pgTable(
   "trade",
   {
     id: uuid().primaryKey().defaultRandom(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     ticker: text()
       .notNull()
       .references(() => marketCompanyProfile.ticker),

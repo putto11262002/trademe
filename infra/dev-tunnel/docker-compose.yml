@@ -1,0 +1,8 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: trademe-dev-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_DEV_TUNNEL_TOKEN}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

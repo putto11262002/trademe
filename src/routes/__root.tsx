@@ -7,26 +7,21 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { QueryClient } from "@tanstack/react-query"
+import { ClerkProvider } from "@clerk/tanstack-react-start"
 
-import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/sonner"
+import type { User } from "@/auth"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
+  user: User | null
 }>()({
   head: () => ({
     meta: [
-      {
-        charSet: "utf-8",
-      },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      {
-        title: "TradeMe",
-      },
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "TradeMe" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -46,28 +41,21 @@ export const Route = createRootRouteWithContext<{
 
 function RootDocument() {
   return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <AppShell>
+    <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/sign-in">
+      <html lang="en">
+        <head>
+          <HeadContent />
+        </head>
+        <body>
           <Outlet />
-        </AppShell>
-        <Toaster />
-        <TanStackDevtools
-          config={{
-            position: "bottom-right",
-          }}
-          plugins={[
-            {
-              name: "Tanstack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
-        <Scripts />
-      </body>
-    </html>
+          <Toaster />
+          <TanStackDevtools
+            config={{ position: "bottom-right" }}
+            plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+          />
+          <Scripts />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

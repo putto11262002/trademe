@@ -31,11 +31,11 @@ import {
   type GeneralChatModelKey,
   type ProviderOptions,
 } from "@/agent/general-chat-models"
+import { useAuth } from "@clerk/tanstack-react-start"
 import { ConversationSidebar, ConversationToggle } from "@/components/chat/thread-switcher"
 import { createThreadFn, getThreadFn, updateThreadFn } from "@/thread/functions"
 import type { Thread } from "@/thread/types"
 
-const MOCK_USER_ID = "usr_demo_01"
 const THREAD_LS_KEY = "activeThreadId"
 
 // ---------------------------------------------------------------------------
@@ -640,6 +640,7 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
 // ---------------------------------------------------------------------------
 
 export function ChatPanel({ onClose }: { onClose: () => void }) {
+  const { userId } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
@@ -649,7 +650,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
 
   const createMutation = useMutation({
-    mutationFn: () => createThreadFn({ data: { userId: MOCK_USER_ID, modelKey, providerOptions } }),
+    mutationFn: () => createThreadFn({ data: { userId: userId!, modelKey, providerOptions } }),
     onSuccess: (id) => {
       setActiveThreadId(id)
       setActiveTitle(null)
@@ -743,7 +744,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
       <ConversationSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        userId={MOCK_USER_ID}
+        userId={userId ?? ""}
         activeThreadId={activeThreadId}
         onSelect={handleThreadSelect}
         onNew={handleNewConversation}

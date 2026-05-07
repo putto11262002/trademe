@@ -1,4 +1,5 @@
 import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { user } from "./user"
 
 export const tradeSlipStatus = pgEnum("trade_slip_status", ["parsed", "attached"])
 
@@ -6,7 +7,7 @@ export const tradeSlip = pgTable(
   "trade_slip",
   {
     id: uuid().primaryKey().defaultRandom(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     status: tradeSlipStatus().notNull().default("parsed"),
     extraction: jsonb().notNull(),
     extractionModel: text("extraction_model").notNull(),

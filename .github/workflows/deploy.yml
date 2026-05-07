@@ -37,7 +37,14 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm db:migrate
 
+      - name: Write .dev.vars for prerender
+        run: |
+          echo "CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}" >> .dev.vars
+          echo "VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}" >> .dev.vars
+
       - run: pnpm build
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
 
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v3

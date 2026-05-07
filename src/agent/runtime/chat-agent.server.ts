@@ -2,6 +2,7 @@ import { AIChatAgent } from "@cloudflare/ai-chat"
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai"
 import type { StreamTextOnFinishCallback, ToolSet } from "ai"
 import type { OnChatMessageOptions } from "@cloudflare/ai-chat"
+import { verifyToken } from "@clerk/backend"
 import { runChatAgent } from "@/agent/definitions/chat.server"
 import type { GeneralChatModelKey, ProviderOptions } from "@/agent/general-chat-models"
 
@@ -25,6 +26,14 @@ export class ChatAgent extends AIChatAgent<Env> {
   }
 
   async onRequest(request: Request): Promise<Response> {
+    const sessionToken = request.headers.get("cookie")?.match(/(?:^|;\s*)__session=([^;]+)/)?.[1]
+    if (!sessionToken) return new Response("Unauthorized", { status: 401 })
+    try {
+      await verifyToken(sessionToken, { secretKey: process.env.CLERK_SECRET_KEY })
+    } catch {
+      return new Response("Unauthorized", { status: 401 })
+    }
+
     if (request.method === "DELETE") {
       this.messages = []
       return new Response(null, { status: 204 })

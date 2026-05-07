@@ -7,6 +7,9 @@ import tailwindcss from "@tailwindcss/vite"
 import { cloudflare } from "@cloudflare/vite-plugin"
 
 const config = defineConfig({
+  server: {
+    allowedHosts: ["trademe-dev.sabaiscale.com"],
+  },
   plugins: [
     devtools(),
     cloudflare({ viteEnvironment: { name: "ssr" } }),

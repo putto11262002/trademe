@@ -15,7 +15,7 @@ import {
 import { parseSlipFn, type SlipExtractionSlip } from "@/slip"
 import type { AddTradeFormValues } from "@/trade"
 
-export const Route = createFileRoute("/trades/from-slip")({
+export const Route = createFileRoute("/_authenticated/trades/from-slip")({
   component: FromSlipPage,
 })
 
