@@ -170,6 +170,76 @@ function Message({ message, isStreaming }: { message: UIMessage; isStreaming: bo
 }
 
 // ---------------------------------------------------------------------------
+// ContextRing — circular usage indicator with hover tooltip
+// ---------------------------------------------------------------------------
+
+function ContextRing({ pct, inputTokens, outputTokens, contextWindow }: {
+  pct: number
+  inputTokens: number
+  outputTokens: number
+  contextWindow: number
+}) {
+  const [open, setOpen] = useState(false)
+  const r = 9
+  const circ = 2 * Math.PI * r
+  const offset = circ * (1 - pct / 100)
+  const color = pct >= 80 ? "text-destructive" : pct >= 60 ? "text-yellow-500" : "text-muted-foreground"
+  const total = inputTokens + outputTokens
+
+  return (
+    <Popover open={open}>
+      <PopoverTrigger asChild>
+        <div
+          className={cn("relative size-7 shrink-0 cursor-default", color)}
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <svg className="size-full -rotate-90" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="2" strokeOpacity="0.2" />
+            <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="2"
+              strokeDasharray={circ} strokeDashoffset={offset}
+              strokeLinecap="round" className="transition-all duration-500" />
+          </svg>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        className="w-48 p-3"
+        onMouseLeave={() => setOpen(false)}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Input</span>
+            <span>{inputTokens.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Output</span>
+            <span>{outputTokens.toLocaleString()}</span>
+          </div>
+          <div className="border-t border-border pt-2">
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-muted-foreground">Context used</span>
+              <span className={cn("font-medium", pct >= 80 ? "text-destructive" : pct >= 60 ? "text-yellow-500" : "")}>{pct}%</span>
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-border/40">
+              <div
+                className={cn("h-full rounded-full transition-all duration-500", pct >= 80 ? "bg-destructive" : pct >= 60 ? "bg-yellow-500" : "bg-primary/60")}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="mt-1 text-right text-[10px] text-muted-foreground tabular-nums">
+              {total.toLocaleString()} / {contextWindow.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // ConnectedChat — keyed by threadId so it fully remounts on thread switch
 // ---------------------------------------------------------------------------
 
@@ -200,15 +270,25 @@ function ConnectedChat({
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
   const [modelOpen, setModelOpen] = useState(false)
+  const [contextUsage, setContextUsage] = useState<{ inputTokens: number; outputTokens: number } | null>(null)
 
   const agent = useAgent({ agent: "chat", name: threadId })
   const { messages, sendMessage, status, clearHistory } = useAgentChat({
     agent,
     body: () => ({ modelKey, providerOptions }),
+    onData: (part) => {
+      if ((part as { type: string }).type === "data-token-usage") {
+        setContextUsage((part as { data: { inputTokens: number; outputTokens: number } }).data)
+      }
+    },
   })
 
   const isStreaming = status === "streaming" || status === "submitted"
   const selectedModel = generalChatModels[modelKey] as GeneralChatModel
+  const contextPct = contextUsage
+    ? Math.min(100, Math.round(((contextUsage.inputTokens + contextUsage.outputTokens) / selectedModel.contextWindow) * 100))
+    : null
+  const contextFull = contextPct !== null && contextPct >= 95
   const thinkingLevels = selectedModel.thinking?.levels ?? []
   const currentThinkingKey = thinkingLevels.find(
     (l) => JSON.stringify(l.providerOptions) === JSON.stringify(providerOptions)
@@ -344,6 +424,12 @@ function ConnectedChat({
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
         <div className="pointer-events-auto flex items-center justify-end gap-1">
+          <ContextRing
+            pct={contextPct ?? 0}
+            inputTokens={contextUsage?.inputTokens ?? 0}
+            outputTokens={contextUsage?.outputTokens ?? 0}
+            contextWindow={selectedModel.contextWindow}
+          />
           {messages.length > 0 && (
             <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
               className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive" aria-label="Clear history">
@@ -365,13 +451,13 @@ function ConnectedChat({
               placeholder="Ask about your portfolio…"
               className="max-h-32 px-4 pt-4 text-sm"
               rows={2}
-              disabled={isStreaming}
+              disabled={isStreaming || contextFull}
             />
             <InputGroupAddon align="block-end" className="justify-between">
               <div className="flex items-center gap-1">
                 <Popover open={modelOpen} onOpenChange={setModelOpen}>
                   <PopoverTrigger asChild>
-                    <button type="button" disabled={isStreaming}
+                    <button type="button" disabled={isStreaming || contextFull}
                       className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
                       {selectedModel.label}
                       <ChevronDown className="size-3 opacity-60" />
@@ -409,7 +495,7 @@ function ConnectedChat({
                   </Popover>
                 )}
               </div>
-              <InputGroupButton size="icon-sm" variant="default" onClick={submit} disabled={isStreaming || !input.trim()}>
+              <InputGroupButton size="icon-sm" variant="default" onClick={submit} disabled={isStreaming || !input.trim() || contextFull}>
                 <ArrowUp />
               </InputGroupButton>
             </InputGroupAddon>
