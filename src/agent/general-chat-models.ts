@@ -9,6 +9,7 @@ export type ThinkingLevel = {
 export type GeneralChatModel = {
   id: string
   label: string
+  contextWindow: number
   thinking?: {
     levels: ThinkingLevel[]
     default: ProviderOptions
@@ -19,10 +20,12 @@ export const generalChatModels = {
   flash: {
     id: "deepseek/deepseek-v4-flash",
     label: "DeepSeek V4 Flash",
+    contextWindow: 65536,
   },
   pro: {
     id: "deepseek/deepseek-v4-pro",
     label: "DeepSeek V4 Pro",
+    contextWindow: 65536,
     thinking: {
       levels: [
         { key: "off",  label: "Off",  providerOptions: {} },

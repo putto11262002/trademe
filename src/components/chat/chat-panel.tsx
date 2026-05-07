@@ -200,15 +200,25 @@ function ConnectedChat({
   const hasInitialScrolledRef = useRef(false)
   const [input, setInput] = useState("")
   const [modelOpen, setModelOpen] = useState(false)
+  const [contextUsage, setContextUsage] = useState<{ inputTokens: number; outputTokens: number } | null>(null)
 
   const agent = useAgent({ agent: "chat", name: threadId })
   const { messages, sendMessage, status, clearHistory } = useAgentChat({
     agent,
     body: () => ({ modelKey, providerOptions }),
+    onData: (part) => {
+      if ((part as { type: string }).type === "data-token-usage") {
+        setContextUsage((part as { data: { inputTokens: number; outputTokens: number } }).data)
+      }
+    },
   })
 
   const isStreaming = status === "streaming" || status === "submitted"
   const selectedModel = generalChatModels[modelKey] as GeneralChatModel
+  const contextPct = contextUsage
+    ? Math.min(100, Math.round(((contextUsage.inputTokens + contextUsage.outputTokens) / selectedModel.contextWindow) * 100))
+    : null
+  const contextFull = contextPct !== null && contextPct >= 95
   const thinkingLevels = selectedModel.thinking?.levels ?? []
   const currentThinkingKey = thinkingLevels.find(
     (l) => JSON.stringify(l.providerOptions) === JSON.stringify(providerOptions)
@@ -343,6 +353,19 @@ function ConnectedChat({
 
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+        {contextPct !== null && contextPct >= 80 && (
+          <div className="pointer-events-auto rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            Context {contextPct}% full — start a new conversation to continue.
+          </div>
+        )}
+        {contextPct !== null && (
+          <div className="pointer-events-none h-1 w-full overflow-hidden rounded-full bg-border/40">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", contextPct >= 80 ? "bg-destructive" : contextPct >= 60 ? "bg-yellow-500" : "bg-primary/60")}
+              style={{ width: `${contextPct}%` }}
+            />
+          </div>
+        )}
         <div className="pointer-events-auto flex items-center justify-end gap-1">
           {messages.length > 0 && (
             <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
@@ -365,13 +388,13 @@ function ConnectedChat({
               placeholder="Ask about your portfolio…"
               className="max-h-32 px-4 pt-4 text-sm"
               rows={2}
-              disabled={isStreaming}
+              disabled={isStreaming || contextFull}
             />
             <InputGroupAddon align="block-end" className="justify-between">
               <div className="flex items-center gap-1">
                 <Popover open={modelOpen} onOpenChange={setModelOpen}>
                   <PopoverTrigger asChild>
-                    <button type="button" disabled={isStreaming}
+                    <button type="button" disabled={isStreaming || contextFull}
                       className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
                       {selectedModel.label}
                       <ChevronDown className="size-3 opacity-60" />
@@ -409,7 +432,7 @@ function ConnectedChat({
                   </Popover>
                 )}
               </div>
-              <InputGroupButton size="icon-sm" variant="default" onClick={submit} disabled={isStreaming || !input.trim()}>
+              <InputGroupButton size="icon-sm" variant="default" onClick={submit} disabled={isStreaming || !input.trim() || contextFull}>
                 <ArrowUp />
               </InputGroupButton>
             </InputGroupAddon>
