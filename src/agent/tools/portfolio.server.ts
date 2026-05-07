@@ -12,13 +12,9 @@ export const portfolioTools = {
       return {
         summary: {
           totalValueUSD: dashboard.summary.totalValueUSD,
-          totalValueTHB: dashboard.summary.totalValueTHB,
           unrealizedPnLUSD: dashboard.summary.unrealizedPnLUSD,
           unrealizedPnLPct: dashboard.summary.unrealizedPnLPct,
-          unrealizedPnLTHB: dashboard.summary.unrealizedPnLTHB,
           realizedPnLUSD: dashboard.summary.realizedPnLUSD,
-          realizedPnLTHB: dashboard.summary.realizedPnLTHB,
-          fxRate: dashboard.summary.fxRate,
           positionCount: dashboard.summary.positionCount,
         },
         positions: dashboard.positions.map((p) => ({
@@ -29,7 +25,6 @@ export const portfolioTools = {
           avgCostUSD: p.avgCost,
           currentPriceUSD: p.currentPriceUSD,
           valueUSD: p.valueUSD,
-          valueTHB: p.valueTHB,
           unrealizedPnLUSD: p.unrealizedPnLUSD,
           unrealizedPnLPct: p.unrealizedPnLPct,
         })),

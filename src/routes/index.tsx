@@ -62,7 +62,7 @@ function Dashboard() {
   }
 
   const top = [...data.positions]
-    .sort((a, b) => b.valueTHB - a.valueTHB)
+    .sort((a, b) => b.valueUSD - a.valueUSD)
     .slice(0, 3)
 
   return (

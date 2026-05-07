@@ -98,28 +98,18 @@ export async function getPositions(): Promise<Array<Position>> {
         totalBought: 0,
         totalSold: 0,
         totalCost: 0,
-        totalCostTHB: 0,
         totalProceeds: 0,
-        totalProceedsTHB: 0,
         tradeCount: 0,
       } satisfies Position)
-    // Transitional: per-trade FX is gone (PR drops trade.fx_rate). THB
-    // aggregates collapse to USD here; the THB tracking fields themselves are
-    // removed in the follow-up PR.
-    const fx = 1
     const grossUSD = t.quantity * t.pricePerShare
     if (t.side === "buy") {
-      const costUSD = grossUSD + t.fees
       p.netQuantity += t.quantity
       p.totalBought += t.quantity
-      p.totalCost += costUSD
-      p.totalCostTHB += costUSD * fx
+      p.totalCost += grossUSD + t.fees
     } else {
-      const proceedsUSD = grossUSD - t.fees
       p.netQuantity -= t.quantity
       p.totalSold += t.quantity
-      p.totalProceeds += proceedsUSD
-      p.totalProceedsTHB += proceedsUSD * fx
+      p.totalProceeds += grossUSD - t.fees
     }
     p.tradeCount += 1
     byTicker.set(t.ticker, p)

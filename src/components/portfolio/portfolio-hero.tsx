@@ -7,8 +7,8 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { thb, usd } from "./format"
 
-function signedTHB(n: number): string {
-  return `${n > 0 ? "+" : ""}${thb.format(n)}`
+function signedUSD(n: number): string {
+  return `${n > 0 ? "+" : ""}${usd.format(n)}`
 }
 
 function signedPct(n: number): string {
@@ -22,20 +22,20 @@ function tone(n: number): string {
 
 function StatRow({
   label,
-  thbValue,
+  usdValue,
   pctValue,
 }: {
   label: string
-  thbValue: number
+  usdValue: number
   pctValue: number | null
 }) {
-  const valueIsZeroFlat = thbValue === 0 && pctValue === null
+  const valueIsZeroFlat = usdValue === 0 && pctValue === null
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
       <div className="flex items-baseline gap-3 tabular-nums">
-        <span className={cn("font-medium", tone(thbValue))}>
-          {valueIsZeroFlat ? "—" : signedTHB(thbValue)}
+        <span className={cn("font-medium", tone(usdValue))}>
+          {valueIsZeroFlat ? "—" : signedUSD(usdValue)}
         </span>
         <span
           className={cn(
@@ -51,25 +51,10 @@ function StatRow({
 }
 
 export function PortfolioHero({ summary }: { summary: PortfolioSummary }) {
-  // Use the THB P&L derived from THB cost basis vs THB value (entry FX for
-  // cost, current FX for value). This captures FX drift; converting USD P&L
-  // at today's FX would understate it for a Thai investor.
-  const pnlTHB = summary.unrealizedPnLTHB
-  const pnlPct =
-    summary.totalCostTHB > 0
-      ? (summary.unrealizedPnLTHB / summary.totalCostTHB) * 100
-      : 0
-  const isUp = pnlTHB >= 0
+  const pnlUSD = summary.unrealizedPnLUSD
+  const pnlPct = summary.unrealizedPnLPct
+  const isUp = pnlUSD >= 0
   const Icon = isUp ? TrendingUp : TrendingDown
-
-  const stockPct =
-    summary.totalCostTHB > 0
-      ? (summary.stockPnLTHB / summary.totalCostTHB) * 100
-      : 0
-  const fxPct =
-    summary.totalCostTHB > 0
-      ? (summary.fxPnLTHB / summary.totalCostTHB) * 100
-      : 0
 
   return (
     <Card>
@@ -77,10 +62,10 @@ export function PortfolioHero({ summary }: { summary: PortfolioSummary }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-3xl font-semibold tabular-nums">
-              {thb.format(summary.totalValueTHB)}
+              {usd.format(summary.totalValueUSD)}
             </div>
             <div className="text-muted-foreground tabular-nums">
-              {usd.format(summary.totalValueUSD)}
+              ≈ {thb.format(summary.totalValueUSD * summary.fxRate)}
             </div>
           </div>
           <Badge
@@ -93,7 +78,7 @@ export function PortfolioHero({ summary }: { summary: PortfolioSummary }) {
             <Icon className="size-3" />
             <span className="tabular-nums">{signedPct(pnlPct)}</span>
             <span className="opacity-80 tabular-nums">
-              ({signedTHB(pnlTHB)})
+              ({signedUSD(pnlUSD)})
             </span>
           </Badge>
         </div>
@@ -102,18 +87,8 @@ export function PortfolioHero({ summary }: { summary: PortfolioSummary }) {
 
         <div className="space-y-2 text-sm">
           <StatRow
-            label="Stock gain"
-            thbValue={summary.stockPnLTHB}
-            pctValue={stockPct}
-          />
-          <StatRow
-            label="Currency impact"
-            thbValue={summary.fxPnLTHB}
-            pctValue={fxPct}
-          />
-          <StatRow
             label="Locked-in P&L"
-            thbValue={summary.realizedPnLTHB}
+            usdValue={summary.realizedPnLUSD}
             pctValue={null}
           />
         </div>

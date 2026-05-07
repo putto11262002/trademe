@@ -11,8 +11,8 @@ import {
 import { PositionCard } from "./position-card"
 
 const SORT_OPTIONS = {
-  "value-desc": { label: "Value (high → low)", fn: (a: EnrichedPosition, b: EnrichedPosition) => b.valueTHB - a.valueTHB },
-  "value-asc": { label: "Value (low → high)", fn: (a: EnrichedPosition, b: EnrichedPosition) => a.valueTHB - b.valueTHB },
+  "value-desc": { label: "Value (high → low)", fn: (a: EnrichedPosition, b: EnrichedPosition) => b.valueUSD - a.valueUSD },
+  "value-asc": { label: "Value (low → high)", fn: (a: EnrichedPosition, b: EnrichedPosition) => a.valueUSD - b.valueUSD },
   "ticker-asc": { label: "Ticker (A → Z)", fn: (a: EnrichedPosition, b: EnrichedPosition) => a.ticker.localeCompare(b.ticker) },
   "ticker-desc": { label: "Ticker (Z → A)", fn: (a: EnrichedPosition, b: EnrichedPosition) => b.ticker.localeCompare(a.ticker) },
   "pnl-desc": { label: "P&L (best first)", fn: (a: EnrichedPosition, b: EnrichedPosition) => b.unrealizedPnLPct - a.unrealizedPnLPct },

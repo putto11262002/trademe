@@ -14,7 +14,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { cn } from "@/lib/utils"
-import { pct, qty, thb, usd } from "./format"
+import { pct, qty, usd } from "./format"
 
 export function PositionCard({ position }: { position: EnrichedPosition }) {
   const isUp = position.unrealizedPnLUSD >= 0
@@ -64,10 +64,7 @@ export function PositionCard({ position }: { position: EnrichedPosition }) {
       </ItemActions>
       <ItemFooter>
         <div className="tabular-nums">
-          <span className="font-medium">{thb.format(position.valueTHB)}</span>
-          <span className="text-muted-foreground ml-2 text-xs">
-            {usd.format(position.valueUSD)}
-          </span>
+          <span className="font-medium">{usd.format(position.valueUSD)}</span>
         </div>
         <div className="text-muted-foreground flex gap-3 text-xs tabular-nums">
           <span>

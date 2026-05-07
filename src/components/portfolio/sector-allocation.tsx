@@ -13,7 +13,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { thb } from "./format"
+import { usd } from "./format"
 
 const CHART_COLORS = [
   "var(--color-chart-1)",
@@ -36,7 +36,7 @@ export function SectorAllocationCard({
 
   const slices = allocation.map((a, i) => ({
     name: a.sector,
-    value: a.valueTHB,
+    value: a.valueUSD,
     pct: a.pct,
     color: i < CHART_COLORS.length ? CHART_COLORS[i] : FALLBACK_COLOR,
   }))
@@ -57,7 +57,7 @@ export function SectorAllocationCard({
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  formatter={(value) => thb.format(Number(value))}
+                  formatter={(value) => usd.format(Number(value))}
                 />
               }
             />

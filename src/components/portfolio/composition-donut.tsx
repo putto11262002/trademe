@@ -7,7 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { thb } from "./format"
+import { usd } from "./format"
 
 const CHART_COLORS = [
   "var(--color-chart-1)",
@@ -24,15 +24,15 @@ export function CompositionDonut({
 }: {
   positions: Array<EnrichedPosition>
 }) {
-  const sorted = [...positions].sort((a, b) => b.valueTHB - a.valueTHB)
+  const sorted = [...positions].sort((a, b) => b.valueUSD - a.valueUSD)
   const top = sorted.slice(0, TOP_N)
   const rest = sorted.slice(TOP_N)
-  const restValue = rest.reduce((s, p) => s + p.valueTHB, 0)
+  const restValue = rest.reduce((s, p) => s + p.valueUSD, 0)
 
   const slices = [
     ...top.map((p, i) => ({
       name: p.ticker,
-      value: p.valueTHB,
+      value: p.valueUSD,
       color: CHART_COLORS[i % CHART_COLORS.length],
     })),
     ...(rest.length > 0
@@ -64,7 +64,7 @@ export function CompositionDonut({
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  formatter={(value) => thb.format(Number(value))}
+                  formatter={(value) => usd.format(Number(value))}
                 />
               }
             />

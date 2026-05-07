@@ -1,6 +1,5 @@
 import {
   getCompanyProfile,
-  getFXRate,
   getFundamentals,
   getLatestRecommendation,
   getNews,
@@ -35,15 +34,9 @@ function enrich(
   p: Position,
   quote: Quote,
   profile: CompanyProfile,
-  fxRate: number,
-  fxAsOf: Date,
 ): EnrichedPosition {
   const avgCost = p.totalBought > 0 ? p.totalCost / p.totalBought : 0
-  const avgCostTHB = p.totalBought > 0 && p.totalCostTHB != null
-    ? p.totalCostTHB / p.totalBought
-    : avgCost * fxRate
   const valueUSD = p.netQuantity * quote.price
-  const valueTHB = valueUSD * fxRate
   const costForOpenLeg = avgCost * p.netQuantity
   const unrealizedPnLUSD = valueUSD - costForOpenLeg
   const unrealizedPnLPct = costForOpenLeg > 0 ? (unrealizedPnLUSD / costForOpenLeg) * 100 : 0
@@ -51,17 +44,14 @@ function enrich(
   return {
     ...p,
     name: profile.name,
+    sector: profile.sector ?? profile.industry,
     logoUrl: profile.logoUrl,
     currentPriceUSD: quote.price,
     priceAsOf: quote.asOf,
     avgCost,
-    avgCostTHB,
     valueUSD,
-    valueTHB,
     unrealizedPnLUSD,
     unrealizedPnLPct,
-    fxRate,
-    fxAsOf,
   }
 }
 
@@ -70,19 +60,16 @@ export async function getPositionDetail(
 ): Promise<PositionDetail> {
   const symbol = ticker.toUpperCase()
 
-  // Required: quote + profile + trades + fx (page is meaningless without these)
-  const [quote, profile, trades, fx, positions] = await Promise.all([
+  // Required: quote + profile + trades (page is meaningless without these)
+  const [quote, profile, trades, positions] = await Promise.all([
     getQuote(symbol),
     getCompanyProfile(symbol),
     getTradesForTicker(symbol),
-    getFXRate("USD", "THB"),
     getPositions(),
   ])
 
   const rawPosition = positions.find((p) => p.ticker === symbol) ?? null
-  const position = rawPosition
-    ? enrich(rawPosition, quote, profile, fx.rate, fx.asOf)
-    : null
+  const position = rawPosition ? enrich(rawPosition, quote, profile) : null
 
   // Optional: enrichment data — failures degrade gracefully
   const [
@@ -121,7 +108,5 @@ export async function getPositionDetail(
     nextEarnings,
     pastEarnings,
     trades: tradesNormalized,
-    fxRate: fx.rate,
-    fxAsOf: fx.asOf,
   }
 }
