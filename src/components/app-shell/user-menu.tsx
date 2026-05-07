@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
+import { useClerk } from "@clerk/tanstack-react-start"
 import { getCurrentUserFn } from "@/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function UserMenu() {
+  const { signOut } = useClerk()
   const { data: user } = useSuspenseQuery({
     queryKey: ["currentUser"],
     queryFn: () => getCurrentUserFn(),
@@ -40,7 +42,7 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>Settings</DropdownMenuItem>
-        <DropdownMenuItem disabled>Sign out</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => signOut({ redirectUrl: "https://trademe.sabaiscale.com" })}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

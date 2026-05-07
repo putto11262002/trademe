@@ -3,18 +3,27 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  redirect,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { QueryClient } from "@tanstack/react-query"
+import { ClerkProvider } from "@clerk/tanstack-react-start"
 
 import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/sonner"
+import { getCurrentUserFn } from "@/auth"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
 }>()({
+  beforeLoad: async () => {
+    const user = await getCurrentUserFn()
+    if (!user) {
+      throw redirect({ href: `https://accounts.clerk.com/sign-in?redirect_url=${encodeURIComponent(typeof window !== "undefined" ? window.location.origin : "https://trademe.sabaiscale.com")}` })
+    }
+  },
   head: () => ({
     meta: [
       {
@@ -46,6 +55,7 @@ export const Route = createRootRouteWithContext<{
 
 function RootDocument() {
   return (
+    <ClerkProvider>
     <html lang="en">
       <head>
         <HeadContent />
@@ -69,5 +79,6 @@ function RootDocument() {
         <Scripts />
       </body>
     </html>
+    </ClerkProvider>
   )
 }
