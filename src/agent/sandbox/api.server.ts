@@ -55,12 +55,12 @@ const newsInput = tickerInput.extend({
 
 export async function handleSandboxApi(
   request: Request,
-  env: Env,
+  _env: Env,
 ): Promise<Response> {
-  const session = requireSandboxSession(request, env)
+  const session = await requireSandboxSession(request)
   if (session instanceof Response) return session
 
-  const userId = request.headers.get("X-User-Id") ?? ""
+  const { userId } = session
 
   if (request.method !== "GET") {
     return jsonError("Method not allowed", 405)

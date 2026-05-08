@@ -35,9 +35,7 @@
           "remote": true
         }
       ],
-      "vars": {
-        "SANDBOX_API_TOKEN": ""
-      },
+
       "containers": [
         {
           "name": "trademe-analysissandbox-dev",
@@ -53,9 +51,6 @@
         ]
       }
     }
-  },
-  "vars": {
-    "SANDBOX_API_TOKEN": ""
   },
   "containers": [
     {

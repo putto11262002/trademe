@@ -23,3 +23,7 @@ CLERK_WEBHOOK_SECRET=whsec_
 # CF Dev Tunnel — Cloudflare Zero Trust → Networks → Tunnels → trademe-dev → token
 # Used by pnpm dev:tunnel (routes trademe-dev.sabaiscale.com → localhost:5173)
 CF_DEV_TUNNEL_TOKEN=
+
+# Internal API token signing secret — used to issue short-lived user-scoped tokens
+# Generate with: openssl rand -hex 32
+API_TOKEN_SECRET=
