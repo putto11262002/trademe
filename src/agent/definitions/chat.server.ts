@@ -44,18 +44,20 @@ function renderSystemPrompt(skills: AgentSkillMetadata[]): string {
   ].join("\n")
 }
 
-export type ChatAgentOptions = {
+export async function runChatAgent({
+  messages,
+  onFinish,
+  userId,
+  modelKey: modelKeyOpt,
+  providerOptions,
+}: {
+  messages: UIMessage[]
+  onFinish: StreamTextOnFinishCallback<ToolSet>
+  userId: string
   modelKey?: GeneralChatModelKey
   providerOptions?: ProviderOptions
-  userId: string
-}
-
-export async function runChatAgent(
-  messages: UIMessage[],
-  onFinish: StreamTextOnFinishCallback<ToolSet>,
-  opts: ChatAgentOptions,
-) {
-  const modelKey = (opts.modelKey ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
+}) {
+  const modelKey = (modelKeyOpt ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
   const modelMessages = await convertToModelMessages(messages)
   const skills = await listAgentSkills()
@@ -65,13 +67,13 @@ export async function runChatAgent(
     system: renderSystemPrompt(skills),
     tools: {
       ...skillTools,
-      ...createPortfolioTools(opts.userId),
+      ...createPortfolioTools(userId),
       ...stockTools,
-      ...createAnalysisTools(opts.userId),
+      ...createAnalysisTools(userId),
     },
     messages: modelMessages,
     stopWhen: [stopOnTerminalToolError, stepCountIs(10)],
-    providerOptions: opts.providerOptions,
+    providerOptions,
     onFinish,
   })
 }

@@ -13,7 +13,13 @@ export class ChatAgent extends AIChatAgent<Env> {
     const modelKey = options?.body?.modelKey as GeneralChatModelKey | undefined
     const providerOptions = options?.body?.providerOptions as ProviderOptions | undefined
 
-    const result = await runChatAgent(this.messages, onFinish, { modelKey, providerOptions, userId: this.userId })
+    const result = await runChatAgent({
+      messages: this.messages,
+      onFinish,
+      userId: this.userId,
+      modelKey,
+      providerOptions,
+    })
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
