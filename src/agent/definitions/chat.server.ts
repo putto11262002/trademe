@@ -9,6 +9,7 @@ import { createPortfolioTools } from "@/agent/tools/portfolio.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
+import { buildAiRun, insertAiRun } from "@/agent/usage/api.server"
 
 const SYSTEM_PROMPT = `You are TradeMe's stock analysis assistant for a retail investor holding US stocks.
 
@@ -48,12 +49,14 @@ export async function runChatAgent({
   messages,
   onFinish,
   userId,
+  threadId,
   modelKey: modelKeyOpt,
   providerOptions,
 }: {
   messages: UIMessage[]
   onFinish: StreamTextOnFinishCallback<ToolSet>
   userId: string
+  threadId: string | null
   modelKey?: GeneralChatModelKey
   providerOptions?: ProviderOptions
 }) {
@@ -61,6 +64,12 @@ export async function runChatAgent({
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
   const modelMessages = await convertToModelMessages(messages)
   const skills = await listAgentSkills()
+  const startedAt = Date.now()
+
+  const wrappedOnFinish: StreamTextOnFinishCallback<ToolSet> = async (event) => {
+    await insertAiRun(buildAiRun({ event, userId, threadId, type: "chat", startedAt }))
+    await onFinish(event)
+  }
 
   return streamText({
     model: createModel(modelId),
@@ -74,6 +83,6 @@ export async function runChatAgent({
     messages: modelMessages,
     stopWhen: [stopOnTerminalToolError, stepCountIs(10)],
     providerOptions,
-    onFinish,
+    onFinish: wrappedOnFinish,
   })
 }
