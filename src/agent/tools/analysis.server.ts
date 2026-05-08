@@ -8,6 +8,7 @@ import {
   getNews,
   getQuote,
 } from "@/market/api.server"
+import { createUserApiToken } from "@/auth/api-token.server"
 import { getPortfolioDashboard } from "@/trade/portfolio.server"
 import { PYTHON_ANALYSIS_SDK } from "./analysis-sdk.server"
 import { AgentToolError } from "./errors.server"
@@ -235,7 +236,10 @@ export function createAnalysisTools(userId: string) {
         })
 
         phase = "dataset"
-        const analysisDataset = await buildAnalysisDataset(dataset, userId)
+        const [analysisDataset, apiToken] = await Promise.all([
+          buildAnalysisDataset(dataset, userId),
+          createUserApiToken(userId),
+        ])
         logAnalysis("dataset_ready", {
           runId,
           tickers: analysisDataset.data.tickers,
@@ -284,6 +288,7 @@ export function createAnalysisTools(userId: string) {
             signal: abortController.signal,
             env: {
               PYTHONPATH: "/workspace",
+              TRADEME_API_TOKEN: apiToken,
             },
           }),
           EXEC_TIMEOUT_MS + 2_000,
