@@ -5,20 +5,20 @@ type ModelPricing = {
   outputPerM: number
 }
 
-// Prices in USD per 1M tokens — DeepSeek V4 via Vercel AI Gateway
-// https://vercel.com/docs/ai-gateway/providers/deepseek
+// Prices in USD per 1M tokens — DeepSeek V4 via Vercel AI Gateway (https://ai-gateway.vercel.sh/v1/models)
+// cacheWritePerM is not published by Vercel for these models — using input rate as conservative fallback
 export const MODEL_PRICING: Record<string, ModelPricing> = {
   "deepseek/deepseek-v4-flash": {
-    inputPerM: 0.27,
-    cacheReadPerM: 0.07,
-    cacheWritePerM: 0.27,
-    outputPerM: 1.10,
+    inputPerM: 0.14,
+    cacheReadPerM: 0.0028,
+    cacheWritePerM: 0.14,
+    outputPerM: 0.28,
   },
   "deepseek/deepseek-v4-pro": {
-    inputPerM: 0.27,
-    cacheReadPerM: 0.07,
-    cacheWritePerM: 0.27,
-    outputPerM: 1.10,
+    inputPerM: 0.435,
+    cacheReadPerM: 0.0036,
+    cacheWritePerM: 0.435,
+    outputPerM: 0.87,
   },
 }
 
