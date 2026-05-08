@@ -22,7 +22,7 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["threads", userId],
     queryFn: ({ pageParam }) =>
-      listThreadsFn({ data: { userId, cursor: pageParam as string | undefined, limit: 20 } }),
+      listThreadsFn({ data: { cursor: pageParam as string | undefined, limit: 20 } }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: open,

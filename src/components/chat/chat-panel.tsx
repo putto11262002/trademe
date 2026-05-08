@@ -650,7 +650,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
 
   const createMutation = useMutation({
-    mutationFn: () => createThreadFn({ data: { userId: userId!, modelKey, providerOptions } }),
+    mutationFn: () => createThreadFn({ data: { modelKey, providerOptions } }),
     onSuccess: (id) => {
       setActiveThreadId(id)
       setActiveTitle(null)

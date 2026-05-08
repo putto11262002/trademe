@@ -51,7 +51,7 @@ export async function deleteThread(id: string, userId: string) {
   await db.delete(thread).where(and(eq(thread.id, id), eq(thread.userId, userId)))
 }
 
-export async function touchThread(id: string) {
+export async function touchThread(id: string, userId: string) {
   const db = getDb()
-  await db.update(thread).set({ updatedAt: new Date() }).where(eq(thread.id, id))
+  await db.update(thread).set({ updatedAt: new Date() }).where(and(eq(thread.id, id), eq(thread.userId, userId)))
 }
