@@ -65,7 +65,7 @@ export async function getPositionDetail(
   const [quote, profile, trades, positions] = await Promise.all([
     getQuote(symbol),
     getCompanyProfile(symbol),
-    getTradesForTicker(symbol),
+    getTradesForTicker(symbol, userId),
     getPositions(userId),
   ])
 

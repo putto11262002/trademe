@@ -9,7 +9,10 @@ import { addTradeSchema } from "./schemas"
 
 export const addTradeFn = createServerFn({ method: "POST" })
   .inputValidator(addTradeSchema)
-  .handler(async ({ data }) => api.addTrade(data))
+  .handler(async ({ data }) => {
+    const { id: userId } = await requireUser()
+    return api.addTrade(data, userId)
+  })
 
 export const listTradesFn = createServerFn({ method: "GET" }).handler(async () => {
   const { id: userId } = await requireUser()

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import * as api from "./api.server"
+import { requireUser } from "@/auth/api.server"
 import { createThreadSchema, updateThreadSchema } from "./schemas"
 
 export const createThreadFn = createServerFn({ method: "POST" })
@@ -17,18 +18,25 @@ export const listThreadsFn = createServerFn({ method: "GET" })
 
 export const getThreadFn = createServerFn({ method: "GET" })
   .inputValidator(z.object({ id: z.string().min(1) }))
-  .handler(async ({ data }) => api.getThread(data.id))
+  .handler(async ({ data }) => {
+    const { id: userId } = await requireUser()
+    return api.getThread(data.id, userId)
+  })
 
 export const updateThreadFn = createServerFn({ method: "POST" })
   .inputValidator(updateThreadSchema)
   .handler(async ({ data }) => {
+    const { id: userId } = await requireUser()
     const { id, ...rest } = data
-    await api.updateThread(id, rest)
+    await api.updateThread(id, rest, userId)
   })
 
 export const deleteThreadFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string().min(1) }))
-  .handler(async ({ data }) => api.deleteThread(data.id))
+  .handler(async ({ data }) => {
+    const { id: userId } = await requireUser()
+    return api.deleteThread(data.id, userId)
+  })
 
 export const touchThreadFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string().min(1) }))

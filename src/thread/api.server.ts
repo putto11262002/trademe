@@ -1,7 +1,6 @@
 import { and, desc, eq, lt } from "drizzle-orm"
 import { getDb } from "@/db/index.server"
 import { thread } from "@/db/schema"
-import { requireUser } from "@/auth/api.server"
 import type { NewThread } from "./types"
 
 export async function createThread(data: Omit<NewThread, "id" | "createdAt" | "updatedAt">): Promise<string> {
@@ -33,26 +32,23 @@ export async function listThreads(userId: string, opts?: { cursor?: string; limi
   }
 }
 
-export async function getThread(id: string) {
-  const user = await requireUser()
+export async function getThread(id: string, userId: string) {
   const db = getDb()
-  const [row] = await db.select().from(thread).where(and(eq(thread.id, id), eq(thread.userId, user.id)))
+  const [row] = await db.select().from(thread).where(and(eq(thread.id, id), eq(thread.userId, userId)))
   return row ?? null
 }
 
-export async function updateThread(id: string, data: Partial<Pick<NewThread, "title" | "modelKey" | "providerOptions">>) {
-  const user = await requireUser()
+export async function updateThread(id: string, data: Partial<Pick<NewThread, "title" | "modelKey" | "providerOptions">>, userId: string) {
   const db = getDb()
   await db
     .update(thread)
     .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(thread.id, id), eq(thread.userId, user.id)))
+    .where(and(eq(thread.id, id), eq(thread.userId, userId)))
 }
 
-export async function deleteThread(id: string) {
-  const user = await requireUser()
+export async function deleteThread(id: string, userId: string) {
   const db = getDb()
-  await db.delete(thread).where(and(eq(thread.id, id), eq(thread.userId, user.id)))
+  await db.delete(thread).where(and(eq(thread.id, id), eq(thread.userId, userId)))
 }
 
 export async function touchThread(id: string) {
