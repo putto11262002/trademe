@@ -27,3 +27,8 @@ CF_DEV_TUNNEL_TOKEN=
 # Internal API token signing secret — used to issue short-lived user-scoped tokens
 # Generate with: openssl rand -hex 32
 API_TOKEN_SECRET=
+
+# Sandbox SDK callback origin. The analysis container calls this URL.
+# Docker Desktop local default: http://host.docker.internal:3000
+# Tunnel/dev-domain alternative: https://trademe-dev.sabaiscale.com
+TRADEME_API_BASE_URL=http://host.docker.internal:3000

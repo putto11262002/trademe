@@ -1,33 +1,75 @@
 import json
+import os
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-INPUT_PATH = Path("/workspace/input.json")
 OUTPUT_PATH = Path("/workspace/output.json")
-
-_PAYLOAD: dict[str, Any] | None = None
-
-
-def _load_payload() -> dict[str, Any]:
-    global _PAYLOAD
-    if _PAYLOAD is None:
-        _PAYLOAD = json.loads(INPUT_PATH.read_text())
-    return _PAYLOAD
+DEFAULT_TIMEOUT_SECONDS = 20
 
 
 def _get_ticker_key(ticker: Any) -> str:
     return str(ticker).upper()
 
 
+def _api_base_url() -> str:
+    value = os.environ.get("TRADEME_API_BASE_URL")
+    if not value:
+        raise RuntimeError("TRADEME_API_BASE_URL is not configured")
+    return value.rstrip("/")
+
+
+def _api_token() -> str:
+    value = os.environ.get("TRADEME_API_TOKEN")
+    if not value:
+        raise RuntimeError("TRADEME_API_TOKEN is not configured")
+    return value
+
+
+def _get(path: str, params: dict[str, Any] | None = None) -> Any:
+    query = urlencode({key: value for key, value in (params or {}).items() if value is not None})
+    url = f"{_api_base_url()}{path}"
+    if query:
+        url = f"{url}?{query}"
+
+    request = Request(url, headers={
+        "Authorization": f"Bearer {_api_token()}",
+        "Accept": "application/json",
+    })
+
+    try:
+        with urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
+            body = response.read().decode("utf-8")
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"TradeMe API request failed with HTTP {exc.code}: {body}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"TradeMe API request failed: {exc.reason}") from exc
+
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("TradeMe API returned invalid JSON") from exc
+
+    if not payload.get("ok"):
+        raise RuntimeError(f"TradeMe API error: {payload.get('error', 'unknown error')}")
+    return payload.get("data")
+
+
 class _Input:
     def load(self) -> dict[str, Any]:
-        return _load_payload()
+        return {
+            "run": self.metadata(),
+            "data": {},
+        }
 
     def metadata(self) -> dict[str, Any]:
-        return _load_payload().get("run", {})
+        return {}
 
     def available_tickers(self) -> list[str]:
-        return _load_payload().get("data", {}).get("tickers", [])
+        return []
 
 
 class _Output:
@@ -44,8 +86,8 @@ class _Output:
 
 
 class _Portfolio:
-    def dashboard(self) -> dict[str, Any] | None:
-        return _load_payload().get("data", {}).get("portfolio")
+    def dashboard(self) -> dict[str, Any]:
+        return _get("/api/sandbox/portfolio/dashboard")
 
     def summary(self) -> dict[str, Any] | None:
         dashboard = self.dashboard()
@@ -64,22 +106,30 @@ class _Portfolio:
 
 
 class _Market:
-    def _ticker_data(self, ticker: str) -> dict[str, Any]:
-        return _load_payload().get("data", {}).get("market", {}).get(_get_ticker_key(ticker), {})
-
     def quote(self, ticker: str) -> Any:
-        return self._ticker_data(ticker).get("quote")
+        return _get("/api/sandbox/market/quote", {"ticker": _get_ticker_key(ticker)})
 
-    def candles(self, ticker: str) -> list[dict[str, Any]]:
-        return self._ticker_data(ticker).get("candles", [])
+    def candles(self, ticker: str, from_: str | None = None, to: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+        from_value = from_ or kwargs.get("from_date") or kwargs.get("from")
+        to_value = to or kwargs.get("to_date")
+        if not from_value or not to_value:
+            raise ValueError("candles requires from_ and to dates in YYYY-MM-DD format")
+        return _get("/api/sandbox/market/candles", {
+            "ticker": _get_ticker_key(ticker),
+            "from": from_value,
+            "to": to_value,
+        })
 
     def fundamentals(self, ticker: str) -> Any:
-        return self._ticker_data(ticker).get("fundamentals")
+        return _get("/api/sandbox/market/fundamentals", {"ticker": _get_ticker_key(ticker)})
 
 
 class _News:
-    def recent(self, ticker: str) -> list[dict[str, Any]]:
-        return _load_payload().get("data", {}).get("news", {}).get(_get_ticker_key(ticker), [])
+    def recent(self, ticker: str, days: int = 7) -> list[dict[str, Any]]:
+        return _get("/api/sandbox/market/news", {
+            "ticker": _get_ticker_key(ticker),
+            "days": days,
+        })
 
 
 class _Utils:

@@ -6,7 +6,12 @@ Inside `analysis_run_code`, generated Python runs in `/workspace` with:
 import trademe_sdk as trademe
 ```
 
-The sandbox image installs `trademe_sdk`. The Worker writes `/workspace/input.json`, writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
+The sandbox image installs `trademe_sdk`. The Worker writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
+
+The SDK fetches portfolio and market data over authenticated sandbox API calls using:
+
+- `TRADEME_API_BASE_URL`
+- `TRADEME_API_TOKEN`
 
 Available analysis libraries:
 
@@ -45,55 +50,11 @@ Written JSON shape:
 
 Avoid returning raw candles, full news lists, large tables, plots, or verbose logs.
 
-## Payload Shape
+## Data Access
 
-`trademe.input.load()` returns:
+Data accessors make network calls to the TradeMe sandbox API. Fetch only the data needed for the calculation.
 
-```ts
-type AnalysisPayload = {
-  run: {
-    task: string
-    asOf: string
-  }
-  data: {
-    tickers: string[]
-    portfolio: PortfolioDashboard | null
-    market: Record<string, MarketBundle>
-    news: Record<string, NewsArticle[]>
-  }
-}
-
-type MarketBundle = {
-  quote?: Quote
-  fundamentals?: Fundamentals
-  candles?: Candle[]
-}
-```
-
-Only requested datasets are present. Missing data is normal; check for `None`, `{}`, or `[]`.
-
-## trademe.input
-
-### `trademe.input.load() -> dict`
-
-Returns the full analysis payload.
-
-Use when you need multiple namespaces or raw access to the run metadata.
-
-### `trademe.input.metadata() -> dict`
-
-Returns:
-
-```ts
-type RunMetadata = {
-  task: string
-  asOf: string
-}
-```
-
-### `trademe.input.available_tickers() -> list[str]`
-
-Returns the uppercase ticker symbols requested in the dataset.
+Unexpected HTTP/API failures should fail normally so the tool can surface the error. For expected data gaps, return a compact `dataGaps` array in `result`.
 
 ## trademe.output
 
@@ -119,7 +80,7 @@ Use only for expected data limitations. Let unexpected Python exceptions fail no
 
 ### `trademe.portfolio.dashboard() -> PortfolioDashboard | None`
 
-Returns the portfolio dashboard if `includePortfolio` was requested; otherwise `None`.
+Fetches and returns the portfolio dashboard.
 
 ```ts
 type PortfolioDashboard = {
@@ -149,7 +110,7 @@ type PortfolioSummary = {
 
 ### `trademe.portfolio.positions() -> list[Position]`
 
-Returns open positions, or `[]` if portfolio data was not requested.
+Fetches and returns open positions, or `[]`.
 
 ```ts
 type Position = {
@@ -178,7 +139,7 @@ Returns one position by ticker, case-insensitive, or `None`.
 
 ## trademe.market
 
-### `trademe.market.quote(ticker: str) -> Quote | None`
+### `trademe.market.quote(ticker: str) -> Quote`
 
 Input:
 
@@ -197,11 +158,17 @@ type Quote = {
 }
 ```
 
-Returns `None` if quotes were not requested or unavailable.
+Raises if the API request fails.
 
-### `trademe.market.candles(ticker: str) -> list[Candle]`
+### `trademe.market.candles(ticker: str, from_: str, to: str) -> list[Candle]`
 
-Returns requested daily candles, or `[]`.
+Inputs:
+
+- `ticker`: symbol such as `"NVDA"`, case-insensitive.
+- `from_`: start date in `YYYY-MM-DD` format.
+- `to`: end date in `YYYY-MM-DD` format.
+
+Fetches and returns daily candles, or `[]`.
 
 ```ts
 type Candle = {
@@ -217,11 +184,11 @@ type Candle = {
 
 Notes:
 
-- Candle range is capped by the tool input.
+- Candle range is capped by the sandbox API.
 - Do not assume adjusted prices unless `adjustedClose` is present.
 - Use `trademe.utils.closes(candles)` for close-price arrays.
 
-### `trademe.market.fundamentals(ticker: str) -> Fundamentals | None`
+### `trademe.market.fundamentals(ticker: str) -> Fundamentals`
 
 Returns:
 
@@ -240,13 +207,13 @@ type Fundamentals = {
 }
 ```
 
-Returns `None` if fundamentals were not requested or unavailable.
+Raises if the API request fails.
 
 ## trademe.news
 
-### `trademe.news.recent(ticker: str) -> list[NewsArticle]`
+### `trademe.news.recent(ticker: str, days: int = 7) -> list[NewsArticle]`
 
-Returns recent articles requested for the ticker, or `[]`.
+Fetches recent articles for the ticker, or `[]`.
 
 ```ts
 type NewsArticle = {
@@ -286,7 +253,7 @@ import math
 import numpy as np
 import trademe_sdk as trademe
 
-bars = trademe.market.candles("NVDA")
+bars = trademe.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
 closes = trademe.utils.closes(bars)
 
 data_gaps = []
