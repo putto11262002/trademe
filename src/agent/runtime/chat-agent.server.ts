@@ -23,6 +23,7 @@ export class ChatAgent extends AIChatAgent<Env> {
       messages: this.messages,
       onFinish,
       userId,
+      threadId: this.name,
       modelKey,
       providerOptions,
     })
