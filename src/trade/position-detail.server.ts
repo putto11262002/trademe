@@ -57,6 +57,7 @@ function enrich(
 
 export async function getPositionDetail(
   ticker: string,
+  userId: string,
 ): Promise<PositionDetail> {
   const symbol = ticker.toUpperCase()
 
@@ -65,7 +66,7 @@ export async function getPositionDetail(
     getQuote(symbol),
     getCompanyProfile(symbol),
     getTradesForTicker(symbol),
-    getPositions(),
+    getPositions(userId),
   ])
 
   const rawPosition = positions.find((p) => p.ticker === symbol) ?? null

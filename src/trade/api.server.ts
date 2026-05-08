@@ -57,12 +57,11 @@ export async function addTrade(input: AddTradeInput): Promise<Trade> {
   return toTrade(row)
 }
 
-export async function listTrades(): Promise<Array<Trade>> {
-  const user = await requireUser()
+export async function listTrades(userId: string): Promise<Array<Trade>> {
   const rows = await getDb()
     .select()
     .from(trade)
-    .where(eq(trade.userId, user.id))
+    .where(eq(trade.userId, userId))
     .orderBy(desc(trade.tradedAt))
   return rows.map(toTrade)
 }
@@ -77,8 +76,8 @@ export async function getTradesForTicker(ticker: string): Promise<Array<Trade>> 
   return rows.map(toTrade)
 }
 
-export async function getPositions(): Promise<Array<Position>> {
-  const trades = await listTrades()
+export async function getPositions(userId: string): Promise<Array<Position>> {
+  const trades = await listTrades(userId)
   const byTicker = new Map<string, Position>()
   for (const t of trades) {
     const p =

@@ -81,13 +81,13 @@ function assertCandleRange(from: Date, to: Date): void {
   }
 }
 
-async function buildAnalysisDataset(input: DatasetInput) {
+async function buildAnalysisDataset(input: DatasetInput, userId: string) {
   const tickers = Array.from(
     new Set(input.tickers.map((ticker) => ticker.toUpperCase())),
   )
 
   const [portfolio, quotes, fundamentals, news, candles] = await Promise.all([
-    input.includePortfolio ? getPortfolioDashboard() : Promise.resolve(null),
+    input.includePortfolio ? getPortfolioDashboard(userId) : Promise.resolve(null),
     input.includeQuotes
       ? Promise.all(tickers.map((ticker) => getQuote(ticker)))
       : Promise.resolve([]),
@@ -210,7 +210,8 @@ async function withTimeout<T>(
   }
 }
 
-export const analysisTools = {
+export function createAnalysisTools(userId: string) {
+  return {
   analysis_run_code: tool({
     description:
       "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import trademe_sdk as trademe and finish with trademe.output.write(summary, result). The summary must be one short sentence describing what was done. Do not use for trade execution or portfolio writes.",
@@ -234,7 +235,7 @@ export const analysisTools = {
         })
 
         phase = "dataset"
-        const analysisDataset = await buildAnalysisDataset(dataset)
+        const analysisDataset = await buildAnalysisDataset(dataset, userId)
         logAnalysis("dataset_ready", {
           runId,
           tickers: analysisDataset.data.tickers,
@@ -358,6 +359,7 @@ export const analysisTools = {
       }
     },
   }),
+  }
 }
 
 function terminalModeForPhase(phase: AnalysisPhase | string): "recoverable" | "terminal" {

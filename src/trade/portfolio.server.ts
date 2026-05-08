@@ -107,8 +107,8 @@ function computeSummary(
   }
 }
 
-export async function getPortfolioDashboard(): Promise<PortfolioDashboard> {
-  const positions = await getPositions()
+export async function getPortfolioDashboard(userId: string): Promise<PortfolioDashboard> {
+  const positions = await getPositions(userId)
   const open = positions.filter((p) => p.netQuantity > 0)
 
   const fx = await getFXRate("USD", "THB")

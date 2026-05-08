@@ -4,8 +4,8 @@ import { createModel } from "@/agent/gateway.server"
 import { generalChatModels, DEFAULT_GENERAL_CHAT_MODEL, type GeneralChatModelKey, type ProviderOptions } from "@/agent/general-chat-models"
 import { listAgentSkills } from "@/agent/skills/registry.server"
 import type { AgentSkillMetadata } from "@/agent/skills/types"
-import { analysisTools } from "@/agent/tools/analysis.server"
-import { portfolioTools } from "@/agent/tools/portfolio.server"
+import { createAnalysisTools } from "@/agent/tools/analysis.server"
+import { createPortfolioTools } from "@/agent/tools/portfolio.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
@@ -47,12 +47,13 @@ function renderSystemPrompt(skills: AgentSkillMetadata[]): string {
 export type ChatAgentOptions = {
   modelKey?: GeneralChatModelKey
   providerOptions?: ProviderOptions
+  userId: string
 }
 
 export async function runChatAgent(
   messages: UIMessage[],
   onFinish: StreamTextOnFinishCallback<ToolSet>,
-  opts: ChatAgentOptions = {},
+  opts: ChatAgentOptions,
 ) {
   const modelKey = (opts.modelKey ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
@@ -64,9 +65,9 @@ export async function runChatAgent(
     system: renderSystemPrompt(skills),
     tools: {
       ...skillTools,
-      ...portfolioTools,
+      ...createPortfolioTools(opts.userId),
       ...stockTools,
-      ...analysisTools,
+      ...createAnalysisTools(opts.userId),
     },
     messages: modelMessages,
     stopWhen: [stopOnTerminalToolError, stepCountIs(10)],
