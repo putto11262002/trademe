@@ -4,8 +4,8 @@ import { createModel } from "@/agent/gateway.server"
 import { generalChatModels, DEFAULT_GENERAL_CHAT_MODEL, type GeneralChatModelKey, type ProviderOptions } from "@/agent/general-chat-models"
 import { listAgentSkills } from "@/agent/skills/registry.server"
 import type { AgentSkillMetadata } from "@/agent/skills/types"
-import { analysisTools } from "@/agent/tools/analysis.server"
-import { portfolioTools } from "@/agent/tools/portfolio.server"
+import { createAnalysisTools } from "@/agent/tools/analysis.server"
+import { createPortfolioTools } from "@/agent/tools/portfolio.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
@@ -44,17 +44,20 @@ function renderSystemPrompt(skills: AgentSkillMetadata[]): string {
   ].join("\n")
 }
 
-export type ChatAgentOptions = {
+export async function runChatAgent({
+  messages,
+  onFinish,
+  userId,
+  modelKey: modelKeyOpt,
+  providerOptions,
+}: {
+  messages: UIMessage[]
+  onFinish: StreamTextOnFinishCallback<ToolSet>
+  userId: string
   modelKey?: GeneralChatModelKey
   providerOptions?: ProviderOptions
-}
-
-export async function runChatAgent(
-  messages: UIMessage[],
-  onFinish: StreamTextOnFinishCallback<ToolSet>,
-  opts: ChatAgentOptions = {},
-) {
-  const modelKey = (opts.modelKey ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
+}) {
+  const modelKey = (modelKeyOpt ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
   const modelMessages = await convertToModelMessages(messages)
   const skills = await listAgentSkills()
@@ -64,13 +67,13 @@ export async function runChatAgent(
     system: renderSystemPrompt(skills),
     tools: {
       ...skillTools,
-      ...portfolioTools,
+      ...createPortfolioTools(userId),
       ...stockTools,
-      ...analysisTools,
+      ...createAnalysisTools(userId),
     },
     messages: modelMessages,
     stopWhen: [stopOnTerminalToolError, stepCountIs(10)],
-    providerOptions: opts.providerOptions,
+    providerOptions,
     onFinish,
   })
 }

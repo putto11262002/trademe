@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm"
 import { runSlipExtraction } from "@/agent/definitions/slip-extraction.server"
-import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
 import { tradeSlip } from "@/db/schema"
 import type { SlipExtractionSlip } from "./schemas"
@@ -72,11 +71,10 @@ function validateImageBytes(bytes: Uint8Array, contentType: string): void {
   }
 }
 
-export async function parseSlip(input: {
-  image: Uint8Array
-  contentType: string
-}): Promise<ParseSlipResult> {
-  const user = await requireUser()
+export async function parseSlip(
+  input: { image: Uint8Array; contentType: string },
+  userId: string,
+): Promise<ParseSlipResult> {
   validateImageBytes(input.image, input.contentType)
   const { result, modelId } = await runSlipExtraction(input)
 
@@ -87,7 +85,7 @@ export async function parseSlip(input: {
   const [row] = await getDb()
     .insert(tradeSlip)
     .values({
-      userId: user.id,
+      userId,
       status: "parsed",
       extraction: result,
       extractionModel: modelId,
@@ -97,12 +95,11 @@ export async function parseSlip(input: {
   return { kind: "slip", slipId: row.id, extraction: result }
 }
 
-export async function getSlip(slipId: string): Promise<Slip | null> {
-  const user = await requireUser()
+export async function getSlip(slipId: string, userId: string): Promise<Slip | null> {
   const [row] = await getDb()
     .select()
     .from(tradeSlip)
-    .where(and(eq(tradeSlip.id, slipId), eq(tradeSlip.userId, user.id)))
+    .where(and(eq(tradeSlip.id, slipId), eq(tradeSlip.userId, userId)))
     .limit(1)
   return row ? toSlip(row) : null
 }

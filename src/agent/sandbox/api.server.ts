@@ -60,6 +60,8 @@ export async function handleSandboxApi(
   const session = requireSandboxSession(request, env)
   if (session instanceof Response) return session
 
+  const userId = request.headers.get("X-User-Id") ?? ""
+
   if (request.method !== "GET") {
     return jsonError("Method not allowed", 405)
   }
@@ -68,7 +70,7 @@ export async function handleSandboxApi(
 
   try {
     if (url.pathname === "/api/sandbox/portfolio/dashboard") {
-      return json(await getPortfolioDashboard())
+      return json(await getPortfolioDashboard(userId))
     }
 
     if (url.pathname === "/api/sandbox/market/quote") {

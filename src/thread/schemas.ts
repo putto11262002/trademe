@@ -7,7 +7,6 @@ const providerOptionsSchema = z.record(
 )
 
 export const createThreadSchema = z.object({
-  userId: z.string().min(1),
   title: z.string().max(120).optional(),
   modelKey: z.string().default(DEFAULT_GENERAL_CHAT_MODEL),
   providerOptions: providerOptionsSchema.default({}),

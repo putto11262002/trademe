@@ -1,5 +1,4 @@
 import { and, desc, eq } from "drizzle-orm"
-import { requireUser } from "@/auth/api.server"
 import { getDb } from "@/db/index.server"
 import { trade } from "@/db/schema"
 import { markSlipAttached } from "@/slip/api.server"
@@ -27,17 +26,16 @@ function toTrade(row: TradeRow): Trade {
   }
 }
 
-export async function addTrade(input: AddTradeInput): Promise<Trade> {
-  const user = await requireUser()
+export async function addTrade(input: AddTradeInput, userId: string): Promise<Trade> {
   const ticker = input.ticker.toUpperCase()
 
-  const { errors } = await validateAddTrade(input, user.id)
+  const { errors } = await validateAddTrade(input, userId)
   if (errors.length > 0) throw new TradeValidationFailed(errors)
 
   const [row] = await getDb()
     .insert(trade)
     .values({
-      userId: user.id,
+      userId,
       ticker,
       side: input.side,
       quantity: input.quantity.toString(),
@@ -51,34 +49,32 @@ export async function addTrade(input: AddTradeInput): Promise<Trade> {
     .returning()
 
   if (input.slipId) {
-    await markSlipAttached(input.slipId, user.id)
+    await markSlipAttached(input.slipId, userId)
   }
 
   return toTrade(row)
 }
 
-export async function listTrades(): Promise<Array<Trade>> {
-  const user = await requireUser()
+export async function listTrades(userId: string): Promise<Array<Trade>> {
   const rows = await getDb()
     .select()
     .from(trade)
-    .where(eq(trade.userId, user.id))
+    .where(eq(trade.userId, userId))
     .orderBy(desc(trade.tradedAt))
   return rows.map(toTrade)
 }
 
-export async function getTradesForTicker(ticker: string): Promise<Array<Trade>> {
-  const user = await requireUser()
+export async function getTradesForTicker(ticker: string, userId: string): Promise<Array<Trade>> {
   const rows = await getDb()
     .select()
     .from(trade)
-    .where(and(eq(trade.userId, user.id), eq(trade.ticker, ticker.toUpperCase())))
+    .where(and(eq(trade.userId, userId), eq(trade.ticker, ticker.toUpperCase())))
     .orderBy(desc(trade.tradedAt))
   return rows.map(toTrade)
 }
 
-export async function getPositions(): Promise<Array<Position>> {
-  const trades = await listTrades()
+export async function getPositions(userId: string): Promise<Array<Position>> {
+  const trades = await listTrades(userId)
   const byTicker = new Map<string, Position>()
   for (const t of trades) {
     const p =

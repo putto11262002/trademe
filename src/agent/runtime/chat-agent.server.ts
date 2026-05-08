@@ -7,11 +7,19 @@ import { runChatAgent } from "@/agent/definitions/chat.server"
 import type { GeneralChatModelKey, ProviderOptions } from "@/agent/general-chat-models"
 
 export class ChatAgent extends AIChatAgent<Env> {
+  userId = ""
+
   async onChatMessage(onFinish: StreamTextOnFinishCallback<ToolSet>, options?: OnChatMessageOptions) {
     const modelKey = options?.body?.modelKey as GeneralChatModelKey | undefined
     const providerOptions = options?.body?.providerOptions as ProviderOptions | undefined
 
-    const result = await runChatAgent(this.messages, onFinish, { modelKey, providerOptions })
+    const result = await runChatAgent({
+      messages: this.messages,
+      onFinish,
+      userId: this.userId,
+      modelKey,
+      providerOptions,
+    })
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -28,11 +36,13 @@ export class ChatAgent extends AIChatAgent<Env> {
   async onRequest(request: Request): Promise<Response> {
     const sessionToken = request.headers.get("cookie")?.match(/(?:^|;\s*)__session=([^;]+)/)?.[1]
     if (!sessionToken) return new Response("Unauthorized", { status: 401 })
+    let payload: Awaited<ReturnType<typeof verifyToken>>
     try {
-      await verifyToken(sessionToken, { secretKey: process.env.CLERK_SECRET_KEY })
+      payload = await verifyToken(sessionToken, { secretKey: process.env.CLERK_SECRET_KEY })
     } catch {
       return new Response("Unauthorized", { status: 401 })
     }
+    this.userId = payload.sub
 
     if (request.method === "DELETE") {
       this.messages = []
