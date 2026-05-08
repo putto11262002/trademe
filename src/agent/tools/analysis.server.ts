@@ -16,6 +16,9 @@ import type { AnalysisSandbox } from "@/agent/runtime/analysis-sandbox.server"
 const MAX_CANDLE_RANGE_DAYS = 730
 const EXEC_TIMEOUT_MS = 15_000
 const SANDBOX_IO_TIMEOUT_MS = 20_000
+const SANDBOX_INSTANCE_TIMEOUT_MS = 5_000
+const SANDBOX_PORT_READY_TIMEOUT_MS = 12_000
+const SANDBOX_POLL_INTERVAL_MS = 500
 const MAX_OUTPUT_BYTES = 256_000
 const MAX_RESULT_BYTES = 128_000
 
@@ -232,6 +235,8 @@ export function createAnalysisTools(userId: string) {
           candles: dataset.candles ?? null,
           codeLength: code.length,
           execTimeoutMs: EXEC_TIMEOUT_MS,
+          sandboxIoTimeoutMs: SANDBOX_IO_TIMEOUT_MS,
+          sandboxStartupTimeoutMs: SANDBOX_PORT_READY_TIMEOUT_MS,
         })
 
         phase = "dataset"
@@ -250,7 +255,14 @@ export function createAnalysisTools(userId: string) {
         const sandbox = getSandbox<AnalysisSandbox>(
           env.ANALYSIS_SANDBOX,
           sandboxId(),
-          { keepAlive: false },
+          {
+            keepAlive: false,
+            containerTimeouts: {
+              instanceGetTimeoutMS: SANDBOX_INSTANCE_TIMEOUT_MS,
+              portReadyTimeoutMS: SANDBOX_PORT_READY_TIMEOUT_MS,
+              waitIntervalMS: SANDBOX_POLL_INTERVAL_MS,
+            },
+          },
         )
 
         phase = "sandbox_io"
@@ -277,12 +289,10 @@ export function createAnalysisTools(userId: string) {
         })
 
         phase = "exec"
-        const abortController = new AbortController()
         const result = await withTimeout(
           sandbox.exec("python3 /workspace/run_analysis.py", {
             cwd: "/workspace",
             timeout: EXEC_TIMEOUT_MS,
-            signal: abortController.signal,
             env: {
               PYTHONPATH: "/workspace",
               TRADEME_API_TOKEN: apiToken,
@@ -291,7 +301,6 @@ export function createAnalysisTools(userId: string) {
           EXEC_TIMEOUT_MS + 2_000,
           `Python execution timed out after ${EXEC_TIMEOUT_MS}ms`,
           "exec",
-          () => abortController.abort("analysis timeout"),
         )
         logAnalysis("exec_finished", {
           runId,
