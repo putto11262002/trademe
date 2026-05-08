@@ -8,7 +8,7 @@ import { AppSidebar } from "./app-sidebar"
 import { UserMenu } from "./user-menu"
 import { AuthError } from "./auth-error"
 import { AuthSplash } from "./auth-splash"
-import { ChevronDown, LayoutDashboard, MessageSquare, PieChart, TrendingUp } from "lucide-react"
+import { ChevronDown, LayoutDashboard, MessageSquare, PieChart, TrendingUp, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -144,6 +144,11 @@ function AppShellInner({ children }: { children: ReactNode }) {
                 <DropdownMenuItem asChild>
                   <Link to="/trades" onClick={() => setMobileView("app")} className="flex items-center gap-2">
                     <TrendingUp className="size-4" /> Trades
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/usage" onClick={() => setMobileView("app")} className="flex items-center gap-2">
+                    <Zap className="size-4" /> Usage
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

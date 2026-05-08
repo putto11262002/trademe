@@ -1,9 +1,124 @@
+import { and, count, desc, gte, eq, sql, sum } from "drizzle-orm"
 import type { OnFinishEvent, ToolSet } from "ai"
 import { getDb } from "@/db/index.server"
 import { aiRun } from "@/db/schema"
 import { computeCostUsd } from "./pricing"
 import type { AiRunType } from "./schemas"
-import type { NewAiRun } from "./types"
+import type { AiRun, NewAiRun } from "./types"
+
+// Default monthly cost limit — override with MONTHLY_COST_LIMIT_USD env var
+const DEFAULT_MONTHLY_LIMIT_USD = 10
+
+export function getMonthlyLimitUsd(): number {
+  return Number(process.env.MONTHLY_COST_LIMIT_USD ?? DEFAULT_MONTHLY_LIMIT_USD)
+}
+
+function startOfCurrentMonth(): Date {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+}
+
+export async function getMonthlySpend(userId: string): Promise<number> {
+  const db = getDb()
+  const [row] = await db
+    .select({ total: sum(aiRun.costUsd) })
+    .from(aiRun)
+    .where(and(eq(aiRun.userId, userId), gte(aiRun.createdAt, startOfCurrentMonth())))
+  return Number(row?.total ?? "0")
+}
+
+export type UsageSummary = {
+  totalCostUsd: number
+  totalRuns: number
+  totalInputTokens: number
+  totalOutputTokens: number
+  byModel: Array<{ model: string; costUsd: number; runs: number }>
+  monthlyLimitUsd: number
+}
+
+export async function getMonthlyUsageSummary(userId: string): Promise<UsageSummary> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      model: aiRun.model,
+      totalCost: sum(aiRun.costUsd),
+      totalInputTokens: sum(aiRun.inputTokens),
+      totalOutputTokens: sum(aiRun.outputTokens),
+      runCount: count(),
+    })
+    .from(aiRun)
+    .where(and(eq(aiRun.userId, userId), gte(aiRun.createdAt, startOfCurrentMonth())))
+    .groupBy(aiRun.model)
+
+  const byModel = rows.map((r) => ({
+    model: r.model,
+    costUsd: Number(r.totalCost ?? "0"),
+    runs: r.runCount,
+  }))
+
+  return {
+    totalCostUsd: byModel.reduce((acc, r) => acc + r.costUsd, 0),
+    totalRuns: rows.reduce((acc, r) => acc + r.runCount, 0),
+    totalInputTokens: rows.reduce((acc, r) => acc + Number(r.totalInputTokens ?? 0), 0),
+    totalOutputTokens: rows.reduce((acc, r) => acc + Number(r.totalOutputTokens ?? 0), 0),
+    byModel,
+    monthlyLimitUsd: getMonthlyLimitUsd(),
+  }
+}
+
+export type DailyUsageRow = { day: string; costUsd: number; runs: number }
+
+export async function getDailyUsage(userId: string, days = 30): Promise<DailyUsageRow[]> {
+  const db = getDb()
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+
+  const rows = await db
+    .select({
+      day: sql<string>`date_trunc('day', ${aiRun.createdAt})::date::text`.as("day"),
+      totalCost: sum(aiRun.costUsd),
+      runCount: count(),
+    })
+    .from(aiRun)
+    .where(and(eq(aiRun.userId, userId), gte(aiRun.createdAt, since)))
+    .groupBy(sql`date_trunc('day', ${aiRun.createdAt})`)
+    .orderBy(sql`date_trunc('day', ${aiRun.createdAt})`)
+
+  return rows.map((r) => ({
+    day: r.day,
+    costUsd: Number(r.totalCost ?? "0"),
+    runs: r.runCount,
+  }))
+}
+
+export type AiRunRow = Omit<AiRun, "meta">
+
+export async function getRecentRuns(userId: string, limit = 20): Promise<AiRunRow[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      id: aiRun.id,
+      userId: aiRun.userId,
+      threadId: aiRun.threadId,
+      type: aiRun.type,
+      model: aiRun.model,
+      stepCount: aiRun.stepCount,
+      inputTokens: aiRun.inputTokens,
+      cacheReadTokens: aiRun.cacheReadTokens,
+      cacheWriteTokens: aiRun.cacheWriteTokens,
+      outputTokens: aiRun.outputTokens,
+      reasoningTokens: aiRun.reasoningTokens,
+      costUsd: aiRun.costUsd,
+      durationMs: aiRun.durationMs,
+      finishReason: aiRun.finishReason,
+      toolsUsed: aiRun.toolsUsed,
+      createdAt: aiRun.createdAt,
+    })
+    .from(aiRun)
+    .where(eq(aiRun.userId, userId))
+    .orderBy(desc(aiRun.createdAt))
+    .limit(limit)
+  return rows
+}
 
 export async function insertAiRun(data: NewAiRun): Promise<void> {
   const db = getDb()
