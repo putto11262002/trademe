@@ -18,7 +18,7 @@ Good use cases:
 
 Rules:
 - Only use code execution for stock, market, portfolio, or investment-analysis tasks.
-- Request only the dataset needed for the question.
+- Fetch only the data needed for the question through the SDK.
 - Do not inspect long candle arrays in text. Load them in code and compute compact metrics.
 - Generated Python must import trademe_sdk as trademe.
 - Read references/sdk.md before writing non-trivial Python against the SDK.

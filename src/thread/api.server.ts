@@ -38,6 +38,12 @@ export async function getThread(id: string, userId: string) {
   return row ?? null
 }
 
+export async function getThreadOwnerUserId(id: string): Promise<string | null> {
+  const db = getDb()
+  const [row] = await db.select({ userId: thread.userId }).from(thread).where(eq(thread.id, id))
+  return row?.userId ?? null
+}
+
 export async function updateThread(id: string, data: Partial<Pick<NewThread, "title" | "modelKey" | "providerOptions">>, userId: string) {
   const db = getDb()
   await db

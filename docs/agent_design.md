@@ -435,11 +435,6 @@ Purpose: flexible custom numerical analysis that combines datasets/tools in ways
 
 The SDK should feel like a small local data-analysis library for TradeMe. It should expose large data and helper functions to generated code without bloating LLM context.
 
-### `trademe.input`
-
-- `load()`
-  - Load the pre-fetched run payload from `/workspace/input.json`.
-
 ### `trademe.output`
 
 - `write(result)`
@@ -448,7 +443,7 @@ The SDK should feel like a small local data-analysis library for TradeMe. It sho
 ### `trademe.portfolio`
 
 - `dashboard()`
-  - Return preloaded portfolio dashboard if included in dataset.
+  - Fetch current portfolio dashboard through the sandbox API.
 
 - `positions()`
   - Return current positions.
@@ -459,18 +454,18 @@ The SDK should feel like a small local data-analysis library for TradeMe. It sho
 ### `trademe.market`
 
 - `quote(ticker)`
-  - Return preloaded quote.
+  - Fetch quote through the sandbox API.
 
-- `candles(ticker)`
-  - Return preloaded candle array.
+- `candles(ticker, from_, to)`
+  - Fetch candle array through the sandbox API.
 
 - `fundamentals(ticker)`
-  - Return preloaded fundamentals.
+  - Fetch fundamentals through the sandbox API.
 
 - `news(ticker)`
-  - Return preloaded recent news.
+  - Fetch recent news through the sandbox API.
 
-Later, these can lazily call `/api/sandbox/*` with short-lived run tokens.
+These call `/api/sandbox/*` with short-lived user-scoped tokens.
 
 ### `trademe.utils`
 
@@ -486,7 +481,7 @@ Most analysis should be written directly by the generated Python code using inst
 - SDK functions must be read-only.
 - SDK functions should never expose secrets.
 - SDK functions should never directly access the database.
-- SDK functions should either read preloaded data or call the sandbox bridge with scoped tokens later.
+- SDK functions should call the sandbox bridge with scoped tokens.
 - SDK outputs should be JSON-serializable.
 - SDK should prefer compact data access over broad, ambiguous power functions.
 - Workflow intelligence belongs in playbooks/skills and prompts, not in the SDK.
@@ -512,26 +507,28 @@ Avoid at first:
 Example generated-code direction:
 
 ```python
+import numpy as np
 import pandas as pd
-from ta.momentum import RSIIndicator
-from ta.trend import SMAIndicator, EMAIndicator
 import trademe_sdk as trademe
 
-payload = trademe.input.load()
-bars = trademe.market.candles("NVDA")
+bars = trademe.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
 df = pd.DataFrame(bars)
 
 close = df["close"]
+sma50 = close.rolling(50).mean().iloc[-1]
+delta = close.diff()
+gain = delta.clip(lower=0).rolling(14).mean()
+loss = (-delta.clip(upper=0)).rolling(14).mean()
+rsi14 = 100 - (100 / (1 + (gain / loss)))
 result = {
-    "summary": "NVDA is above its 50-day average with neutral RSI.",
     "metrics": {
-        "sma50": SMAIndicator(close, window=50).sma_indicator().iloc[-1],
-        "rsi14": RSIIndicator(close, window=14).rsi().iloc[-1],
+        "sma50": float(sma50) if not np.isnan(sma50) else None,
+        "rsi14": float(rsi14.iloc[-1]) if not np.isnan(rsi14.iloc[-1]) else None,
     },
     "warnings": [],
     "dataGaps": [],
 }
-trademe.output.write(result)
+trademe.output.write("Computed NVDA SMA and RSI from fetched candles.", result)
 ```
 
 The agent should write code for the specific question, not blindly call a large SDK function that hides the reasoning.
@@ -955,26 +952,25 @@ The same Worker exposes a thin sandbox bridge at `/api/sandbox/*`. These endpoin
 - `GET /api/sandbox/market/news?ticker=NVDA&days=7`
 - `GET /api/sandbox/market/fundamentals?ticker=NVDA`
 
-For now they use `SANDBOX_API_TOKEN` bearer auth. This is a testing bridge, not a public product API.
+They use a short-lived `TRADEME_API_TOKEN` bearer token minted by the Worker for the current user. This is a sandbox bridge, not a public product API.
 
 ## Code execution slice
 
-`analysis_run_code` runs generated Python inside Cloudflare Sandbox. The Worker fetches the requested dataset through existing modules, writes `/workspace/input.json`, writes a small `trademe_sdk.py`, runs `/workspace/run_analysis.py`, and reads `/workspace/output.json`.
+`analysis_run_code` runs generated Python inside Cloudflare Sandbox. The sandbox image installs the local `trademe_sdk` package. The Worker writes `/workspace/run_analysis.py`, passes `TRADEME_API_BASE_URL` and a short-lived `TRADEME_API_TOKEN`, runs the code, and reads `/workspace/output.json`.
 
 Status: prototype only. Normal compact tools are useful today, but code execution still needs a redesign/hardening pass before it is dependable. Known current issues:
 
-- Local runs can get stuck pending.
+- Local runs can fail if `TRADEME_API_BASE_URL` does not point at an origin reachable from the sandbox container.
 - The agent can make several failed analysis attempts.
 - There is not enough structured logging/debug visibility.
-- The current SDK still includes helper indicators, while the latest design direction is a data-access/output SDK plus installed Python analysis libraries.
+- The SDK is now packaged into the sandbox image, but its generated reference docs are still maintained manually.
 
 The generated Python contract:
 
 ```python
 import trademe_sdk as trademe
 
-bars = trademe.market.candles("NVDA")
-# compute from preloaded data
+bars = trademe.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
 trademe.output.write(
     "Computed 1-month trend metrics for NVDA.",
     {
@@ -998,9 +994,6 @@ type AnalysisOutput = {
 
 The bundled SDK now exposes namespaced data accessors:
 
-- `trademe.input.load()`
-- `trademe.input.metadata()`
-- `trademe.input.available_tickers()`
 - `trademe.output.write(summary, result)`
 - `trademe.output.fail(summary, details)`
 - `trademe.portfolio.dashboard()`
@@ -1008,7 +1001,7 @@ The bundled SDK now exposes namespaced data accessors:
 - `trademe.portfolio.positions()`
 - `trademe.portfolio.position(ticker)`
 - `trademe.market.quote(ticker)`
-- `trademe.market.candles(ticker)`
+- `trademe.market.candles(ticker, from_, to)`
 - `trademe.market.fundamentals(ticker)`
 - `trademe.news.recent(ticker)`
 - `trademe.utils.closes(candles)`
@@ -1018,11 +1011,10 @@ Backward-compatible shims (`load_input`, `write_output`, `closes`) remain tempor
 
 ## What remains
 
-- Replace static `SANDBOX_API_TOKEN` with short-lived signed run tokens.
-- Add a sandbox SDK client that calls the `/api/sandbox/*` bridge when lazy data loading is needed.
-- Add a persisted audit log for generated code, dataset request, run id, output, errors, and latency.
+- Add broader sandbox SDK methods as more internal data endpoints exist.
+- Add a persisted audit log for generated code, sandbox API requests, run id, output, errors, and latency.
 - Add strict output schema validation for tables, metrics, charts, warnings, and citations.
 - Add dedicated pure analytics modules under `src/analytics/` so common indicators do not need generated code.
 - Add per-user/run quotas: timeout, max candle rows, max tickers, max output size, and max concurrent sandboxes.
 - Add clearer regulatory guardrails in prompt and UI: information only, no order execution, no buy/sell instructions.
-- Decide whether sandbox callback traffic should use the HTTP bridge, Cloudflare outbound handlers, or preloaded `input.json` per run.
+- Decide whether sandbox callback traffic should stay on the HTTP bridge or move to Cloudflare-native outbound handlers later.

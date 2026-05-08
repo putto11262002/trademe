@@ -5,18 +5,24 @@ import type { OnChatMessageOptions } from "@cloudflare/ai-chat"
 import { verifyToken } from "@clerk/backend"
 import { runChatAgent } from "@/agent/definitions/chat.server"
 import type { GeneralChatModelKey, ProviderOptions } from "@/agent/general-chat-models"
+import { getThreadOwnerUserId } from "@/thread/api.server"
 
 export class ChatAgent extends AIChatAgent<Env> {
-  userId = ""
+  private async getThreadUserId(): Promise<string> {
+    const userId = await getThreadOwnerUserId(this.name)
+    if (!userId) throw new Error("Thread not found")
+    return userId
+  }
 
   async onChatMessage(onFinish: StreamTextOnFinishCallback<ToolSet>, options?: OnChatMessageOptions) {
     const modelKey = options?.body?.modelKey as GeneralChatModelKey | undefined
     const providerOptions = options?.body?.providerOptions as ProviderOptions | undefined
+    const userId = await this.getThreadUserId()
 
     const result = await runChatAgent({
       messages: this.messages,
       onFinish,
-      userId: this.userId,
+      userId,
       modelKey,
       providerOptions,
     })
@@ -42,7 +48,10 @@ export class ChatAgent extends AIChatAgent<Env> {
     } catch {
       return new Response("Unauthorized", { status: 401 })
     }
-    this.userId = payload.sub
+
+    const threadUserId = await getThreadOwnerUserId(this.name)
+    if (!threadUserId) return new Response("Not Found", { status: 404 })
+    if (threadUserId !== payload.sub) return new Response("Forbidden", { status: 403 })
 
     if (request.method === "DELETE") {
       this.messages = []

@@ -31,6 +31,8 @@ function getSecret(): string {
 }
 
 export async function createUserApiToken(userId: string, opts?: { expiresInSeconds?: number }): Promise<string> {
+  if (!userId) throw new Error("Cannot create API token without user id")
+
   const secret = getSecret()
   const enc = new TextEncoder()
 
