@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { DailyUsageRow } from "@/agent/usage/api.server"
 
 const chartConfig = {
-  inputTokens: { label: "Input" },
-  outputTokens: { label: "Output" },
+  inputTokens: { label: "Input", color: "var(--chart-1)" },
+  outputTokens: { label: "Output", color: "var(--chart-2)" },
 }
 
 function modelLabel(modelId: string) {
@@ -19,7 +19,11 @@ function modelLabel(modelId: string) {
 }
 
 function fmtTokens(n: number) {
-  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}k` : String(n)
+  return n >= 1_000_000
+    ? `${(n / 1_000_000).toFixed(2)}M`
+    : n >= 1_000
+      ? `${(n / 1_000).toFixed(1)}k`
+      : String(n)
 }
 
 function generateDays(n: number): string[] {
@@ -53,29 +57,34 @@ export function TokenChart({ data }: { data: DailyUsageRow[] }) {
 
   const totalInput = filtered.reduce((acc, r) => acc + r.inputTokens, 0)
   const totalOutput = filtered.reduce((acc, r) => acc + r.outputTokens, 0)
+  const total = totalInput + totalOutput
 
   return (
     <Card>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-sm font-medium text-muted-foreground">Token usage — last 7 days</CardTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {fmtTokens(totalInput + totalOutput)} total · {fmtTokens(totalInput)} in · {fmtTokens(totalOutput)} out
-          </p>
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Token usage</CardTitle>
+            <p className="text-2xl font-semibold">{fmtTokens(total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {fmtTokens(totalInput)} input · {fmtTokens(totalOutput)} output
+            </p>
+          </div>
+          {models.length > 1 && (
+            <Select value={selected} onValueChange={setSelected}>
+              <SelectTrigger className="h-7 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All models</SelectItem>
+                {models.map((m) => (
+                  <SelectItem key={m} value={m}>{modelLabel(m)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        {models.length > 1 && (
-          <Select value={selected} onValueChange={setSelected}>
-            <SelectTrigger className="h-7 w-32 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All models</SelectItem>
-              {models.map((m) => (
-                <SelectItem key={m} value={m}>{modelLabel(m)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <p className="text-xs text-muted-foreground">Last 7 days</p>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-48 w-full">
@@ -85,7 +94,6 @@ export function TokenChart({ data }: { data: DailyUsageRow[] }) {
               tickLine={false}
               axisLine={false}
               tick={{ fontSize: 11 }}
-              interval="preserveStartEnd"
             />
             <YAxis
               tickLine={false}
@@ -95,10 +103,17 @@ export function TokenChart({ data }: { data: DailyUsageRow[] }) {
             />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent formatter={(v, name) => [fmtTokens(Number(v)), name === "inputTokens" ? "Input" : "Output"]} />}
+              content={
+                <ChartTooltipContent
+                  formatter={(v, name) => [
+                    fmtTokens(Number(v)),
+                    name === "inputTokens" ? "Input" : "Output",
+                  ]}
+                />
+              }
             />
-            <Bar dataKey="inputTokens" stackId="tokens" fill="var(--primary)" radius={[0, 0, 0, 0]} minPointSize={0} />
-            <Bar dataKey="outputTokens" stackId="tokens" fill="var(--primary)/60" radius={[2, 2, 0, 0]} minPointSize={0} />
+            <Bar dataKey="inputTokens" stackId="tokens" fill="var(--color-inputTokens)" radius={[0, 0, 0, 0]} minPointSize={0} />
+            <Bar dataKey="outputTokens" stackId="tokens" fill="var(--color-outputTokens)" radius={[2, 2, 0, 0]} minPointSize={0} />
           </BarChart>
         </ChartContainer>
       </CardContent>

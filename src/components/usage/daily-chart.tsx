@@ -7,7 +7,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { DailyUsageRow } from "@/agent/usage/api.server"
 
-const chartConfig = { costUsd: { label: "Cost (USD)" } }
+const chartConfig = { costUsd: { label: "Cost (USD)", color: "var(--chart-1)" } }
 
 function modelLabel(modelId: string) {
   if (modelId.includes("flash")) return "Flash"
@@ -85,7 +85,7 @@ export function DailyChart({ data }: { data: DailyUsageRow[] }) {
                 />
               }
             />
-            <Bar dataKey="costUsd" fill="var(--primary)" radius={[2, 2, 0, 0]} minPointSize={0} />
+            <Bar dataKey="costUsd" fill="var(--color-costUsd)" radius={[2, 2, 0, 0]} minPointSize={0} />
           </BarChart>
         </ChartContainer>
       </CardContent>
