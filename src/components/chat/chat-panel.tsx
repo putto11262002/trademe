@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import {
   generalChatModels,
   DEFAULT_GENERAL_CHAT_MODEL,
@@ -42,7 +43,22 @@ const THREAD_LS_KEY = "activeThreadId"
 // Markdown / message rendering
 // ---------------------------------------------------------------------------
 
-const markdownComponents: Components = {
+function markdownComponents(sources: ResearchSource[], scope: string): Components {
+  return {
+  a: ({ node: _n, href, children, ...props }) => {
+    if (typeof href === "string" && href.startsWith(`#citation-${scope}-`)) {
+      const citationIds = href
+        .replace(`#citation-${scope}-`, "")
+        .split("-")
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isInteger(value))
+      const citedSources = citationIds
+        .map((citation) => sources.find((source) => source.citation === citation))
+        .filter((source): source is ResearchSource => source != null)
+      return <CitationPill sources={citedSources} />
+    }
+    return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>
+  },
   h1: ({ node: _n, ...props }) => <h1 className="text-base font-semibold mt-3 mb-1" {...props} />,
   h2: ({ node: _n, ...props }) => <h2 className="text-sm font-semibold mt-2 mb-1" {...props} />,
   h3: ({ node: _n, ...props }) => <h3 className="text-sm font-medium mt-2 mb-0.5" {...props} />,
@@ -57,9 +73,267 @@ const markdownComponents: Components = {
   tr: ({ node: _n, ...props }) => <TableRow {...props} />,
   th: ({ node: _n, ...props }) => <TableHead {...props} />,
   td: ({ node: _n, ...props }) => <TableCell {...props} />,
+  }
 }
 
 type AnyPart = ChatMessage["parts"][number]
+
+type ResearchSource = {
+  citation?: number
+  url: string
+  title: string
+  source?: string
+  favicon?: string
+  publishedAt?: string
+  excerpt?: string
+  snippet?: string
+  read: boolean
+  truncated?: boolean
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function toolNameForPart(part: AnyPart): string | null {
+  if (part.type === "dynamic-tool") return (part as { toolName?: string }).toolName ?? null
+  if (part.type.startsWith("tool-")) return part.type.replace(/^tool-/, "")
+  return null
+}
+
+function outputForPart(part: AnyPart): unknown {
+  const p = part as { state?: string; output?: unknown }
+  return p.state === "output-available" ? p.output : null
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined
+}
+
+function optionalCitation(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined
+}
+
+function hostForUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return url
+  }
+}
+
+function faviconFallback(source: ResearchSource): string {
+  const value = source.source ?? hostForUrl(source.url) ?? source.title
+  return value.trim().charAt(0).toUpperCase() || "?"
+}
+
+function normalizeUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null
+  try {
+    return new URL(value).toString()
+  } catch {
+    return null
+  }
+}
+
+function mergeSource(
+  map: Map<string, ResearchSource>,
+  source: ResearchSource,
+) {
+  const existing = map.get(source.url)
+  if (!existing) {
+    map.set(source.url, source)
+    return
+  }
+  map.set(source.url, {
+    ...existing,
+    ...source,
+    citation: existing.citation ?? source.citation,
+    title: source.read && source.title ? source.title : existing.title,
+    excerpt: source.excerpt ?? existing.excerpt,
+    snippet: existing.snippet ?? source.snippet,
+    source: source.source ?? existing.source,
+    favicon: existing.favicon ?? source.favicon,
+    publishedAt: source.publishedAt ?? existing.publishedAt,
+    read: existing.read || source.read,
+    truncated: existing.truncated || source.truncated,
+  })
+}
+
+function extractResearchSources(message: ChatMessage): ResearchSource[] {
+  const sources = new Map<string, ResearchSource>()
+  for (const part of message.parts) {
+    const toolName = toolNameForPart(part)
+    const output = outputForPart(part)
+    if (!toolName || !isRecord(output)) continue
+
+    if (toolName === "research_search_web" && Array.isArray(output.results)) {
+      for (const result of output.results) {
+        if (!isRecord(result)) continue
+        const url = normalizeUrl(result.url)
+        if (!url) continue
+        mergeSource(sources, {
+          citation: optionalCitation(result.citation),
+          url,
+          title: optionalString(result.title) ?? hostForUrl(url),
+          source: optionalString(result.source) ?? hostForUrl(url),
+          favicon: optionalString(result.favicon),
+          publishedAt: optionalString(result.publishedAt),
+          snippet: optionalString(result.snippet),
+          read: false,
+        })
+      }
+    }
+
+    if (toolName === "research_read_page") {
+      const url = normalizeUrl(output.url)
+      if (!url) continue
+      mergeSource(sources, {
+        citation: optionalCitation(output.citation),
+        url,
+        title: optionalString(output.title) ?? hostForUrl(url),
+        source: optionalString(output.siteName) ?? hostForUrl(url),
+        publishedAt: optionalString(output.publishedAt),
+        excerpt: optionalString(output.excerpt),
+        read: true,
+        truncated: output.truncated === true,
+      })
+    }
+  }
+  const orderedSources = Array.from(sources.values()).sort((a, b) => {
+    if (a.citation != null && b.citation != null) return a.citation - b.citation
+    if (a.citation != null) return -1
+    if (b.citation != null) return 1
+    return 0
+  })
+  let nextFallbackCitation = orderedSources.reduce((max, source) => Math.max(max, source.citation ?? 0), 0) + 1
+  return orderedSources.map((source) => {
+    if (source.citation != null) return source
+    const citation = nextFallbackCitation
+    nextFallbackCitation += 1
+    return { ...source, citation }
+  })
+}
+
+function citationScope(message: ChatMessage): string {
+  return message.id.replace(/[^a-zA-Z0-9_-]/g, "")
+}
+
+function rewriteCitationMarkersInPlainText(text: string, validCitations: Set<number>, scope: string): string {
+  return text.replace(/(?:\[\d{1,2}\])+(?!\()/g, (match) => {
+    const citations = Array.from(match.matchAll(/\[(\d{1,2})\]/g))
+      .map((item) => Number.parseInt(item[1] ?? "", 10))
+      .filter((citation) => Number.isInteger(citation) && validCitations.has(citation))
+    if (citations.length === 0) return match
+    return `[sources](#citation-${scope}-${citations.join("-")})`
+  })
+}
+
+function rewriteOutsideInlineCode(text: string, validCitations: Set<number>, scope: string): string {
+  let result = ""
+  let cursor = 0
+  const inlineCodePattern = /(`+)([\s\S]*?)\1/g
+  for (const match of text.matchAll(inlineCodePattern)) {
+    const index = match.index ?? 0
+    result += rewriteCitationMarkersInPlainText(text.slice(cursor, index), validCitations, scope)
+    result += match[0]
+    cursor = index + match[0].length
+  }
+  result += rewriteCitationMarkersInPlainText(text.slice(cursor), validCitations, scope)
+  return result
+}
+
+function linkCitationMarkers(text: string, sources: ResearchSource[], scope: string): string {
+  if (sources.length === 0) return text
+  const validCitations = new Set(sources.map((source) => source.citation).filter((citation): citation is number => citation != null))
+  let result = ""
+  let cursor = 0
+  const fencedCodePattern = /(^|\n)(`{3,}|~{3,})[^\n]*\n[\s\S]*?(\n\2)(?=\n|$)/g
+  for (const match of text.matchAll(fencedCodePattern)) {
+    const index = match.index ?? 0
+    result += rewriteOutsideInlineCode(text.slice(cursor, index), validCitations, scope)
+    result += match[0]
+    cursor = index + match[0].length
+  }
+  result += rewriteOutsideInlineCode(text.slice(cursor), validCitations, scope)
+  return result
+}
+
+function CitationPill({ sources }: { sources: ResearchSource[] }) {
+  if (sources.length === 0) return null
+  const maxVisibleFavicons = 3
+  const visibleSources = sources.slice(0, maxVisibleFavicons)
+  const overflow = Math.max(0, sources.length - maxVisibleFavicons)
+  const title = sources.map((source) => `[${source.citation}] ${source.title} - ${source.url}`).join("\n")
+  const href = sources[0]?.url
+  const pill = (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={title}
+      className="not-prose bg-muted hover:bg-muted/80 inline-flex h-6 items-center rounded-full px-1.5 align-middle no-underline transition-colors"
+    >
+      <span className="flex items-center">
+        {visibleSources.map((source, index) => (
+          <span
+            key={`${source.url}-${source.citation}`}
+            className={cn(
+              "bg-background text-muted-foreground inline-flex size-4 items-center justify-center overflow-hidden rounded-full text-[9px] font-medium",
+              index > 0 && "-ml-1.5",
+            )}
+          >
+            {source.favicon ? (
+              <img src={source.favicon} alt="" className="size-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+            ) : (
+              faviconFallback(source)
+            )}
+          </span>
+        ))}
+      </span>
+      {overflow > 0 && <span className="text-muted-foreground ml-1 text-[10px] font-medium">+{overflow}</span>}
+    </a>
+  )
+
+  return (
+    <HoverCard openDelay={120} closeDelay={160}>
+      <HoverCardTrigger asChild>{pill}</HoverCardTrigger>
+      <HoverCardContent
+        side="top"
+        align="start"
+        className="w-80 p-2"
+      >
+        <div className="space-y-1">
+          {sources.map((source) => {
+            const detail = source.excerpt ?? source.snippet
+            return (
+              <a
+                key={`${source.url}-${source.citation}`}
+                href={source.url}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:bg-muted grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 gap-y-1 rounded-md p-2 no-underline transition-colors"
+              >
+                <span className="bg-muted text-muted-foreground inline-flex size-5 shrink-0 items-center justify-center self-center overflow-hidden rounded-full text-[10px] font-medium">
+                  {source.favicon ? (
+                    <img src={source.favicon} alt="" className="size-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                  ) : (
+                    faviconFallback(source)
+                  )}
+                </span>
+                <span className="min-w-0 self-center">
+                  <span className="text-foreground line-clamp-1 text-xs font-medium leading-tight">{source.title}</span>
+                  <span className="text-muted-foreground mt-0.5 block truncate text-[11px] leading-tight">{source.source ?? hostForUrl(source.url)}</span>
+                </span>
+                {detail && <span className="text-muted-foreground col-span-2 line-clamp-2 text-[11px] leading-relaxed">{detail}</span>}
+              </a>
+            )
+          })}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  )
+}
 
 function toolPartRow(part: AnyPart) {
   const toolName =
@@ -141,6 +415,8 @@ function WorkingIndicator() {
 
 function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: boolean }) {
   const isUser = message.role === "user"
+  const sources = isUser ? [] : extractResearchSources(message)
+  const sourceScope = citationScope(message)
   type Group = { kind: "text"; part: AnyPart; idx: number } | { kind: "reasoning"; part: AnyPart; idx: number } | { kind: "tools"; parts: AnyPart[] }
   const groups: Group[] = []
   for (const [idx, part] of message.parts.entries()) {
@@ -170,7 +446,9 @@ function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: 
         }
         return (
           <div key={gi} className="prose prose-sm dark:prose-invert w-full text-sm">
-            <Streamdown isAnimating={isStreaming} components={markdownComponents}>{group.part.text}</Streamdown>
+            <Streamdown isAnimating={isStreaming} components={markdownComponents(sources, sourceScope)}>
+              {linkCitationMarkers(group.part.text, sources, sourceScope)}
+            </Streamdown>
           </div>
         )
       })}

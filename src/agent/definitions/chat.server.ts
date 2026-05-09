@@ -7,7 +7,7 @@ import { listAgentSkills } from "@/agent/skills/registry.server"
 import type { AgentSkillMetadata } from "@/agent/skills/types"
 import { createAnalysisTools } from "@/agent/tools/analysis.server"
 import { createPortfolioTools } from "@/agent/tools/portfolio.server"
-import { researchTools } from "@/agent/tools/research.server"
+import { createResearchTools } from "@/agent/tools/research.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
@@ -47,6 +47,8 @@ Research rules:
 - Use research_search_web for source discovery.
 - Use research_read_page before relying on details from a source page.
 - Prefer primary or high-quality sources: company investor-relations pages, SEC filings, exchange/vendor data, reputable financial news, then lower-confidence web sources.
+- When using research tools, use the citation numbers returned by the tools as bracket markers like [1] and [2]. If one claim uses multiple sources, write separate markers like [1][2]. Do not invent citation numbers.
+- If you need to write a literal bracketed number that is not a citation, write it as inline code, like \`[1]\`.
 - Keep research concise: normally search once and read 1-3 relevant pages.
 - Do not quote long passages; summarize in your own words.
 - Do not use research tools for unrelated browsing, broker login, trade placement, form submission, paywall bypass, or access-control bypass.
@@ -89,6 +91,7 @@ export async function runChatAgent({
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
   const modelMessages = await convertToModelMessages(messages)
   const skills = await listAgentSkills()
+  const researchTools = createResearchTools()
   const startedAt = Date.now()
 
   const wrappedOnFinish: StreamTextOnFinishCallback<ToolSet> = async (event) => {
