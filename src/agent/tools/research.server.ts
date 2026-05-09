@@ -34,6 +34,10 @@ const readPageInput = z.object({
   maxChars: z.number().int().positive().max(MAX_PAGE_CHARS).default(DEFAULT_PAGE_CHARS).describe("Maximum readable text characters to return"),
 })
 
+type ResearchCitationRegistry = {
+  citationForUrl: (url: string) => number
+}
+
 type TavilyResult = {
   title?: string
   url?: string
@@ -75,6 +79,22 @@ function assertPublicHttpUrl(value: string): URL {
   return url
 }
 
+function createResearchCitationRegistry(): ResearchCitationRegistry {
+  const citationsByUrl = new Map<string, number>()
+  let nextCitation = 1
+  return {
+    citationForUrl: (value) => {
+      const url = new URL(value).toString()
+      const existing = citationsByUrl.get(url)
+      if (existing != null) return existing
+      const citation = nextCitation
+      nextCitation += 1
+      citationsByUrl.set(url, citation)
+      return citation
+    },
+  }
+}
+
 function decodeHtmlEntities(text: string): string {
   return text
     .replace(/&nbsp;/gi, " ")
@@ -113,104 +133,111 @@ function extractReadablePage(html: string, maxChars: number) {
   }
 }
 
-export const researchTools = {
-  research_search_web: tool({
-    description:
-      "Search the public web for current or external source context. Use for latest market/company context, source discovery, or facts not covered by built-in market data. Returns compact results; read important pages with research_read_page before citing details.",
-    inputSchema: searchInput,
-    execute: async ({ query, recencyDays, domains, maxResults = DEFAULT_SEARCH_RESULTS }) => {
-      const apiKey = process.env.TAVILY_API_KEY
-      if (!apiKey) throw new Error("TAVILY_API_KEY is not configured")
+export function createResearchTools() {
+  const citations = createResearchCitationRegistry()
 
-      const body: Record<string, unknown> = {
-        query,
-        search_depth: "basic",
-        topic: "general",
-        max_results: Math.min(maxResults, MAX_SEARCH_RESULTS),
-        include_answer: false,
-        include_raw_content: false,
-        include_images: false,
-        include_favicon: true,
-        include_usage: true,
-      }
-      const includeDomains = normalizeDomains(domains)
-      if (includeDomains.length) body.include_domains = includeDomains
-      const timeRange = tavilyTimeRange(recencyDays)
-      if (timeRange) body.time_range = timeRange
+  return {
+    research_search_web: tool({
+      description:
+        "Search the public web for current or external source context. Use for latest market/company context, source discovery, or facts not covered by built-in market data. Returns compact results with citation numbers; read important pages with research_read_page before citing details.",
+      inputSchema: searchInput,
+      execute: async ({ query, recencyDays, domains, maxResults = DEFAULT_SEARCH_RESULTS }) => {
+        const apiKey = process.env.TAVILY_API_KEY
+        if (!apiKey) throw new Error("TAVILY_API_KEY is not configured")
 
-      const response = await fetch(TAVILY_SEARCH_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(body),
-      })
-      if (!response.ok) {
-        throw new Error(`Search failed with HTTP ${response.status}`)
-      }
+        const body: Record<string, unknown> = {
+          query,
+          search_depth: "basic",
+          topic: "general",
+          max_results: Math.min(maxResults, MAX_SEARCH_RESULTS),
+          include_answer: false,
+          include_raw_content: false,
+          include_images: false,
+          include_favicon: true,
+          include_usage: true,
+        }
+        const includeDomains = normalizeDomains(domains)
+        if (includeDomains.length) body.include_domains = includeDomains
+        const timeRange = tavilyTimeRange(recencyDays)
+        if (timeRange) body.time_range = timeRange
 
-      const data = await response.json() as TavilyResponse
-      const results = (data.results ?? []).slice(0, maxResults).map((result) => ({
-        title: result.title ?? "Untitled",
-        url: result.url ?? "",
-        snippet: result.content ?? "",
-        source: result.url ? new URL(result.url).hostname : null,
-        publishedAt: result.published_date ?? null,
-        score: result.score ?? null,
-        favicon: result.favicon ?? null,
-      })).filter((result) => result.url)
-
-      return {
-        query,
-        recencyDays: recencyDays ?? null,
-        domains: domains ?? [],
-        results,
-        responseTime: data.response_time ?? null,
-        usageCredits: data.usage?.credits ?? null,
-        requestId: data.request_id ?? null,
-      }
-    },
-  }),
-
-  research_read_page: tool({
-    description:
-      "Read a public HTTP/HTTPS page and return cleaned readable text for grounding and citations. Use after research_search_web when the answer needs details from a source page. Does not execute browser JavaScript.",
-    inputSchema: readPageInput,
-    execute: async ({ url, maxChars = DEFAULT_PAGE_CHARS }) => {
-      const target = assertPublicHttpUrl(url)
-      const response = await fetch(target, {
-        signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
-        headers: {
-          "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
-          "User-Agent": "TradeMeResearchBot/0.1 (+https://trademe.sabaiscale.com)",
-        },
-      })
-      if (!response.ok) {
-        throw new Error(`Page read failed with HTTP ${response.status}`)
-      }
-
-      const contentType = response.headers.get("content-type") ?? ""
-      const raw = await response.text()
-      const page = contentType.includes("html")
-        ? extractReadablePage(raw, maxChars)
-        : {
-          title: null,
-          byline: null,
-          excerpt: null,
-          siteName: null,
-          publishedAt: null,
-          text: raw.length > maxChars ? raw.slice(0, maxChars) : raw,
-          truncated: raw.length > maxChars,
-          charCount: raw.length,
+        const response = await fetch(TAVILY_SEARCH_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(body),
+        })
+        if (!response.ok) {
+          throw new Error(`Search failed with HTTP ${response.status}`)
         }
 
-      return {
-        url: target.toString(),
-        contentType,
-        ...page,
-      }
-    },
-  }),
+        const data = await response.json() as TavilyResponse
+        const results = (data.results ?? []).slice(0, maxResults).map((result) => ({
+          citation: result.url ? citations.citationForUrl(result.url) : null,
+          title: result.title ?? "Untitled",
+          url: result.url ?? "",
+          snippet: result.content ?? "",
+          source: result.url ? new URL(result.url).hostname : null,
+          publishedAt: result.published_date ?? null,
+          score: result.score ?? null,
+          favicon: result.favicon ?? null,
+        })).filter((result) => result.url)
+
+        return {
+          query,
+          recencyDays: recencyDays ?? null,
+          domains: domains ?? [],
+          results,
+          responseTime: data.response_time ?? null,
+          usageCredits: data.usage?.credits ?? null,
+          requestId: data.request_id ?? null,
+        }
+      },
+    }),
+
+    research_read_page: tool({
+      description:
+        "Read a public HTTP/HTTPS page and return cleaned readable text for grounding and citations. Reuses the page's citation number from research_search_web when possible. Does not execute browser JavaScript.",
+      inputSchema: readPageInput,
+      execute: async ({ url, maxChars = DEFAULT_PAGE_CHARS }) => {
+        const target = assertPublicHttpUrl(url)
+        const citation = citations.citationForUrl(target.toString())
+        const response = await fetch(target, {
+          signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
+          headers: {
+            "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
+            "User-Agent": "TradeMeResearchBot/0.1 (+https://trademe.sabaiscale.com)",
+          },
+        })
+        if (!response.ok) {
+          throw new Error(`Page read failed with HTTP ${response.status}`)
+        }
+
+        const contentType = response.headers.get("content-type") ?? ""
+        const raw = await response.text()
+        const page = contentType.includes("html")
+          ? extractReadablePage(raw, maxChars)
+          : {
+            title: null,
+            byline: null,
+            excerpt: null,
+            siteName: null,
+            publishedAt: null,
+            text: raw.length > maxChars ? raw.slice(0, maxChars) : raw,
+            truncated: raw.length > maxChars,
+            charCount: raw.length,
+          }
+
+        return {
+          citation,
+          url: target.toString(),
+          contentType,
+          ...page,
+        }
+      },
+    }),
+  }
 }
