@@ -21,6 +21,8 @@ type PriceHistorySummary = { ticker: string; range: string; periodReturnPct: num
 type SkillList = { found?: boolean; skills: unknown[] }
 type SkillLoad = { found: boolean; name: string; title?: string; references?: unknown[] }
 type SkillFile = { found: boolean; title?: string; path?: string }
+type ResearchSearch = { results: unknown[] }
+type ResearchPage = { title?: string | null; truncated?: boolean; charCount?: number }
 
 export const toolDisplayRegistry: Record<string, ToolDisplay> = {
   skill_list: {
@@ -175,6 +177,25 @@ export const toolDisplayRegistry: Record<string, ToolDisplay> = {
       if (o.periodReturnPct == null) return `${o.ticker} · ${o.barCount} bars`
       const sign = o.periodReturnPct >= 0 ? "+" : ""
       return `${o.ticker} ${o.range} · ${sign}${o.periodReturnPct.toFixed(2)}%`
+    },
+  },
+
+  research_search_web: {
+    label: "Web Search",
+    loadingMessage: (input) => `Searching ${input.query}…`,
+    resultMessage: (out) => {
+      const o = out as ResearchSearch
+      return `${o.results.length} result${o.results.length !== 1 ? "s" : ""} found`
+    },
+  },
+
+  research_read_page: {
+    label: "Page",
+    loadingMessage: (input) => `Reading ${input.url}…`,
+    resultMessage: (out) => {
+      const o = out as ResearchPage
+      const suffix = o.truncated ? " · truncated" : ""
+      return `${o.title ?? "Page read"}${suffix}`
     },
   },
 

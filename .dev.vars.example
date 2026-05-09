@@ -13,6 +13,8 @@ FMP_API_KEY=
 # AI agent
 # Vercel AI Gateway — https://vercel.com/docs/ai-gateway
 VERCEL_AI_GATEWAY_KEY=
+# Tavily Search API — used by research_search_web
+TAVILY_API_KEY=
 
 # Auth — Clerk dev instance (https://dashboard.clerk.com → API Keys)
 CLERK_SECRET_KEY=sk_test_
