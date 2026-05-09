@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react"
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { MessagesSquare, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -44,6 +45,10 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
         }
       }
       onClose()
+      toast.success("Conversation deleted")
+    },
+    onError: () => {
+      toast.error("Couldn't delete conversation")
     },
   })
 
