@@ -8,6 +8,10 @@ import trademe_sdk as trademe
 
 `trademe` exposes the namespace instances documented below.
 
+## Type Aliases
+
+- `AnalysisArtifact = MetricGridArtifact | LineChartArtifact | TableArtifact`
+
 ## Namespaces
 
 ### `trademe.input`
@@ -39,7 +43,7 @@ Returns: `list[str]`
 
 Output namespace for returning analysis results.
 
-#### `trademe.output.write(summary: str, result: Any) -> None`
+#### `trademe.output.write(summary: str, result: Any, artifacts: list[AnalysisArtifact] | None = None) -> None`
 
 Write the successful analysis output.
 
@@ -49,6 +53,8 @@ Parameters:
 - `result`: Compact JSON-serializable analysis result. Prefer a dict
   with metrics, warnings, and data gaps. Do not return raw
   candles, full news lists, plots, or large tables.
+- `artifacts`: Optional UI artifacts such as metric grids, line charts,
+  or tables. Keep payloads compact and downsample chart data.
 
 Returns: `None`
 
@@ -279,4 +285,81 @@ class NewsArticle(TypedDict):
     source: str
     publishedAt: str
     sentiment: NotRequired[Literal['positive', 'negative', 'neutral']]
+```
+
+### `MetricGridItem`
+
+One displayed metric in a metric grid artifact.
+
+```python
+class MetricGridItem(TypedDict):
+    label: str
+    value: str | int | float
+    unit: NotRequired[str]
+    tone: NotRequired[Literal['default', 'positive', 'negative', 'warning']]
+```
+
+### `MetricGridArtifact`
+
+Metric-card artifact rendered as a compact grid.
+
+```python
+class MetricGridArtifact(TypedDict):
+    type: Literal['metric_grid']
+    id: str
+    title: str
+    items: list[MetricGridItem]
+```
+
+### `LineChartSeries`
+
+One line series definition for a line chart artifact.
+
+```python
+class LineChartSeries(TypedDict):
+    key: str
+    label: str
+```
+
+### `LineChartArtifact`
+
+Line chart artifact for compact time-series analysis.
+
+`xKey` and every `series[].key` must be simple identifiers: letters,
+numbers, and underscores only, starting with a letter or underscore.
+
+```python
+class LineChartArtifact(TypedDict):
+    type: Literal['line_chart']
+    id: str
+    title: str
+    xKey: str
+    series: list[LineChartSeries]
+    data: list[dict[str, str | int | float | None]]
+```
+
+### `TableColumn`
+
+One table column definition.
+
+```python
+class TableColumn(TypedDict):
+    key: str
+    label: str
+```
+
+### `TableArtifact`
+
+Small table artifact for compact comparison output.
+
+`columns[].key` must be a simple identifier: letters, numbers, and
+underscores only, starting with a letter or underscore.
+
+```python
+class TableArtifact(TypedDict):
+    type: Literal['table']
+    id: str
+    title: str
+    columns: list[TableColumn]
+    rows: list[dict[str, str | int | float | None]]
 ```

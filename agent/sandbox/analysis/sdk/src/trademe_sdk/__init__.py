@@ -124,6 +124,70 @@ class NewsArticle(TypedDict):
     sentiment: NotRequired[Literal["positive", "negative", "neutral"]]
 
 
+class MetricGridItem(TypedDict):
+    """One displayed metric in a metric grid artifact."""
+
+    label: str
+    value: str | int | float
+    unit: NotRequired[str]
+    tone: NotRequired[Literal["default", "positive", "negative", "warning"]]
+
+
+class MetricGridArtifact(TypedDict):
+    """Metric-card artifact rendered as a compact grid."""
+
+    type: Literal["metric_grid"]
+    id: str
+    title: str
+    items: list[MetricGridItem]
+
+
+class LineChartSeries(TypedDict):
+    """One line series definition for a line chart artifact."""
+
+    key: str
+    label: str
+
+
+class LineChartArtifact(TypedDict):
+    """Line chart artifact for compact time-series analysis.
+
+    `xKey` and every `series[].key` must be simple identifiers: letters,
+    numbers, and underscores only, starting with a letter or underscore.
+    """
+
+    type: Literal["line_chart"]
+    id: str
+    title: str
+    xKey: str
+    series: list[LineChartSeries]
+    data: list[dict[str, str | int | float | None]]
+
+
+class TableColumn(TypedDict):
+    """One table column definition."""
+
+    key: str
+    label: str
+
+
+class TableArtifact(TypedDict):
+    """Small table artifact for compact comparison output.
+
+    `columns[].key` must be a simple identifier: letters, numbers, and
+    underscores only, starting with a letter or underscore.
+    """
+
+    type: Literal["table"]
+    id: str
+    title: str
+    columns: list[TableColumn]
+    rows: list[dict[str, str | int | float | None]]
+
+
+AnalysisArtifact = MetricGridArtifact | LineChartArtifact | TableArtifact
+
+
 def _get_ticker_key(ticker: Any) -> str:
     return str(ticker).upper()
 
@@ -205,7 +269,7 @@ class Input:
 class Output:
     """Output namespace for returning analysis results."""
 
-    def write(self, summary: str, result: Any) -> None:
+    def write(self, summary: str, result: Any, artifacts: list[AnalysisArtifact] | None = None) -> None:
         """Write the successful analysis output.
 
         Parameters:
@@ -213,14 +277,19 @@ class Output:
             result: Compact JSON-serializable analysis result. Prefer a dict
                 with metrics, warnings, and data gaps. Do not return raw
                 candles, full news lists, plots, or large tables.
+            artifacts: Optional UI artifacts such as metric grids, line charts,
+                or tables. Keep payloads compact and downsample chart data.
         """
 
         if not isinstance(summary, str) or not summary.strip():
             raise ValueError("summary must be a non-empty string")
-        OUTPUT_PATH.write_text(json.dumps({
+        payload = {
             "summary": summary.strip(),
             "result": result,
-        }, default=str, ensure_ascii=False))
+        }
+        if artifacts is not None:
+            payload["artifacts"] = artifacts
+        OUTPUT_PATH.write_text(json.dumps(payload, default=str, ensure_ascii=False))
 
     def fail(self, summary: str, details: Any = None) -> None:
         """Write an expected data-gap result without raising an exception.

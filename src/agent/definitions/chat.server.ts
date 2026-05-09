@@ -36,6 +36,7 @@ Tools:
 Code execution rules:
 - Use analysis_run_code only for stock, market, or portfolio analysis tasks.
 - If a task needs detailed code execution guidance, load the relevant skill before using analysis_run_code.
+- If analysis output includes artifacts, place them in your final answer with [artifact:<id>] markers where they should appear. Use only artifact ids returned by the tool. Do not invent artifact ids.
 
 Skill loading rules:
 - When a task would benefit from a skill, call skill_load before doing the work.
