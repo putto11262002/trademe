@@ -13,6 +13,12 @@ const SANDBOX_PORT_READY_TIMEOUT_MS = 12_000
 const SANDBOX_POLL_INTERVAL_MS = 500
 const MAX_OUTPUT_BYTES = 256_000
 const MAX_RESULT_BYTES = 128_000
+const MAX_ARTIFACT_BYTES = 128_000
+const MAX_ARTIFACTS = 4
+const MAX_METRIC_ITEMS = 12
+const MAX_CHART_POINTS = 200
+const MAX_TABLE_ROWS = 50
+const MAX_TABLE_COLUMNS = 8
 
 const runAnalysisInput = z.object({
   task: z.string().min(1).max(1_000),
@@ -21,9 +27,54 @@ const runAnalysisInput = z.object({
   ),
 })
 
+const artifactScalarSchema = z.union([z.string(), z.number(), z.null()])
+const artifactKeySchema = z.string().trim().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).max(60)
+
+const metricGridArtifactSchema = z.object({
+  type: z.literal("metric_grid"),
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(120),
+  items: z.array(z.object({
+    label: z.string().trim().min(1).max(80),
+    value: z.union([z.string(), z.number()]),
+    unit: z.string().trim().max(24).optional(),
+    tone: z.enum(["default", "positive", "negative", "warning"]).optional(),
+  })).min(1).max(MAX_METRIC_ITEMS),
+})
+
+const lineChartArtifactSchema = z.object({
+  type: z.literal("line_chart"),
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(120),
+  xKey: artifactKeySchema,
+  series: z.array(z.object({
+    key: artifactKeySchema,
+    label: z.string().trim().min(1).max(80),
+  })).min(1).max(5),
+  data: z.array(z.record(z.string(), artifactScalarSchema)).min(1).max(MAX_CHART_POINTS),
+})
+
+const tableArtifactSchema = z.object({
+  type: z.literal("table"),
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(120),
+  columns: z.array(z.object({
+    key: artifactKeySchema,
+    label: z.string().trim().min(1).max(80),
+  })).min(1).max(MAX_TABLE_COLUMNS),
+  rows: z.array(z.record(z.string(), artifactScalarSchema)).max(MAX_TABLE_ROWS),
+})
+
+const analysisArtifactSchema = z.discriminatedUnion("type", [
+  metricGridArtifactSchema,
+  lineChartArtifactSchema,
+  tableArtifactSchema,
+])
+
 const analysisOutputSchema = z.object({
   summary: z.string().trim().min(1).max(300),
   result: z.unknown(),
+  artifacts: z.array(analysisArtifactSchema).max(MAX_ARTIFACTS).optional(),
 })
 
 type AnalysisPhase = "sandbox_io" | "exec" | "output"
@@ -56,6 +107,11 @@ function parseAnalysisOutput(content: string): z.infer<typeof analysisOutputSche
   const resultBytes = byteLength(JSON.stringify(result.data.result))
   if (resultBytes > MAX_RESULT_BYTES) {
     throw new Error(`Analysis result cannot exceed ${MAX_RESULT_BYTES} bytes`)
+  }
+
+  const artifactBytes = byteLength(JSON.stringify(result.data.artifacts ?? []))
+  if (artifactBytes > MAX_ARTIFACT_BYTES) {
+    throw new Error(`Analysis artifacts cannot exceed ${MAX_ARTIFACT_BYTES} bytes`)
   }
 
   return result.data
@@ -99,7 +155,7 @@ export function createAnalysisTools(userId: string) {
   return {
   analysis_run_code: tool({
     description:
-      "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import trademe_sdk as trademe and finish with trademe.output.write(summary, result). The summary must be one short sentence describing what was done. Do not use for trade execution or portfolio writes.",
+      "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import trademe_sdk as trademe and finish with trademe.output.write(summary, result, artifacts=...). The summary must be one short sentence describing what was done. Optional artifacts can include metric_grid, line_chart, or table payloads for UI rendering. Do not use for trade execution or portfolio writes.",
     inputSchema: runAnalysisInput,
     execute: async ({ task, code }) => {
       const runId = crypto.randomUUID()
@@ -202,6 +258,7 @@ export function createAnalysisTools(userId: string) {
           durationMs: result.duration,
           summary: parsed.summary,
           result: parsed.result,
+          artifacts: parsed.artifacts ?? [],
           stdout: clip(result.stdout, 2_000),
           stderr: clip(result.stderr, 2_000),
         }

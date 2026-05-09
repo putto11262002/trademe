@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
 import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2, Trash2, X } from "lucide-react"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import { Streamdown, type Components } from "streamdown"
 import type { ChatMessage } from "@/agent/chat-message"
 import { Button } from "@/components/ui/button"
@@ -35,6 +36,12 @@ import { useAuth } from "@clerk/tanstack-react-start"
 import { ConversationSidebar, ConversationToggle } from "@/components/chat/thread-switcher"
 import { createThreadFn, getThreadFn, updateThreadFn } from "@/thread/functions"
 import type { Thread } from "@/thread/types"
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 
 const THREAD_LS_KEY = "activeThreadId"
 
@@ -90,6 +97,39 @@ type ResearchSource = {
   truncated?: boolean
 }
 
+type ArtifactScalar = string | number | null
+
+type MetricGridArtifact = {
+  type: "metric_grid"
+  id: string
+  title: string
+  items: Array<{
+    label: string
+    value: string | number
+    unit?: string
+    tone?: "default" | "positive" | "negative" | "warning"
+  }>
+}
+
+type LineChartArtifact = {
+  type: "line_chart"
+  id: string
+  title: string
+  xKey: string
+  series: Array<{ key: string; label: string }>
+  data: Array<Record<string, ArtifactScalar>>
+}
+
+type TableArtifact = {
+  type: "table"
+  id: string
+  title: string
+  columns: Array<{ key: string; label: string }>
+  rows: Array<Record<string, ArtifactScalar>>
+}
+
+type AnalysisArtifact = MetricGridArtifact | LineChartArtifact | TableArtifact
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
@@ -111,6 +151,10 @@ function optionalString(value: unknown): string | undefined {
 
 function optionalCitation(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined
+}
+
+function isArtifactScalar(value: unknown): value is ArtifactScalar {
+  return typeof value === "string" || typeof value === "number" || value === null
 }
 
 function hostForUrl(url: string): string {
@@ -334,6 +378,259 @@ function CitationPill({ sources }: { sources: ResearchSource[] }) {
   )
 }
 
+function parseArtifact(value: unknown): AnalysisArtifact | null {
+  if (!isRecord(value) || typeof value.type !== "string") return null
+  const id = optionalString(value.id)
+  const title = optionalString(value.title)
+  if (!id || !title) return null
+
+  if (value.type === "metric_grid" && Array.isArray(value.items)) {
+    const items = value.items.flatMap((item) => {
+      if (!isRecord(item)) return []
+      const label = optionalString(item.label)
+      if (!label) return []
+      if (typeof item.value !== "string" && typeof item.value !== "number") return []
+      const tone: MetricGridArtifact["items"][number]["tone"] =
+        item.tone === "positive" || item.tone === "negative" || item.tone === "warning" ? item.tone : "default"
+      return [{
+        label,
+        value: item.value,
+        unit: optionalString(item.unit),
+        tone,
+      }]
+    })
+    return items.length ? { type: "metric_grid", id, title, items } : null
+  }
+
+  if (value.type === "line_chart" && Array.isArray(value.series) && Array.isArray(value.data) && optionalString(value.xKey)) {
+    const series = value.series.flatMap((item) => {
+      if (!isRecord(item)) return []
+      const key = optionalString(item.key)
+      const label = optionalString(item.label)
+      if (!key || !label) return []
+      return [{ key, label }]
+    })
+    const data = value.data.flatMap((row) => {
+      if (!isRecord(row)) return []
+      const parsed: Record<string, ArtifactScalar> = {}
+      for (const [key, rowValue] of Object.entries(row)) {
+        if (isArtifactScalar(rowValue)) parsed[key] = rowValue
+      }
+      return Object.keys(parsed).length ? [parsed] : []
+    })
+    const xKey = optionalString(value.xKey)
+    return series.length && data.length && xKey ? { type: "line_chart", id, title, xKey, series, data } : null
+  }
+
+  if (value.type === "table" && Array.isArray(value.columns) && Array.isArray(value.rows)) {
+    const columns = value.columns.flatMap((item) => {
+      if (!isRecord(item)) return []
+      const key = optionalString(item.key)
+      const label = optionalString(item.label)
+      if (!key || !label) return []
+      return [{ key, label }]
+    })
+    const rows = value.rows.flatMap((row) => {
+      if (!isRecord(row)) return []
+      const parsed: Record<string, ArtifactScalar> = {}
+      for (const [key, rowValue] of Object.entries(row)) {
+        if (isArtifactScalar(rowValue)) parsed[key] = rowValue
+      }
+      return [parsed]
+    })
+    return columns.length ? { type: "table", id, title, columns, rows } : null
+  }
+
+  return null
+}
+
+function extractAnalysisArtifacts(message: ChatMessage): AnalysisArtifact[] {
+  const artifacts: AnalysisArtifact[] = []
+  const seen = new Set<string>()
+  for (const part of message.parts) {
+    const toolName = toolNameForPart(part)
+    if (toolName !== "analysis_run_code") continue
+    const output = outputForPart(part)
+    if (!isRecord(output) || !Array.isArray(output.artifacts)) continue
+    for (const value of output.artifacts) {
+      const artifact = parseArtifact(value)
+      if (!artifact) continue
+      const key = `${artifact.type}:${artifact.id}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      artifacts.push(artifact)
+    }
+  }
+  return artifacts
+}
+
+function artifactToneClass(tone: MetricGridArtifact["items"][number]["tone"]) {
+  if (tone === "positive") return "text-green-600 dark:text-green-400"
+  if (tone === "negative") return "text-red-600 dark:text-red-400"
+  if (tone === "warning") return "text-amber-600 dark:text-amber-400"
+  return "text-foreground"
+}
+
+function MetricGridArtifactView({ artifact }: { artifact: MetricGridArtifact }) {
+  return (
+    <section className="border-border bg-muted/20 w-full rounded-2xl border p-3">
+      <h4 className="text-foreground mb-2 text-xs font-medium">{artifact.title}</h4>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {artifact.items.map((item, index) => (
+          <div key={`${item.label}-${index}`} className="bg-background rounded-xl px-3 py-2">
+            <div className="text-muted-foreground truncate text-[11px]">{item.label}</div>
+            <div className={cn("mt-1 truncate text-sm font-semibold", artifactToneClass(item.tone))}>
+              {item.value}{item.unit ? <span className="text-muted-foreground ml-1 text-xs font-normal">{item.unit}</span> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function LineChartArtifactView({ artifact }: { artifact: LineChartArtifact }) {
+  const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
+  const config = Object.fromEntries(
+    artifact.series.map((series, index) => [series.key, { label: series.label, color: colors[index % colors.length] }])
+  ) satisfies ChartConfig
+  return (
+    <section className="border-border bg-muted/20 w-full rounded-2xl border p-3">
+      <h4 className="text-foreground mb-2 text-xs font-medium">{artifact.title}</h4>
+      <ChartContainer config={config} className="aspect-auto h-56 w-full" initialDimension={{ width: 640, height: 224 }}>
+        <LineChart data={artifact.data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey={artifact.xKey} axisLine={false} tickLine={false} minTickGap={28} tickMargin={8} />
+          <YAxis axisLine={false} tickLine={false} width={48} tickMargin={8} tickFormatter={(value) => String(value)} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+          {artifact.series.map((series, index) => (
+            <Line
+              key={series.key}
+              dataKey={series.key}
+              type="monotone"
+              stroke={colors[index % colors.length]}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 3 }}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ChartContainer>
+    </section>
+  )
+}
+
+function TableArtifactView({ artifact }: { artifact: TableArtifact }) {
+  return (
+    <section className="border-border bg-muted/20 w-full rounded-2xl border p-3">
+      <h4 className="text-foreground mb-2 text-xs font-medium">{artifact.title}</h4>
+      <ScrollArea className="w-full rounded-xl border bg-background">
+        <table className="min-w-full caption-bottom text-xs">
+          <TableHeader>
+            <TableRow>
+              {artifact.columns.map((column) => <TableHead key={column.key}>{column.label}</TableHead>)}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {artifact.rows.map((row, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {artifact.columns.map((column) => (
+                  <TableCell key={column.key}>{row[column.key] ?? ""}</TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </table>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    </section>
+  )
+}
+
+function ArtifactView({ artifact }: { artifact: AnalysisArtifact }) {
+  if (artifact.type === "metric_grid") return <MetricGridArtifactView artifact={artifact} />
+  if (artifact.type === "line_chart") return <LineChartArtifactView artifact={artifact} />
+  return <TableArtifactView artifact={artifact} />
+}
+
+function ArtifactBlock({ artifacts }: { artifacts: AnalysisArtifact[] }) {
+  if (artifacts.length === 0) return null
+  return (
+    <div className="grid w-full gap-3">
+      {artifacts.map((artifact) => <ArtifactView key={`${artifact.type}-${artifact.id}`} artifact={artifact} />)}
+    </div>
+  )
+}
+
+function splitPlainTextWithArtifactMarkers(text: string, artifactsById: Map<string, AnalysisArtifact>) {
+  const segments: Array<
+    | { kind: "text"; text: string }
+    | { kind: "artifact"; artifact: AnalysisArtifact }
+  > = []
+  const renderedArtifactIds = new Set<string>()
+  let cursor = 0
+  const markerPattern = /\[artifact:([A-Za-z_][A-Za-z0-9_-]{0,79})\]/g
+  for (const match of text.matchAll(markerPattern)) {
+    const index = match.index ?? 0
+    const id = match[1] ?? ""
+    const artifact = artifactsById.get(id)
+    if (!artifact) continue
+    if (index > cursor) segments.push({ kind: "text", text: text.slice(cursor, index) })
+    segments.push({ kind: "artifact", artifact })
+    renderedArtifactIds.add(id)
+    cursor = index + match[0].length
+  }
+  if (cursor < text.length) segments.push({ kind: "text", text: text.slice(cursor) })
+  return { segments, renderedArtifactIds }
+}
+
+function splitOutsideInlineCodeWithArtifactMarkers(text: string, artifactsById: Map<string, AnalysisArtifact>) {
+  const segments: Array<
+    | { kind: "text"; text: string }
+    | { kind: "artifact"; artifact: AnalysisArtifact }
+  > = []
+  const renderedArtifactIds = new Set<string>()
+  let cursor = 0
+  const inlineCodePattern = /(`+)([\s\S]*?)\1/g
+  for (const match of text.matchAll(inlineCodePattern)) {
+    const index = match.index ?? 0
+    const before = splitPlainTextWithArtifactMarkers(text.slice(cursor, index), artifactsById)
+    segments.push(...before.segments)
+    for (const id of before.renderedArtifactIds) renderedArtifactIds.add(id)
+    segments.push({ kind: "text", text: match[0] })
+    cursor = index + match[0].length
+  }
+  const after = splitPlainTextWithArtifactMarkers(text.slice(cursor), artifactsById)
+  segments.push(...after.segments)
+  for (const id of after.renderedArtifactIds) renderedArtifactIds.add(id)
+  return { segments, renderedArtifactIds }
+}
+
+function splitTextWithArtifactMarkers(text: string, artifacts: AnalysisArtifact[]) {
+  const artifactsById = new Map(artifacts.map((artifact) => [artifact.id, artifact]))
+  const segments: Array<
+    | { kind: "text"; text: string }
+    | { kind: "artifact"; artifact: AnalysisArtifact }
+  > = []
+  const renderedArtifactIds = new Set<string>()
+  let cursor = 0
+  const fencedCodePattern = /(^|\n)(`{3,}|~{3,})[^\n]*\n[\s\S]*?(\n\2)(?=\n|$)/g
+  for (const match of text.matchAll(fencedCodePattern)) {
+    const index = match.index ?? 0
+    const before = splitOutsideInlineCodeWithArtifactMarkers(text.slice(cursor, index), artifactsById)
+    segments.push(...before.segments)
+    for (const id of before.renderedArtifactIds) renderedArtifactIds.add(id)
+    segments.push({ kind: "text", text: match[0] })
+    cursor = index + match[0].length
+  }
+  const after = splitOutsideInlineCodeWithArtifactMarkers(text.slice(cursor), artifactsById)
+  segments.push(...after.segments)
+  for (const id of after.renderedArtifactIds) renderedArtifactIds.add(id)
+  if (segments.length === 0 && text) segments.push({ kind: "text", text })
+  return { segments, renderedArtifactIds }
+}
+
 function toolPartRow(part: AnyPart) {
   const toolName =
     part.type === "dynamic-tool"
@@ -511,6 +808,8 @@ function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: 
 
   const sources = extractResearchSources(message)
   const sourceScope = citationScope(message)
+  const artifacts = extractAnalysisArtifacts(message)
+  const renderedArtifactIds = new Set<string>()
 
   type Block = { kind: "rail"; parts: AnyPart[] } | { kind: "text"; text: string }
   const blocks: Block[] = []
@@ -533,14 +832,25 @@ function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: 
         if (block.kind === "rail") {
           return <IntermediateRail key={i} parts={block.parts} isStreaming={isStreaming} />
         }
+        const { segments, renderedArtifactIds: blockArtifactIds } = splitTextWithArtifactMarkers(block.text, artifacts)
+        for (const id of blockArtifactIds) renderedArtifactIds.add(id)
         return (
-          <div key={i} className="prose prose-sm dark:prose-invert w-full text-sm">
-            <Streamdown isAnimating={isStreaming} components={markdownComponents(sources, sourceScope)}>
-              {linkCitationMarkers(block.text, sources, sourceScope)}
-            </Streamdown>
+          <div key={i} className="flex w-full flex-col gap-5">
+            {segments.map((segment, si) => {
+              if (segment.kind === "artifact") return <ArtifactView key={`${segment.artifact.type}-${segment.artifact.id}-${si}`} artifact={segment.artifact} />
+              if (!segment.text.trim()) return null
+              return (
+                <div key={si} className="prose prose-sm dark:prose-invert w-full text-sm">
+                  <Streamdown isAnimating={isStreaming} components={markdownComponents(sources, sourceScope)}>
+                    {linkCitationMarkers(segment.text, sources, sourceScope)}
+                  </Streamdown>
+                </div>
+              )
+            })}
           </div>
         )
       })}
+      <ArtifactBlock artifacts={artifacts.filter((artifact) => !renderedArtifactIds.has(artifact.id))} />
     </div>
   )
 }
