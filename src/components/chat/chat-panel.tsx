@@ -122,6 +122,11 @@ function hostForUrl(url: string): string {
   }
 }
 
+function faviconFallback(source: ResearchSource): string {
+  const value = source.source ?? hostForUrl(source.url) ?? source.title
+  return value.trim().charAt(0).toUpperCase() || "?"
+}
+
 function normalizeUrl(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null
   try {
@@ -214,9 +219,7 @@ function citationScope(message: ChatMessage): string {
   return message.id.replace(/[^a-zA-Z0-9_-]/g, "")
 }
 
-function linkCitationMarkers(text: string, sources: ResearchSource[], scope: string): string {
-  if (sources.length === 0) return text
-  const validCitations = new Set(sources.map((source) => source.citation).filter((citation): citation is number => citation != null))
+function rewriteCitationMarkersInPlainText(text: string, validCitations: Set<number>, scope: string): string {
   return text.replace(/(?:\[\d{1,2}\])+(?!\()/g, (match) => {
     const citations = Array.from(match.matchAll(/\[(\d{1,2})\]/g))
       .map((item) => Number.parseInt(item[1] ?? "", 10))
@@ -224,6 +227,36 @@ function linkCitationMarkers(text: string, sources: ResearchSource[], scope: str
     if (citations.length === 0) return match
     return `[sources](#citation-${scope}-${citations.join("-")})`
   })
+}
+
+function rewriteOutsideInlineCode(text: string, validCitations: Set<number>, scope: string): string {
+  let result = ""
+  let cursor = 0
+  const inlineCodePattern = /(`+)([\s\S]*?)\1/g
+  for (const match of text.matchAll(inlineCodePattern)) {
+    const index = match.index ?? 0
+    result += rewriteCitationMarkersInPlainText(text.slice(cursor, index), validCitations, scope)
+    result += match[0]
+    cursor = index + match[0].length
+  }
+  result += rewriteCitationMarkersInPlainText(text.slice(cursor), validCitations, scope)
+  return result
+}
+
+function linkCitationMarkers(text: string, sources: ResearchSource[], scope: string): string {
+  if (sources.length === 0) return text
+  const validCitations = new Set(sources.map((source) => source.citation).filter((citation): citation is number => citation != null))
+  let result = ""
+  let cursor = 0
+  const fencedCodePattern = /(^|\n)(`{3,}|~{3,})[^\n]*\n[\s\S]*?(\n\2)(?=\n|$)/g
+  for (const match of text.matchAll(fencedCodePattern)) {
+    const index = match.index ?? 0
+    result += rewriteOutsideInlineCode(text.slice(cursor, index), validCitations, scope)
+    result += match[0]
+    cursor = index + match[0].length
+  }
+  result += rewriteOutsideInlineCode(text.slice(cursor), validCitations, scope)
+  return result
 }
 
 function CitationPill({ sources }: { sources: ResearchSource[] }) {
@@ -253,7 +286,7 @@ function CitationPill({ sources }: { sources: ResearchSource[] }) {
             {source.favicon ? (
               <img src={source.favicon} alt="" className="size-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
             ) : (
-              source.citation
+              faviconFallback(source)
             )}
           </span>
         ))}
@@ -285,7 +318,7 @@ function CitationPill({ sources }: { sources: ResearchSource[] }) {
                   {source.favicon ? (
                     <img src={source.favicon} alt="" className="size-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                   ) : (
-                    source.citation
+                    faviconFallback(source)
                   )}
                 </span>
                 <span className="min-w-0 self-center">

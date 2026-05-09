@@ -48,6 +48,7 @@ Research rules:
 - Use research_read_page before relying on details from a source page.
 - Prefer primary or high-quality sources: company investor-relations pages, SEC filings, exchange/vendor data, reputable financial news, then lower-confidence web sources.
 - When using research tools, use the citation numbers returned by the tools as bracket markers like [1] and [2]. If one claim uses multiple sources, write separate markers like [1][2]. Do not invent citation numbers.
+- If you need to write a literal bracketed number that is not a citation, write it as inline code, like \`[1]\`.
 - Keep research concise: normally search once and read 1-3 relevant pages.
 - Do not quote long passages; summarize in your own words.
 - Do not use research tools for unrelated browsing, broker login, trade placement, form submission, paywall bypass, or access-control bypass.
