@@ -1,13 +1,127 @@
+"""TradeMe analysis sandbox SDK.
+
+Generated analysis code imports this package as:
+
+```python
+import trademe_sdk as trademe
+```
+
+The SDK fetches TradeMe portfolio and market data through authenticated sandbox
+API calls, then writes a compact JSON result for the agent tool UI.
+"""
+
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, NotRequired, TypedDict
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 OUTPUT_PATH = Path("/workspace/output.json")
 DEFAULT_TIMEOUT_SECONDS = 20
+
+
+class SectorAllocation(TypedDict):
+    """Portfolio allocation for one sector."""
+
+    sector: str
+    valueUSD: float
+    pct: float
+
+
+class PortfolioSummary(TypedDict):
+    """High-level portfolio totals in USD."""
+
+    totalValueUSD: float
+    totalCostUSD: float
+    unrealizedPnLUSD: float
+    unrealizedPnLPct: float
+    realizedPnLUSD: float
+    sectorAllocation: list[SectorAllocation]
+    positionCount: int
+    asOf: str
+    fxRate: float
+    fxAsOf: str
+
+
+class Position(TypedDict):
+    """Open position with current pricing and unrealized P&L."""
+
+    ticker: str
+    netQuantity: float
+    totalBought: float
+    totalSold: float
+    totalCost: float
+    totalProceeds: float
+    tradeCount: int
+    name: str
+    sector: NotRequired[str]
+    logoUrl: NotRequired[str]
+    currentPriceUSD: float
+    priceAsOf: str
+    avgCost: float
+    valueUSD: float
+    unrealizedPnLUSD: float
+    unrealizedPnLPct: float
+
+
+class PortfolioDashboard(TypedDict):
+    """Portfolio dashboard payload."""
+
+    summary: PortfolioSummary
+    positions: list[Position]
+
+
+class Quote(TypedDict):
+    """Latest quote snapshot."""
+
+    ticker: str
+    price: float
+    previousClose: float
+    change: float
+    changePct: float
+    asOf: str
+
+
+class Candle(TypedDict):
+    """Daily OHLCV candle."""
+
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    adjustedClose: NotRequired[float]
+
+
+class Fundamentals(TypedDict):
+    """Compact company fundamentals snapshot."""
+
+    ticker: str
+    asOf: str
+    marketCap: NotRequired[float]
+    peRatio: NotRequired[float]
+    eps: NotRequired[float]
+    revenue: NotRequired[float]
+    week52High: NotRequired[float]
+    week52Low: NotRequired[float]
+    dividendYield: NotRequired[float]
+    beta: NotRequired[float]
+
+
+class NewsArticle(TypedDict):
+    """Recent company news article."""
+
+    id: str
+    ticker: str
+    headline: str
+    summary: NotRequired[str]
+    url: str
+    source: str
+    publishedAt: str
+    sentiment: NotRequired[Literal["positive", "negative", "neutral"]]
 
 
 def _get_ticker_key(ticker: Any) -> str:
@@ -58,22 +172,49 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
     return payload.get("data")
 
 
-class _Input:
+class Input:
+    """Compatibility namespace for older generated code.
+
+    New analysis code should fetch data through `trademe.portfolio`,
+    `trademe.market`, and `trademe.news` instead of reading preloaded input.
+    """
+
     def load(self) -> dict[str, Any]:
+        """Return an empty compatibility payload.
+
+        The sandbox no longer receives a preloaded `/workspace/input.json`.
+        Use the network-backed SDK namespaces for data access.
+        """
+
         return {
             "run": self.metadata(),
             "data": {},
         }
 
     def metadata(self) -> dict[str, Any]:
+        """Return empty run metadata for compatibility."""
+
         return {}
 
     def available_tickers(self) -> list[str]:
+        """Return no preloaded tickers for compatibility."""
+
         return []
 
 
-class _Output:
+class Output:
+    """Output namespace for returning analysis results."""
+
     def write(self, summary: str, result: Any) -> None:
+        """Write the successful analysis output.
+
+        Parameters:
+            summary: One short non-empty sentence describing what was done.
+            result: Compact JSON-serializable analysis result. Prefer a dict
+                with metrics, warnings, and data gaps. Do not return raw
+                candles, full news lists, plots, or large tables.
+        """
+
         if not isinstance(summary, str) or not summary.strip():
             raise ValueError("summary must be a non-empty string")
         OUTPUT_PATH.write_text(json.dumps({
@@ -82,22 +223,38 @@ class _Output:
         }, default=str, ensure_ascii=False))
 
     def fail(self, summary: str, details: Any = None) -> None:
+        """Write an expected data-gap result without raising an exception.
+
+        Use this only for expected limitations. Let unexpected Python or API
+        failures raise normally so the tool can surface the error.
+        """
+
         self.write(summary, {"error": details or summary})
 
 
-class _Portfolio:
-    def dashboard(self) -> dict[str, Any]:
+class Portfolio:
+    """Portfolio namespace for user-scoped holdings and P&L data."""
+
+    def dashboard(self) -> PortfolioDashboard:
+        """Fetch the portfolio dashboard with summary and open positions."""
+
         return _get("/api/sandbox/portfolio/dashboard")
 
-    def summary(self) -> dict[str, Any] | None:
+    def summary(self) -> PortfolioSummary | None:
+        """Fetch and return the portfolio summary, or `None` if unavailable."""
+
         dashboard = self.dashboard()
         return dashboard.get("summary") if dashboard else None
 
-    def positions(self) -> list[dict[str, Any]]:
+    def positions(self) -> list[Position]:
+        """Fetch and return open portfolio positions."""
+
         dashboard = self.dashboard()
         return dashboard.get("positions", []) if dashboard else []
 
-    def position(self, ticker: str) -> dict[str, Any] | None:
+    def position(self, ticker: str) -> Position | None:
+        """Return one open position by ticker, case-insensitive."""
+
         symbol = _get_ticker_key(ticker)
         for position in self.positions():
             if _get_ticker_key(position.get("ticker")) == symbol:
@@ -105,11 +262,27 @@ class _Portfolio:
         return None
 
 
-class _Market:
-    def quote(self, ticker: str) -> Any:
+class Market:
+    """Market namespace for quote, candle, and fundamentals data."""
+
+    def quote(self, ticker: str) -> Quote:
+        """Fetch the latest quote snapshot for a ticker."""
+
         return _get("/api/sandbox/market/quote", {"ticker": _get_ticker_key(ticker)})
 
-    def candles(self, ticker: str, from_: str | None = None, to: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+    def candles(self, ticker: str, from_: str | None = None, to: str | None = None, **kwargs: Any) -> list[Candle]:
+        """Fetch daily OHLCV candles for a ticker and date range.
+
+        Parameters:
+            ticker: Stock symbol such as `"NVDA"`, case-insensitive.
+            from_: Start date in `YYYY-MM-DD` format.
+            to: End date in `YYYY-MM-DD` format.
+
+        Notes:
+            `from_date`, `from`, and `to_date` keyword aliases are accepted
+            for compatibility, but new code should use `from_` and `to`.
+        """
+
         from_value = from_ or kwargs.get("from_date") or kwargs.get("from")
         to_value = to or kwargs.get("to_date")
         if not from_value or not to_value:
@@ -120,23 +293,40 @@ class _Market:
             "to": to_value,
         })
 
-    def fundamentals(self, ticker: str) -> Any:
+    def fundamentals(self, ticker: str) -> Fundamentals:
+        """Fetch compact fundamentals for a ticker."""
+
         return _get("/api/sandbox/market/fundamentals", {"ticker": _get_ticker_key(ticker)})
 
 
-class _News:
-    def recent(self, ticker: str, days: int = 7) -> list[dict[str, Any]]:
+class News:
+    """News namespace for recent ticker-specific articles."""
+
+    def recent(self, ticker: str, days: int = 7) -> list[NewsArticle]:
+        """Fetch recent news articles for a ticker.
+
+        Parameters:
+            ticker: Stock symbol such as `"NVDA"`, case-insensitive.
+            days: Lookback window in days.
+        """
+
         return _get("/api/sandbox/market/news", {
             "ticker": _get_ticker_key(ticker),
             "days": days,
         })
 
 
-class _Utils:
-    def closes(self, candles: list[dict[str, Any]]) -> list[float]:
+class Utils:
+    """Small utility helpers for common analysis code."""
+
+    def closes(self, candles: list[Candle] | list[dict[str, Any]]) -> list[float]:
+        """Extract numeric close prices from candle dictionaries."""
+
         return [float(c["close"]) for c in candles if c.get("close") is not None]
 
     def returns(self, values: list[float]) -> list[float]:
+        """Compute simple period returns from a price series."""
+
         result = []
         for prev, cur in zip(values[:-1], values[1:]):
             if prev:
@@ -144,25 +334,55 @@ class _Utils:
         return result
 
 
-input = _Input()
-output = _Output()
-portfolio = _Portfolio()
-market = _Market()
-news = _News()
-utils = _Utils()
+class TradeMeSDK:
+    """Root SDK object for the analysis environment."""
+
+    input: Input
+    output: Output
+    portfolio: Portfolio
+    market: Market
+    news: News
+    utils: Utils
+
+    def __init__(self) -> None:
+        self.input = Input()
+        self.output = Output()
+        self.portfolio = Portfolio()
+        self.market = Market()
+        self.news = News()
+        self.utils = Utils()
+
+
+sdk = TradeMeSDK()
+input = sdk.input
+output = sdk.output
+portfolio = sdk.portfolio
+market = sdk.market
+news = sdk.news
+utils = sdk.utils
 
 
 # Backward-compatible shims for existing generated code during prototyping.
 def load_input() -> dict[str, Any]:
+    """Return an empty compatibility payload.
+
+    Prefer `trademe.portfolio`, `trademe.market`, and `trademe.news` for new
+    analysis code.
+    """
+
     return input.load()
 
 
 def write_output(value: Any) -> None:
+    """Write an analysis result using the old single-argument style."""
+
     if isinstance(value, dict) and "summary" in value and "result" in value:
         output.write(value["summary"], value["result"])
     else:
         output.write("Analysis completed.", value)
 
 
-def closes(candles: list[dict[str, Any]]) -> list[float]:
+def closes(candles: list[Candle] | list[dict[str, Any]]) -> list[float]:
+    """Extract numeric close prices from candle dictionaries."""
+
     return utils.closes(candles)

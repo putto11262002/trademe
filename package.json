@@ -19,6 +19,7 @@
     "seed:profiles": "tsx --env-file=.dev.vars scripts/seed-profiles.ts",
     "test:slip": "tsx --env-file=.dev.vars scripts/test-slip-extraction.ts",
     "skills:generate": "tsx scripts/skills/generate-manifest.ts",
+    "skills:generate-sdk-reference": "python3 scripts/skills/generate-sdk-reference.py",
     "skills:upload": "tsx scripts/skills/upload-to-r2.ts",
     "skills:deploy": "pnpm skills:generate && pnpm skills:upload",
     "skills:deploy:dev": "pnpm skills:deploy --env=dev",

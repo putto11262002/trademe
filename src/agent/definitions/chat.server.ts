@@ -1,5 +1,6 @@
 import { streamText, convertToModelMessages, stepCountIs } from "ai"
-import type { UIMessage, StreamTextOnFinishCallback, ToolSet } from "ai"
+import type { StreamTextOnFinishCallback, ToolSet } from "ai"
+import type { ChatMessage } from "@/agent/chat-message"
 import { createModel } from "@/agent/gateway.server"
 import { generalChatModels, DEFAULT_GENERAL_CHAT_MODEL, type GeneralChatModelKey, type ProviderOptions } from "@/agent/general-chat-models"
 import { listAgentSkills } from "@/agent/skills/registry.server"
@@ -10,6 +11,10 @@ import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
 import { buildAiRun, insertAiRun } from "@/agent/usage/api.server"
+
+const CHAT_TOTAL_TIMEOUT_MS = 90_000
+const CHAT_STEP_TIMEOUT_MS = 45_000
+const CHAT_CHUNK_TIMEOUT_MS = 30_000
 
 const SYSTEM_PROMPT = `You are TradeMe's stock analysis assistant for a retail investor holding US stocks.
 
@@ -53,7 +58,7 @@ export async function runChatAgent({
   modelKey: modelKeyOpt,
   providerOptions,
 }: {
-  messages: UIMessage[]
+  messages: ChatMessage[]
   onFinish: StreamTextOnFinishCallback<ToolSet>
   userId: string
   threadId: string | null
@@ -67,7 +72,24 @@ export async function runChatAgent({
   const startedAt = Date.now()
 
   const wrappedOnFinish: StreamTextOnFinishCallback<ToolSet> = async (event) => {
-    await insertAiRun(buildAiRun({ event, userId, threadId, type: "chat", startedAt }))
+    console.info(JSON.stringify({
+      event: "agent.chat.finish",
+      threadId,
+      stepCount: event.steps.length,
+      finishReason: event.finishReason,
+      inputTokens: event.totalUsage.inputTokens ?? 0,
+      outputTokens: event.totalUsage.outputTokens ?? 0,
+      toolsUsed: Array.from(new Set(event.steps.flatMap((step) => step.toolCalls.map((tc) => tc.toolName)))),
+    }))
+    try {
+      await insertAiRun(buildAiRun({ event, userId, threadId, type: "chat", startedAt }))
+    } catch (err) {
+      console.error(JSON.stringify({
+        event: "agent.chat.usage_insert_failed",
+        threadId,
+        error: err instanceof Error ? err.message : String(err),
+      }))
+    }
     await onFinish(event)
   }
 
@@ -82,7 +104,55 @@ export async function runChatAgent({
     },
     messages: modelMessages,
     stopWhen: [stopOnTerminalToolError, stepCountIs(10)],
+    timeout: {
+      totalMs: CHAT_TOTAL_TIMEOUT_MS,
+      stepMs: CHAT_STEP_TIMEOUT_MS,
+      chunkMs: CHAT_CHUNK_TIMEOUT_MS,
+    },
     providerOptions,
+    onError: (event) => {
+      console.error(JSON.stringify({
+        event: "agent.chat.error",
+        threadId,
+        error: event.error instanceof Error ? event.error.message : String(event.error),
+      }))
+    },
+    onAbort: (event) => {
+      console.warn(JSON.stringify({
+        event: "agent.chat.abort",
+        threadId,
+        steps: event.steps.length,
+      }))
+    },
+    experimental_onToolCallStart: (event) => {
+      console.info(JSON.stringify({
+        event: "agent.chat.tool_start",
+        threadId,
+        toolName: event.toolCall.toolName,
+        toolCallId: event.toolCall.toolCallId,
+      }))
+    },
+    experimental_onToolCallFinish: (event) => {
+      console.info(JSON.stringify({
+        event: "agent.chat.tool_finish",
+        threadId,
+        toolName: event.toolCall.toolName,
+        toolCallId: event.toolCall.toolCallId,
+        success: event.success,
+        durationMs: event.durationMs,
+        outputBytes: event.success ? new TextEncoder().encode(JSON.stringify(event.output)).byteLength : undefined,
+        error: event.success ? undefined : event.error instanceof Error ? event.error.message : String(event.error),
+      }))
+    },
+    onStepFinish: (event) => {
+      console.info(JSON.stringify({
+        event: "agent.chat.step_finish",
+        threadId,
+        finishReason: event.finishReason,
+        toolCalls: event.toolCalls.map((toolCall) => toolCall.toolName),
+        toolResults: event.toolResults.map((toolResult) => toolResult.toolName),
+      }))
+    },
     onFinish: wrappedOnFinish,
   })
 }

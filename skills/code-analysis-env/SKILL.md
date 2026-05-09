@@ -7,6 +7,16 @@ description: Use for bounded Python analysis over stock, candle, portfolio, mark
 
 Use this skill when the user's stock, market, or portfolio question requires calculations that are awkward or lossy in normal text.
 
+Inside `analysis_run_code`, generated Python runs in `/workspace` with:
+
+```python
+import trademe_sdk as trademe
+```
+
+The sandbox image installs `trademe_sdk`. The Worker writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
+
+The SDK fetches portfolio and market data over authenticated sandbox API calls. Fetch only the data needed for the calculation.
+
 Good use cases:
 - candle analysis
 - returns
@@ -15,6 +25,14 @@ Good use cases:
 - moving averages
 - portfolio concentration
 - multi-ticker numerical comparison
+
+Available Python libraries:
+- Python standard library
+- numpy
+- pandas
+- scipy
+- statsmodels
+- scikit-learn
 
 Rules:
 - Only use code execution for stock, market, portfolio, or investment-analysis tasks.
@@ -26,16 +44,10 @@ Rules:
 - The summary must be one short sentence describing what the code did for the tool UI.
 - The result must be JSON-serializable and compact. Do not return raw candles, large tables, or verbose logs.
 - If data is missing, return a compact result with dataGaps rather than inventing values.
-
-Available Python libraries:
-- Python standard library
-- numpy
-- pandas
-- scipy
-- statsmodels
-- scikit-learn
+- Unexpected HTTP/API failures should fail normally so the tool can surface the error.
+- Use trademe.output.fail(summary, details) only for expected data limitations.
 
 Reference files:
-- references/sdk.md: Python SDK surface available inside analysis_run_code.
+- references/sdk.md: SDK API signatures, return shapes, and method behavior.
 
 Prefer direct deterministic tools when they answer the question without custom computation.
