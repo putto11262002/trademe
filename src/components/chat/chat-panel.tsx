@@ -784,6 +784,60 @@ function ConnectedChat({
 }
 
 // ---------------------------------------------------------------------------
+// ChatSkeleton — Suspense fallback while ConnectedChat fetches initial messages.
+// Mirrors the real input layout (disabled) so the input doesn't disappear on
+// thread switch / mount. Spinner only covers the messages area.
+// ---------------------------------------------------------------------------
+
+function ChatSkeleton({ modelKey, providerOptions }: { modelKey: GeneralChatModelKey; providerOptions: ProviderOptions }) {
+  const selectedModel = generalChatModels[modelKey] as GeneralChatModel
+  const thinkingLevels = selectedModel.thinking?.levels ?? []
+  const currentThinkingKey = thinkingLevels.find(
+    (l) => JSON.stringify(l.providerOptions) === JSON.stringify(providerOptions)
+  )?.key ?? null
+
+  return (
+    <>
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+      </div>
+
+      <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+        <div className="pointer-events-auto">
+          <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 opacity-60">
+            <InputGroupTextarea
+              placeholder="Ask about your portfolio…"
+              className="max-h-32 px-4 pt-4 text-sm"
+              rows={2}
+              disabled
+            />
+            <InputGroupAddon align="block-end" className="justify-between">
+              <div className="flex items-center gap-1">
+                <button type="button" disabled
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground disabled:opacity-50">
+                  {selectedModel.label}
+                  <ChevronDown className="size-3 opacity-60" />
+                </button>
+                {thinkingLevels.length > 0 && (
+                  <button type="button" disabled
+                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground disabled:opacity-50">
+                    Think: {thinkingLevels.find((l) => l.key === currentThinkingKey)?.label ?? "Off"}
+                    <ChevronDown className="size-3 opacity-60" />
+                  </button>
+                )}
+              </div>
+              <InputGroupButton size="icon-sm" variant="default" disabled>
+                <ArrowUp />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // PreChatInput — shown when no thread exists yet; creates thread on first send
 // ---------------------------------------------------------------------------
 
@@ -1019,7 +1073,7 @@ export function ChatPanel() {
       )}
 
       {initialized && activeThreadId && (
-        <Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>}>
+        <Suspense fallback={<ChatSkeleton modelKey={modelKey} providerOptions={providerOptions} />}>
           <ConnectedChat
             key={activeThreadId}
             threadId={activeThreadId}
