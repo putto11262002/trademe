@@ -2,10 +2,9 @@ import { useRef, useEffect, useLayoutEffect, useState, Suspense } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
-import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2 } from "lucide-react"
 import { Streamdown, type Components } from "streamdown"
 import type { ChatMessage } from "@/agent/chat-message"
-import { Button } from "@/components/ui/button"
 import {
   InputGroup,
   InputGroupAddon,
@@ -553,7 +552,6 @@ type ConnectedChatProps = {
   activeTitle: string | null
   initialMessage?: string | null
   onInitialMessageSent?: () => void
-  onClose: () => void
   onModelSelect: (key: GeneralChatModelKey) => void
   onThinkingSelect: (opts: ProviderOptions) => void
   onAutoTitle: (title: string) => void
@@ -562,7 +560,7 @@ type ConnectedChatProps = {
 function ConnectedChat({
   threadId, modelKey, providerOptions, activeTitle,
   initialMessage, onInitialMessageSent,
-  onClose, onModelSelect, onThinkingSelect, onAutoTitle,
+  onModelSelect, onThinkingSelect, onAutoTitle,
 }: ConnectedChatProps) {
   const lastPairRef = useRef<HTMLDivElement>(null)
   const prevLastPairRef = useRef<HTMLDivElement | null>(null)
@@ -575,7 +573,7 @@ function ConnectedChat({
   const [modelOpen, setModelOpen] = useState(false)
 
   const agent = useAgent({ agent: "chat", name: threadId })
-  const { messages, sendMessage, isStreaming, clearHistory } = useAgentChat<unknown, ChatMessage>({
+  const { messages, sendMessage, isStreaming } = useAgentChat<unknown, ChatMessage>({
     agent,
     resume: false,
     body: () => ({ modelKey, providerOptions }),
@@ -720,18 +718,6 @@ function ConnectedChat({
 
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
-        <div className="pointer-events-auto flex items-center justify-end gap-1">
-          {messages.length > 0 && (
-            <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
-              className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive" aria-label="Clear history">
-              <Trash2 className="size-3.5" />
-            </Button>
-          )}
-          <Button type="button" size="icon-sm" variant="ghost" onClick={onClose}
-            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground" aria-label="Close chat">
-            <X className="size-3.5" />
-          </Button>
-        </div>
         <div className="pointer-events-auto">
           <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
             <InputGroupTextarea
@@ -808,10 +794,9 @@ type PreChatInputProps = {
   onModelSelect: (key: GeneralChatModelKey) => void
   onThinkingSelect: (opts: ProviderOptions) => void
   onSubmit: (text: string) => void
-  onClose: () => void
 }
 
-function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onThinkingSelect, onSubmit, onClose }: PreChatInputProps) {
+function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onThinkingSelect, onSubmit }: PreChatInputProps) {
   const [input, setInput] = useState("")
   const [modelOpen, setModelOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -842,12 +827,6 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
       </div>
 
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
-        <div className="pointer-events-auto flex items-center justify-end gap-1">
-          <Button type="button" size="icon-sm" variant="ghost" onClick={onClose}
-            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground" aria-label="Close chat">
-            <X className="size-3.5" />
-          </Button>
-        </div>
         <div className="pointer-events-auto">
           <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
             <InputGroupTextarea
@@ -917,7 +896,7 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
 // ChatPanel — thread management shell
 // ---------------------------------------------------------------------------
 
-export function ChatPanel({ onClose }: { onClose: () => void }) {
+export function ChatPanel() {
   const { userId } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
@@ -1036,7 +1015,6 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
           onModelSelect={handleModelSelect}
           onThinkingSelect={handleThinkingSelect}
           onSubmit={handleFirstMessage}
-          onClose={onClose}
         />
       )}
 
@@ -1050,7 +1028,6 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
             activeTitle={activeTitle}
             initialMessage={pendingMessage}
             onInitialMessageSent={() => setPendingMessage(null)}
-            onClose={onClose}
             onModelSelect={handleModelSelect}
             onThinkingSelect={handleThinkingSelect}
             onAutoTitle={handleAutoTitle}
