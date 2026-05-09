@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react"
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { MessagesSquare, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { listThreadsFn, deleteThreadFn } from "@/thread/functions"
 import type { Thread } from "@/thread/types"
@@ -19,7 +20,7 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
   const sentinelRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ["threads", userId],
     queryFn: ({ pageParam }) =>
       listThreadsFn({ data: { cursor: pageParam as string | undefined, limit: 20 } }),
@@ -87,7 +88,14 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {threads.length === 0 && !isFetchingNextPage && (
+          {isLoading && (
+            <div className="space-y-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-full rounded-2xl" />
+              ))}
+            </div>
+          )}
+          {!isLoading && threads.length === 0 && (
             <p className="py-6 text-center text-xs text-muted-foreground">No conversations yet.</p>
           )}
           {threads.map((t) => (
@@ -112,7 +120,7 @@ export function ConversationSidebar({ open, onClose, userId, activeThreadId, onS
             </button>
           ))}
           {isFetchingNextPage && (
-            <p className="py-2 text-center text-xs text-muted-foreground">Loading…</p>
+            <Skeleton className="mt-1 h-7 w-full rounded-2xl" />
           )}
           <div ref={sentinelRef} className="h-px" />
         </div>
