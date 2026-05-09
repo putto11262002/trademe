@@ -10,7 +10,7 @@ import { createPortfolioTools } from "@/agent/tools/portfolio.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
-import { buildAiRun, insertAiRun } from "@/agent/usage/api.server"
+import { buildAiRun, getMonthlyLimitUsd, getMonthlySpend, insertAiRun } from "@/agent/usage/api.server"
 
 const CHAT_TOTAL_TIMEOUT_MS = 90_000
 const CHAT_STEP_TIMEOUT_MS = 45_000
@@ -65,6 +65,12 @@ export async function runChatAgent({
   modelKey?: GeneralChatModelKey
   providerOptions?: ProviderOptions
 }) {
+  const monthlySpend = await getMonthlySpend(userId)
+  const limit = getMonthlyLimitUsd()
+  if (monthlySpend >= limit) {
+    throw new Error(`Monthly usage limit of $${limit.toFixed(2)} reached. Current spend: $${monthlySpend.toFixed(4)}.`)
+  }
+
   const modelKey = (modelKeyOpt ?? DEFAULT_GENERAL_CHAT_MODEL) as GeneralChatModelKey
   const modelId = generalChatModels[modelKey]?.id ?? generalChatModels[DEFAULT_GENERAL_CHAT_MODEL].id
   const modelMessages = await convertToModelMessages(messages)

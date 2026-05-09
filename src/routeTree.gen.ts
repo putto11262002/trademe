@@ -14,6 +14,7 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedTradesIndexRouteImport } from './routes/_authenticated/trades/index'
 import { Route as AuthenticatedPositionsIndexRouteImport } from './routes/_authenticated/positions/index'
@@ -43,6 +44,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/welcome': typeof WelcomeRoute
   '/chat': typeof AuthenticatedChatRoute
+  '/usage': typeof AuthenticatedUsageRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
   '/trades/new': typeof AuthenticatedTradesNewRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/welcome': typeof WelcomeRoute
   '/chat': typeof AuthenticatedChatRoute
+  '/usage': typeof AuthenticatedUsageRoute
   '/': typeof AuthenticatedIndexRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/welcome': typeof WelcomeRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
+  '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/_authenticated/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/welcome'
     | '/chat'
+    | '/usage'
     | '/positions/$ticker'
     | '/trades/from-slip'
     | '/trades/new'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/welcome'
     | '/chat'
+    | '/usage'
     | '/'
     | '/positions/$ticker'
     | '/trades/from-slip'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/welcome'
     | '/_authenticated/chat'
+    | '/_authenticated/usage'
     | '/_authenticated/'
     | '/_authenticated/positions/$ticker'
     | '/_authenticated/trades/from-slip'
@@ -202,6 +214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/usage': {
+      id: '/_authenticated/usage'
+      path: '/usage'
+      fullPath: '/usage'
+      preLoaderRoute: typeof AuthenticatedUsageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/chat': {
       id: '/_authenticated/chat'
       path: '/chat'
@@ -249,6 +268,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
+  AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedPositionsTickerRoute: typeof AuthenticatedPositionsTickerRoute
   AuthenticatedTradesFromSlipRoute: typeof AuthenticatedTradesFromSlipRoute
@@ -259,6 +279,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
+  AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPositionsTickerRoute: AuthenticatedPositionsTickerRoute,
   AuthenticatedTradesFromSlipRoute: AuthenticatedTradesFromSlipRoute,

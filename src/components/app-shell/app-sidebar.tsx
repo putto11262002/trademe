@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { LayoutDashboard, PieChart, TrendingUp } from "lucide-react"
+import { LayoutDashboard, PieChart, TrendingUp, Zap } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { UserMenu } from "./user-menu"
 import { cn } from "@/lib/utils"
@@ -8,6 +8,7 @@ const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/positions", label: "Positions", icon: PieChart },
   { to: "/trades", label: "Trades", icon: TrendingUp },
+  { to: "/usage", label: "Usage", icon: Zap },
 ] as const
 
 export function AppSidebar() {
