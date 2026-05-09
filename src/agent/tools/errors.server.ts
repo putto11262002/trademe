@@ -32,10 +32,16 @@ export const stopOnTerminalToolError: StopCondition<ToolSet> = ({ steps }) => {
   const step = steps.at(-1)
   if (!step) return false
 
+  const content = Array.isArray((step as { content?: unknown }).content)
+    ? (step as { content: Array<{ type?: string; error?: unknown }> }).content
+    : []
+  const toolResults = Array.isArray((step as { toolResults?: unknown }).toolResults)
+    ? (step as { toolResults: Array<{ type?: string; error?: unknown }> }).toolResults
+    : []
+
   const toolErrors = [
-    ...(step.content as Array<{ type?: string; error?: unknown }>).filter((part) => part.type === "tool-error"),
-    ...((step as unknown as { toolResults?: Array<{ type?: string; error?: unknown }> }).toolResults ?? [])
-      .filter((part) => part.type === "tool-error"),
+    ...content.filter((part) => part.type === "tool-error"),
+    ...toolResults.filter((part) => part.type === "tool-error"),
   ]
 
   return toolErrors.some((part) => isTerminalAgentToolError(part.error))

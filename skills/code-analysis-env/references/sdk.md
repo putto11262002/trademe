@@ -1,280 +1,282 @@
 # TradeMe Python SDK Reference
 
-Inside `analysis_run_code`, generated Python runs in `/workspace` with:
+Generated analysis code imports the SDK as:
 
 ```python
 import trademe_sdk as trademe
 ```
 
-The sandbox image installs `trademe_sdk`. The Worker writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
+`trademe` exposes the namespace instances documented below.
 
-The SDK fetches portfolio and market data over authenticated sandbox API calls using:
+## Namespaces
 
-- `TRADEME_API_BASE_URL`
-- `TRADEME_API_TOKEN`
+### `trademe.input`
 
-Available analysis libraries:
+Compatibility namespace for older generated code.
 
-- `numpy`
-- `pandas`
-- `scipy`
-- `statsmodels`
-- `sklearn` / scikit-learn
+#### `trademe.input.load() -> dict[str, Any]`
 
-## Output Contract
+Return an empty compatibility payload.
 
-All successful analysis code must finish with:
+The sandbox no longer receives a preloaded `/workspace/input.json`.
+Use the network-backed SDK namespaces for data access.
 
-```python
-trademe.output.write(summary: str, result: Any) -> None
-```
+Returns: `dict[str, Any]`
 
-Inputs:
+#### `trademe.input.metadata() -> dict[str, Any]`
 
-- `summary`: one short sentence for the tool UI. Must be non-empty.
-- `result`: JSON-serializable value. Prefer a compact dict with metrics, warnings, and dataGaps.
+Return empty run metadata for compatibility.
 
-Written JSON shape:
+Returns: `dict[str, Any]`
 
-```json
-{
-  "summary": "Computed NVDA 3-month volatility and drawdown.",
-  "result": {
-    "ticker": "NVDA",
-    "metrics": {},
-    "warnings": [],
-    "dataGaps": []
-  }
-}
-```
+#### `trademe.input.available_tickers() -> list[str]`
 
-Avoid returning raw candles, full news lists, large tables, plots, or verbose logs.
+Return no preloaded tickers for compatibility.
 
-## Data Access
+Returns: `list[str]`
 
-Data accessors make network calls to the TradeMe sandbox API. Fetch only the data needed for the calculation.
+### `trademe.output`
 
-Unexpected HTTP/API failures should fail normally so the tool can surface the error. For expected data gaps, return a compact `dataGaps` array in `result`.
+Output namespace for returning analysis results.
 
-## trademe.output
+#### `trademe.output.write(summary: str, result: Any) -> None`
 
-### `trademe.output.write(summary: str, result: Any) -> None`
+Write the successful analysis output.
 
-Writes `/workspace/output.json` with the required `{ summary, result }` shape.
 
-`result` must be JSON-serializable. Dates and other unsupported objects are converted to strings by the SDK, but prefer plain strings/numbers/lists/dicts.
+Parameters:
+- `summary`: One short non-empty sentence describing what was done.
+- `result`: Compact JSON-serializable analysis result. Prefer a dict
+  with metrics, warnings, and data gaps. Do not return raw
+  candles, full news lists, plots, or large tables.
 
-### `trademe.output.fail(summary: str, details: Any | None = None) -> None`
+Returns: `None`
 
-Writes a successful tool output whose result contains an error object:
+#### `trademe.output.fail(summary: str, details: Any = None) -> None`
 
-```json
-{
-  "error": "details"
-}
-```
+Write an expected data-gap result without raising an exception.
 
-Use only for expected data limitations. Let unexpected Python exceptions fail normally.
+Use this only for expected limitations. Let unexpected Python or API
+failures raise normally so the tool can surface the error.
 
-## trademe.portfolio
+Returns: `None`
 
-### `trademe.portfolio.dashboard() -> PortfolioDashboard | None`
+### `trademe.portfolio`
 
-Fetches and returns the portfolio dashboard.
+Portfolio namespace for user-scoped holdings and P&L data.
 
-```ts
-type PortfolioDashboard = {
-  summary: PortfolioSummary
-  positions: Position[]
-}
-```
+#### `trademe.portfolio.dashboard() -> PortfolioDashboard`
 
-### `trademe.portfolio.summary() -> PortfolioSummary | None`
+Fetch the portfolio dashboard with summary and open positions.
 
-Returns dashboard summary or `None`.
+Returns: `PortfolioDashboard`
 
-```ts
-type PortfolioSummary = {
-  totalValueUSD: number
-  totalCostUSD: number
-  unrealizedPnLUSD: number
-  unrealizedPnLPct: number
-  realizedPnLUSD: number
-  sectorAllocation: Array<{ sector: string; valueUSD: number; pct: number }>
-  positionCount: number
-  asOf: string
-  fxRate: number
-  fxAsOf: string
-}
-```
+#### `trademe.portfolio.summary() -> PortfolioSummary | None`
 
-### `trademe.portfolio.positions() -> list[Position]`
+Fetch and return the portfolio summary, or `None` if unavailable.
 
-Fetches and returns open positions, or `[]`.
+Returns: `PortfolioSummary | None`
 
-```ts
-type Position = {
-  ticker: string
-  netQuantity: number
-  totalBought: number
-  totalSold: number
-  totalCost: number
-  totalProceeds: number
-  tradeCount: number
-  name: string
-  sector?: string
-  logoUrl?: string
-  currentPriceUSD: number
-  priceAsOf: string
-  avgCost: number
-  valueUSD: number
-  unrealizedPnLUSD: number
-  unrealizedPnLPct: number
-}
-```
+#### `trademe.portfolio.positions() -> list[Position]`
 
-### `trademe.portfolio.position(ticker: str) -> Position | None`
+Fetch and return open portfolio positions.
 
-Returns one position by ticker, case-insensitive, or `None`.
+Returns: `list[Position]`
 
-## trademe.market
+#### `trademe.portfolio.position(ticker: str) -> Position | None`
 
-### `trademe.market.quote(ticker: str) -> Quote`
+Return one open position by ticker, case-insensitive.
 
-Input:
+Returns: `Position | None`
 
-- `ticker`: symbol such as `"NVDA"`, case-insensitive.
+### `trademe.market`
 
-Returns:
+Market namespace for quote, candle, and fundamentals data.
 
-```ts
-type Quote = {
-  ticker: string
-  price: number
-  previousClose: number
-  change: number
-  changePct: number
-  asOf: string
-}
-```
+#### `trademe.market.quote(ticker: str) -> Quote`
 
-Raises if the API request fails.
+Fetch the latest quote snapshot for a ticker.
 
-### `trademe.market.candles(ticker: str, from_: str, to: str) -> list[Candle]`
+Returns: `Quote`
 
-Inputs:
+#### `trademe.market.candles(ticker: str, from_: str | None = None, to: str | None = None, **kwargs: Any) -> list[Candle]`
 
-- `ticker`: symbol such as `"NVDA"`, case-insensitive.
-- `from_`: start date in `YYYY-MM-DD` format.
-- `to`: end date in `YYYY-MM-DD` format.
+Fetch daily OHLCV candles for a ticker and date range.
 
-Fetches and returns daily candles, or `[]`.
 
-```ts
-type Candle = {
-  date: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-  adjustedClose?: number
-}
-```
+Parameters:
+- `ticker`: Stock symbol such as `"NVDA"`, case-insensitive.
+- `from_`: Start date in `YYYY-MM-DD` format.
+- `to`: End date in `YYYY-MM-DD` format.
+
 
 Notes:
+`from_date`, `from`, and `to_date` keyword aliases are accepted
+for compatibility, but new code should use `from_` and `to`.
 
-- Candle range is capped by the sandbox API.
-- Do not assume adjusted prices unless `adjustedClose` is present.
-- Use `trademe.utils.closes(candles)` for close-price arrays.
+Returns: `list[Candle]`
 
-### `trademe.market.fundamentals(ticker: str) -> Fundamentals`
+#### `trademe.market.fundamentals(ticker: str) -> Fundamentals`
 
-Returns:
+Fetch compact fundamentals for a ticker.
 
-```ts
-type Fundamentals = {
-  ticker: string
-  asOf: string
-  marketCap?: number
-  peRatio?: number
-  eps?: number
-  revenue?: number
-  week52High?: number
-  week52Low?: number
-  dividendYield?: number
-  beta?: number
-}
-```
+Returns: `Fundamentals`
 
-Raises if the API request fails.
+### `trademe.news`
 
-## trademe.news
+News namespace for recent ticker-specific articles.
 
-### `trademe.news.recent(ticker: str, days: int = 7) -> list[NewsArticle]`
+#### `trademe.news.recent(ticker: str, days: int = 7) -> list[NewsArticle]`
 
-Fetches recent articles for the ticker, or `[]`.
+Fetch recent news articles for a ticker.
 
-```ts
-type NewsArticle = {
-  id: string
-  ticker: string
-  headline: string
-  summary?: string
-  url: string
-  source: string
-  publishedAt: string
-  sentiment?: "positive" | "negative" | "neutral"
-}
-```
 
-Use news as context, not as a sole basis for a conclusion.
+Parameters:
+- `ticker`: Stock symbol such as `"NVDA"`, case-insensitive.
+- `days`: Lookback window in days.
 
-## trademe.utils
+Returns: `list[NewsArticle]`
 
-### `trademe.utils.closes(candles: list[dict]) -> list[float]`
+### `trademe.utils`
 
-Extracts numeric close prices from candle dicts and skips candles without `close`.
+Small utility helpers for common analysis code.
 
-### `trademe.utils.returns(values: list[float]) -> list[float]`
+#### `trademe.utils.closes(candles: list[Candle] | list[dict[str, Any]]) -> list[float]`
 
-Computes simple period returns:
+Extract numeric close prices from candle dictionaries.
+
+Returns: `list[float]`
+
+#### `trademe.utils.returns(values: list[float]) -> list[float]`
+
+Compute simple period returns from a price series.
+
+Returns: `list[float]`
+
+## Return Shapes
+
+### `SectorAllocation`
+
+Portfolio allocation for one sector.
 
 ```python
-(current - previous) / previous
+class SectorAllocation(TypedDict):
+    sector: str
+    valueUSD: float
+    pct: float
 ```
 
-Skips periods where the previous value is zero.
+### `PortfolioSummary`
 
-## Example
+High-level portfolio totals in USD.
 
 ```python
-import math
-import numpy as np
-import trademe_sdk as trademe
+class PortfolioSummary(TypedDict):
+    totalValueUSD: float
+    totalCostUSD: float
+    unrealizedPnLUSD: float
+    unrealizedPnLPct: float
+    realizedPnLUSD: float
+    sectorAllocation: list[SectorAllocation]
+    positionCount: int
+    asOf: str
+    fxRate: float
+    fxAsOf: str
+```
 
-bars = trademe.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
-closes = trademe.utils.closes(bars)
+### `Position`
 
-data_gaps = []
-if len(closes) < 2:
-    data_gaps.append("Not enough candles to compute returns.")
-    trademe.output.write("Checked NVDA candles but not enough data was available.", {
-        "ticker": "NVDA",
-        "dataGaps": data_gaps,
-    })
-else:
-    returns = np.array(trademe.utils.returns(closes), dtype=float)
-    annualized_vol = float(np.std(returns, ddof=1) * math.sqrt(252)) if len(returns) > 1 else None
-    peak = np.maximum.accumulate(np.array(closes, dtype=float))
-    drawdowns = (np.array(closes, dtype=float) - peak) / peak
-    max_drawdown = float(np.min(drawdowns))
+Open position with current pricing and unrealized P&L.
 
-    trademe.output.write("Computed NVDA volatility and drawdown from loaded candles.", {
-        "ticker": "NVDA",
-        "observations": len(closes),
-        "annualizedVolatility": annualized_vol,
-        "maxDrawdown": max_drawdown,
-        "dataGaps": data_gaps,
-    })
+```python
+class Position(TypedDict):
+    ticker: str
+    netQuantity: float
+    totalBought: float
+    totalSold: float
+    totalCost: float
+    totalProceeds: float
+    tradeCount: int
+    name: str
+    sector: NotRequired[str]
+    logoUrl: NotRequired[str]
+    currentPriceUSD: float
+    priceAsOf: str
+    avgCost: float
+    valueUSD: float
+    unrealizedPnLUSD: float
+    unrealizedPnLPct: float
+```
+
+### `PortfolioDashboard`
+
+Portfolio dashboard payload.
+
+```python
+class PortfolioDashboard(TypedDict):
+    summary: PortfolioSummary
+    positions: list[Position]
+```
+
+### `Quote`
+
+Latest quote snapshot.
+
+```python
+class Quote(TypedDict):
+    ticker: str
+    price: float
+    previousClose: float
+    change: float
+    changePct: float
+    asOf: str
+```
+
+### `Candle`
+
+Daily OHLCV candle.
+
+```python
+class Candle(TypedDict):
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    adjustedClose: NotRequired[float]
+```
+
+### `Fundamentals`
+
+Compact company fundamentals snapshot.
+
+```python
+class Fundamentals(TypedDict):
+    ticker: str
+    asOf: str
+    marketCap: NotRequired[float]
+    peRatio: NotRequired[float]
+    eps: NotRequired[float]
+    revenue: NotRequired[float]
+    week52High: NotRequired[float]
+    week52Low: NotRequired[float]
+    dividendYield: NotRequired[float]
+    beta: NotRequired[float]
+```
+
+### `NewsArticle`
+
+Recent company news article.
+
+```python
+class NewsArticle(TypedDict):
+    id: str
+    ticker: str
+    headline: str
+    summary: NotRequired[str]
+    url: str
+    source: str
+    publishedAt: str
+    sentiment: NotRequired[Literal['positive', 'negative', 'neutral']]
 ```
