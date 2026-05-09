@@ -368,16 +368,13 @@ function FaviconStack({ items }: { items: { url: string; favicon?: string; sourc
   const visible = items.slice(0, visibleCount)
   const overflow = Math.max(0, items.length - visibleCount)
   if (visible.length === 0 && overflow === 0) return null
-  const stepMs = 60
   return (
     <span className="flex items-center">
       {visible.map((item, i) => (
         <span
           key={`${item.url}-${i}`}
-          style={{ animationDelay: `${i * stepMs}ms`, animationFillMode: "both" }}
           className={cn(
             "ring-border bg-background text-muted-foreground inline-flex size-4 items-center justify-center overflow-hidden rounded-full text-[9px] font-medium ring-1",
-            "animate-in fade-in zoom-in-75 duration-300",
             i > 0 && "-ml-1.5",
           )}
         >
@@ -389,10 +386,7 @@ function FaviconStack({ items }: { items: { url: string; favicon?: string; sourc
         </span>
       ))}
       {overflow > 0 && (
-        <span
-          style={{ animationDelay: `${visible.length * stepMs}ms`, animationFillMode: "both" }}
-          className="ring-border bg-muted text-muted-foreground animate-in fade-in zoom-in-75 -ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-medium ring-1 duration-300"
-        >
+        <span className="ring-border bg-muted text-muted-foreground -ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-medium ring-1">
           +{overflow}
         </span>
       )}
@@ -456,12 +450,14 @@ function RailRow({ part }: { part: AnyPart }) {
   return null
 }
 
-function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreaming: boolean }) {
+function IntermediateRail({ parts, isStreaming, isLast }: { parts: AnyPart[]; isStreaming: boolean; isLast: boolean }) {
   const [override, setOverride] = useState<boolean | null>(null)
-  const open = override ?? isStreaming
+  const defaultOpen = isStreaming && isLast
+  const open = override ?? defaultOpen
 
+  const isActive = isStreaming && isLast
   const toolCount = parts.filter((p) => p.type.startsWith("tool-") || p.type === "dynamic-tool").length
-  const summary = isStreaming
+  const summary = isActive
     ? "Working…"
     : toolCount > 0
     ? `Used ${toolCount} tool${toolCount === 1 ? "" : "s"}`
@@ -474,7 +470,7 @@ function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreamin
         onClick={() => setOverride(!open)}
         className="text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
       >
-        {isStreaming ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <CheckCircle2 className="size-3 shrink-0" />}
+        {isActive ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <CheckCircle2 className="size-3 shrink-0" />}
         <span className="font-medium">{summary}</span>
         <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
       </button>
@@ -530,8 +526,9 @@ function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: 
   return (
     <div className="flex flex-col items-start gap-5">
       {blocks.map((block, i) => {
+        const isLastBlock = i === blocks.length - 1
         if (block.kind === "rail") {
-          return <IntermediateRail key={i} parts={block.parts} isStreaming={isStreaming} />
+          return <IntermediateRail key={i} parts={block.parts} isStreaming={isStreaming} isLast={isLastBlock} />
         }
         return (
           <div key={i} className="prose prose-sm dark:prose-invert w-full text-sm">
