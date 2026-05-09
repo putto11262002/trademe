@@ -151,6 +151,7 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
     request = Request(url, headers={
         "Authorization": f"Bearer {_api_token()}",
         "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; TradeMe-SDK/1.0)",
     })
 
     try:
