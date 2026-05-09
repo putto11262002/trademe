@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Suspense } from "react"
 import { getDailyUsageFn, getUsageSummaryFn } from "@/agent/usage/functions"
 import { DailyChart } from "@/components/usage/daily-chart"
+import { TokenChart } from "@/components/usage/token-chart"
 import { QuotaCard } from "@/components/usage/summary-cards"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -39,6 +40,7 @@ function UsageContent() {
     <div className="space-y-6">
       <QuotaCard summary={summary} />
       <DailyChart data={daily} />
+      <TokenChart data={daily} />
     </div>
   )
 }
@@ -47,6 +49,7 @@ function UsageSkeleton() {
   return (
     <div className="space-y-6">
       <Skeleton className="h-28 rounded-xl" />
+      <Skeleton className="h-64 rounded-xl" />
       <Skeleton className="h-64 rounded-xl" />
     </div>
   )

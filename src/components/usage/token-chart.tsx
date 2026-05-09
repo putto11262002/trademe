@@ -7,12 +7,19 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { DailyUsageRow } from "@/agent/usage/api.server"
 
-const chartConfig = { costUsd: { label: "Cost (USD)" } }
+const chartConfig = {
+  inputTokens: { label: "Input" },
+  outputTokens: { label: "Output" },
+}
 
 function modelLabel(modelId: string) {
   if (modelId.includes("flash")) return "Flash"
   if (modelId.includes("pro")) return "Pro"
   return modelId
+}
+
+function fmtTokens(n: number) {
+  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}k` : String(n)
 }
 
 function generateDays(n: number): string[] {
@@ -22,29 +29,40 @@ function generateDays(n: number): string[] {
   })
 }
 
-export function DailyChart({ data }: { data: DailyUsageRow[] }) {
+export function TokenChart({ data }: { data: DailyUsageRow[] }) {
   const models = Array.from(new Set(data.map((r) => r.model)))
   const [selected, setSelected] = useState<string>("all")
 
   const days = generateDays(7)
-
   const filtered = selected === "all" ? data : data.filter((r) => r.model === selected)
 
-  const byDay = new Map<string, number>()
+  const byDay = new Map<string, { inputTokens: number; outputTokens: number }>()
   for (const r of filtered) {
-    byDay.set(r.day, (byDay.get(r.day) ?? 0) + r.costUsd)
+    const prev = byDay.get(r.day) ?? { inputTokens: 0, outputTokens: 0 }
+    byDay.set(r.day, {
+      inputTokens: prev.inputTokens + r.inputTokens,
+      outputTokens: prev.outputTokens + r.outputTokens,
+    })
   }
 
   const chartData = days.map((day) => ({
-    day: day.slice(5), // MM-DD
-    fullDay: day,
-    costUsd: byDay.get(day) ?? 0,
+    day: day.slice(5),
+    inputTokens: byDay.get(day)?.inputTokens ?? 0,
+    outputTokens: byDay.get(day)?.outputTokens ?? 0,
   }))
+
+  const totalInput = filtered.reduce((acc, r) => acc + r.inputTokens, 0)
+  const totalOutput = filtered.reduce((acc, r) => acc + r.outputTokens, 0)
 
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-medium text-muted-foreground">Daily spend — last 7 days</CardTitle>
+        <div>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Token usage — last 7 days</CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {fmtTokens(totalInput + totalOutput)} total · {fmtTokens(totalInput)} in · {fmtTokens(totalOutput)} out
+          </p>
+        </div>
         {models.length > 1 && (
           <Select value={selected} onValueChange={setSelected}>
             <SelectTrigger className="h-7 w-32 text-xs">
@@ -61,7 +79,7 @@ export function DailyChart({ data }: { data: DailyUsageRow[] }) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-48 w-full">
-          <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <BarChart data={chartData} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
             <XAxis
               dataKey="day"
               tickLine={false}
@@ -73,19 +91,14 @@ export function DailyChart({ data }: { data: DailyUsageRow[] }) {
               tickLine={false}
               axisLine={false}
               tick={{ fontSize: 11 }}
-              tickFormatter={(v) => `$${Number(v).toFixed(3)}`}
+              tickFormatter={fmtTokens}
             />
             <ChartTooltip
               cursor={false}
-              content={
-                <ChartTooltipContent
-                  formatter={(value) =>
-                    Number(value) === 0 ? null : [`$${Number(value).toFixed(4)}`, "Cost"]
-                  }
-                />
-              }
+              content={<ChartTooltipContent formatter={(v, name) => [fmtTokens(Number(v)), name === "inputTokens" ? "Input" : "Output"]} />}
             />
-            <Bar dataKey="costUsd" fill="var(--primary)" radius={[2, 2, 0, 0]} minPointSize={0} />
+            <Bar dataKey="inputTokens" stackId="tokens" fill="var(--primary)" radius={[0, 0, 0, 0]} minPointSize={0} />
+            <Bar dataKey="outputTokens" stackId="tokens" fill="var(--primary)/60" radius={[2, 2, 0, 0]} minPointSize={0} />
           </BarChart>
         </ChartContainer>
       </CardContent>

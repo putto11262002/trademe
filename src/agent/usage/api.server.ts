@@ -66,9 +66,16 @@ export async function getMonthlyUsageSummary(userId: string): Promise<UsageSumma
   }
 }
 
-export type DailyUsageRow = { day: string; model: string; costUsd: number; runs: number }
+export type DailyUsageRow = {
+  day: string
+  model: string
+  costUsd: number
+  inputTokens: number
+  outputTokens: number
+  runs: number
+}
 
-export async function getDailyUsage(userId: string, days = 30): Promise<DailyUsageRow[]> {
+export async function getDailyUsage(userId: string, days = 7): Promise<DailyUsageRow[]> {
   const db = getDb()
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
@@ -77,6 +84,8 @@ export async function getDailyUsage(userId: string, days = 30): Promise<DailyUsa
       day: sql<string>`date_trunc('day', ${aiRun.createdAt})::date::text`.as("day"),
       model: aiRun.model,
       totalCost: sum(aiRun.costUsd),
+      totalInputTokens: sum(aiRun.inputTokens),
+      totalOutputTokens: sum(aiRun.outputTokens),
       runCount: count(),
     })
     .from(aiRun)
@@ -88,6 +97,8 @@ export async function getDailyUsage(userId: string, days = 30): Promise<DailyUsa
     day: r.day,
     model: r.model,
     costUsd: Number(r.totalCost ?? "0"),
+    inputTokens: Number(r.totalInputTokens ?? 0),
+    outputTokens: Number(r.totalOutputTokens ?? 0),
     runs: r.runCount,
   }))
 }
