@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/input-group"
 import { cn } from "@/lib/utils"
 import { toolDisplayRegistry } from "@/agent/tool-display"
-import { Separator } from "@/components/ui/separator"
 import {
   TableBody,
   TableCell,
@@ -355,49 +354,134 @@ function toolPartRow(part: AnyPart) {
   return { isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText: isError ? (p as { errorText?: string }).errorText : undefined }
 }
 
-function ToolGroup({ parts }: { parts: AnyPart[] }) {
+function RailNode({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full overflow-hidden rounded-4xl border border-border">
-      {parts.map((part, i) => {
-        const { isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText } = toolPartRow(part)
-        return (
-          <div key={i}>
-            {i > 0 && <Separator />}
-            <div className={cn("flex items-center gap-2.5 px-4 py-3 text-xs", isError ? "text-destructive" : "text-muted-foreground")}>
-              {isLoading && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
-              {isDone && <CheckCircle2 className="size-3 shrink-0 text-green-500" />}
-              {isError && <AlertCircle className="size-3 shrink-0 text-destructive" />}
-              <span className="font-medium text-foreground">{label}</span>
-              <span className="opacity-40">·</span>
-              <span>{isError ? errorText : isDone ? resultMsg : loadingMsg}</span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
+    <span className="bg-background relative z-10 flex size-4 shrink-0 items-center justify-center">
+      {children}
+    </span>
   )
 }
 
-function ReasoningPart({ part, isStreaming }: { part: AnyPart; isStreaming: boolean }) {
-  const [open, setOpen] = useState(false)
-  const p = part as { reasoning?: string }
-  const text = p.reasoning ?? ""
-  if (!text && !isStreaming) return null
+function FaviconStack({ items }: { items: { url: string; favicon?: string; source?: string }[] }) {
+  const cap = 5
+  const visibleCount = items.length > cap ? cap - 1 : items.length
+  const visible = items.slice(0, visibleCount)
+  const overflow = Math.max(0, items.length - visibleCount)
+  if (visible.length === 0 && overflow === 0) return null
+  const stepMs = 60
   return (
-    <div className="border-border w-full overflow-hidden rounded-4xl border text-xs">
+    <span className="flex items-center">
+      {visible.map((item, i) => (
+        <span
+          key={`${item.url}-${i}`}
+          style={{ animationDelay: `${i * stepMs}ms`, animationFillMode: "both" }}
+          className={cn(
+            "ring-border bg-background text-muted-foreground inline-flex size-4 items-center justify-center overflow-hidden rounded-full text-[9px] font-medium ring-1",
+            "animate-in fade-in zoom-in-75 duration-300",
+            i > 0 && "-ml-1.5",
+          )}
+        >
+          {item.favicon ? (
+            <img src={item.favicon} alt="" className="size-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+          ) : (
+            (item.source ?? hostForUrl(item.url)).charAt(0).toUpperCase() || "?"
+          )}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <span
+          style={{ animationDelay: `${visible.length * stepMs}ms`, animationFillMode: "both" }}
+          className="ring-border bg-muted text-muted-foreground animate-in fade-in zoom-in-75 -ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-medium ring-1 duration-300"
+        >
+          +{overflow}
+        </span>
+      )}
+    </span>
+  )
+}
+
+const richResultRenderers: Record<string, (output: unknown) => React.ReactNode> = {
+  research_search_web: (output) => {
+    if (!isRecord(output) || !Array.isArray(output.results)) return null
+    type Item = { url: string; favicon?: string; source?: string }
+    const items: Item[] = []
+    for (const result of output.results) {
+      if (!isRecord(result)) continue
+      const url = normalizeUrl(result.url)
+      if (!url) continue
+      items.push({
+        url,
+        favicon: optionalString(result.favicon),
+        source: optionalString(result.source) ?? hostForUrl(url),
+      })
+    }
+    if (items.length === 0) return null
+    return <FaviconStack items={items} />
+  },
+}
+
+function RailRow({ part }: { part: AnyPart }) {
+  if (part.type === "reasoning") {
+    const text = (part as { text?: string }).text ?? ""
+    return (
+      <div className="text-muted-foreground flex min-w-0 items-center gap-2">
+        <RailNode><Brain className="size-3" /></RailNode>
+        <span className="text-foreground shrink-0 font-medium">Thinking</span>
+        <span className="shrink-0 opacity-40">·</span>
+        <span className="min-w-0 flex-1 truncate">{text || "…"}</span>
+      </div>
+    )
+  }
+
+  if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
+    const toolName = toolNameForPart(part)
+    const { isLoading, isDone, isError, label, loadingMsg, resultMsg, errorText } = toolPartRow(part)
+    const richNode = isDone && toolName ? richResultRenderers[toolName]?.((part as { output?: unknown }).output) : null
+    return (
+      <div className={cn("flex min-w-0 items-center gap-2", isError ? "text-destructive" : "text-muted-foreground")}>
+        <RailNode>
+          {isLoading && <Loader2 className="size-3 animate-spin" />}
+          {isDone && <CheckCircle2 className="size-3 text-green-500" />}
+          {isError && <AlertCircle className="size-3 text-destructive" />}
+        </RailNode>
+        <span className="text-foreground shrink-0 font-medium">{label}</span>
+        <span className="shrink-0 opacity-40">·</span>
+        <span className="min-w-0 flex-1 truncate">
+          {isError ? errorText : isDone ? (richNode ?? resultMsg) : loadingMsg}
+        </span>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreaming: boolean }) {
+  const [override, setOverride] = useState<boolean | null>(null)
+  const open = override ?? isStreaming
+
+  const toolCount = parts.filter((p) => p.type.startsWith("tool-") || p.type === "dynamic-tool").length
+  const summary = isStreaming
+    ? "Working…"
+    : toolCount > 0
+    ? `Used ${toolCount} tool${toolCount === 1 ? "" : "s"}`
+    : "Thought it through"
+
+  return (
+    <div className="w-full text-xs">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2.5 px-4 py-3 transition-colors"
+        onClick={() => setOverride(!open)}
+        className="text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
       >
-        {isStreaming && !open ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <Brain className="size-3 shrink-0" />}
-        <span className="font-medium">Thinking</span>
-        {!isStreaming && <span className="opacity-40">· {text.split(/\s+/).length} words</span>}
-        <ChevronDown className={cn("ml-auto size-3 transition-transform", open && "rotate-180")} />
+        {isStreaming ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <CheckCircle2 className="size-3 shrink-0" />}
+        <span className="font-medium">{summary}</span>
+        <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
       </button>
-      {open && (
-        <div className="border-border border-t px-4 pb-4 pt-3">
-          <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{text}</p>
+      {open && parts.length > 0 && (
+        <div className="relative mt-2 space-y-2.5">
+          <div className="bg-border absolute left-2 top-2 bottom-2 w-px" aria-hidden />
+          {parts.map((part, i) => <RailRow key={i} part={part} />)}
         </div>
       )}
     </div>
@@ -414,40 +498,45 @@ function WorkingIndicator() {
 }
 
 function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: boolean }) {
-  const isUser = message.role === "user"
-  const sources = isUser ? [] : extractResearchSources(message)
+  if (message.role === "user") {
+    const textPart = message.parts.find((p) => p.type === "text") as { text?: string } | undefined
+    return (
+      <div className="flex flex-col items-end gap-5">
+        <div className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap">
+          {textPart?.text ?? ""}
+        </div>
+      </div>
+    )
+  }
+
+  const sources = extractResearchSources(message)
   const sourceScope = citationScope(message)
-  type Group = { kind: "text"; part: AnyPart; idx: number } | { kind: "reasoning"; part: AnyPart; idx: number } | { kind: "tools"; parts: AnyPart[] }
-  const groups: Group[] = []
-  for (const [idx, part] of message.parts.entries()) {
-    const isTool = part.type.startsWith("tool-") || part.type === "dynamic-tool"
-    if (isTool) {
-      const last = groups[groups.length - 1]
-      if (last?.kind === "tools") last.parts.push(part)
-      else groups.push({ kind: "tools", parts: [part] })
-    } else if (part.type === "reasoning") {
-      groups.push({ kind: "reasoning", part, idx })
-    } else {
-      groups.push({ kind: "text", part, idx })
+
+  type Block = { kind: "rail"; parts: AnyPart[] } | { kind: "text"; text: string }
+  const blocks: Block[] = []
+  for (const part of message.parts) {
+    if (part.type === "step-start") continue
+    if (part.type === "text") {
+      blocks.push({ kind: "text", text: (part as { text?: string }).text ?? "" })
+      continue
+    }
+    if (part.type === "reasoning" || part.type.startsWith("tool-") || part.type === "dynamic-tool") {
+      const last = blocks[blocks.length - 1]
+      if (last && last.kind === "rail") last.parts.push(part)
+      else blocks.push({ kind: "rail", parts: [part] })
     }
   }
+
   return (
-    <div className={cn("flex flex-col gap-5", isUser ? "items-end" : "items-start")}>
-      {groups.map((group, gi) => {
-        if (group.kind === "tools") return <ToolGroup key={gi} parts={group.parts} />
-        if (group.kind === "reasoning") return <ReasoningPart key={gi} part={group.part} isStreaming={isStreaming} />
-        if (group.part.type !== "text") return null
-        if (isUser) {
-          return (
-            <div key={gi} className="bg-primary text-primary-foreground max-w-[80%] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap">
-              {group.part.text}
-            </div>
-          )
+    <div className="flex flex-col items-start gap-5">
+      {blocks.map((block, i) => {
+        if (block.kind === "rail") {
+          return <IntermediateRail key={i} parts={block.parts} isStreaming={isStreaming} />
         }
         return (
-          <div key={gi} className="prose prose-sm dark:prose-invert w-full text-sm">
+          <div key={i} className="prose prose-sm dark:prose-invert w-full text-sm">
             <Streamdown isAnimating={isStreaming} components={markdownComponents(sources, sourceScope)}>
-              {linkCitationMarkers(group.part.text, sources, sourceScope)}
+              {linkCitationMarkers(block.text, sources, sourceScope)}
             </Streamdown>
           </div>
         )
@@ -618,7 +707,7 @@ function ConnectedChat({
                     return (
                       <div key={pair.user.id} ref={isLast ? lastPairRef : undefined} className="space-y-6 pt-6">
                         <div><Message message={pair.user} isStreaming={false} /></div>
-                        {isLast && isStreaming && <WorkingIndicator />}
+                        {isLast && isStreaming && (!pair.assistant || pair.assistant.parts.length === 0) && <WorkingIndicator />}
                         {pair.assistant && (
                           <div><Message message={pair.assistant} isStreaming={isStreaming && pair.assistantIdx === messages.length - 1} /></div>
                         )}
