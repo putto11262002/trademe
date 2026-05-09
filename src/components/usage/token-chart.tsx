@@ -84,7 +84,6 @@ export function TokenChart({ data }: { data: DailyUsageRow[] }) {
             </Select>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">Last 7 days</p>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-48 w-full">
