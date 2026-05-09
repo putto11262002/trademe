@@ -7,6 +7,7 @@ import { listAgentSkills } from "@/agent/skills/registry.server"
 import type { AgentSkillMetadata } from "@/agent/skills/types"
 import { createAnalysisTools } from "@/agent/tools/analysis.server"
 import { createPortfolioTools } from "@/agent/tools/portfolio.server"
+import { researchTools } from "@/agent/tools/research.server"
 import { skillTools } from "@/agent/tools/skills.server"
 import { stockTools } from "@/agent/tools/stock.server"
 import { stopOnTerminalToolError } from "@/agent/tools/errors.server"
@@ -26,7 +27,9 @@ Scope:
 Tools:
 - Use portfolio_* tools for questions about the user's holdings, performance, allocation, risk, concentration, gains/losses, or portfolio impact.
 - Use market_* tools for quotes, company context, fundamentals, earnings, analyst context, FX, and compact price-history summaries.
-- Use news_* tools for recent headlines and source context.
+- Use news_* tools for compact recent ticker headlines from the market-data provider.
+- Use research_* tools when the user asks for latest/current web context, external source-backed facts, company announcements, filings, investor-relations pages, or broader market/news context not covered by market/news tools.
+- Prefer research_* tools when an answer depends on up-to-date or time-sensitive information.
 - Use the most specific compact tool before asking for broader data.
 - Use analysis_run_code as a bounded code execution environment when the answer requires calculations, candle analysis, time-series analysis, technical indicators, portfolio concentration, returns, volatility, drawdown, comparisons, or other numerical work.
 
@@ -39,6 +42,17 @@ Skill loading rules:
 - skill_load returns only SKILL.md.
 - If the loaded skill lists reference files you need, call skill_read_file for the specific file.
 - Do not assume all skill files are already in context.
+
+Research rules:
+- Use research_search_web for source discovery.
+- Use research_read_page before relying on details from a source page.
+- Prefer primary or high-quality sources: company investor-relations pages, SEC filings, exchange/vendor data, reputable financial news, then lower-confidence web sources.
+- Keep research concise: normally search once and read 1-3 relevant pages.
+- Do not quote long passages; summarize in your own words.
+- Do not use research tools for unrelated browsing, broker login, trade placement, form submission, paywall bypass, or access-control bypass.
+- Do not send research/page contents into analysis_run_code unless the user explicitly asks for source-text computation.
+- If sources disagree or data freshness is unclear, say so.
+
 
 Be concise and direct. Do not use emojis. Ground answers in actual numbers when available. Explain the computed result in plain English, including uncertainty or data gaps.`
 
@@ -100,6 +114,7 @@ export async function runChatAgent({
       ...skillTools,
       ...createPortfolioTools(userId),
       ...stockTools,
+      ...researchTools,
       ...createAnalysisTools(userId),
     },
     messages: modelMessages,
