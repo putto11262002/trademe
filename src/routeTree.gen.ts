@@ -14,6 +14,8 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedTradesIndexRouteImport } from './routes/_authenticated/trades/index'
@@ -45,6 +47,16 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const SignUpSplatRoute = SignUpSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => SignUpRoute,
+} as any)
+const SignInSplatRoute = SignInSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => SignInRoute,
 } as any)
 const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
   id: '/usage',
@@ -88,11 +100,13 @@ const AuthenticatedPositionsTickerRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-up': typeof SignUpRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/chat': typeof AuthenticatedChatRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
   '/trades/new': typeof AuthenticatedTradesNewRoute
@@ -100,11 +114,13 @@ export interface FileRoutesByFullPath {
   '/trades/': typeof AuthenticatedTradesIndexRoute
 }
 export interface FileRoutesByTo {
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-up': typeof SignUpRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/chat': typeof AuthenticatedChatRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
   '/': typeof AuthenticatedIndexRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
@@ -115,11 +131,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-up': typeof SignUpRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/_authenticated/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
@@ -136,6 +154,8 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/chat'
     | '/usage'
+    | '/sign-in/$'
+    | '/sign-up/$'
     | '/positions/$ticker'
     | '/trades/from-slip'
     | '/trades/new'
@@ -148,6 +168,8 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/chat'
     | '/usage'
+    | '/sign-in/$'
+    | '/sign-up/$'
     | '/'
     | '/positions/$ticker'
     | '/trades/from-slip'
@@ -162,6 +184,8 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/_authenticated/chat'
     | '/_authenticated/usage'
+    | '/sign-in/$'
+    | '/sign-up/$'
     | '/_authenticated/'
     | '/_authenticated/positions/$ticker'
     | '/_authenticated/trades/from-slip'
@@ -172,8 +196,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  SignInRoute: typeof SignInRoute
-  SignUpRoute: typeof SignUpRoute
+  SignInRoute: typeof SignInRouteWithChildren
+  SignUpRoute: typeof SignUpRouteWithChildren
   WelcomeRoute: typeof WelcomeRoute
 }
 
@@ -213,6 +237,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/sign-up/$': {
+      id: '/sign-up/$'
+      path: '/$'
+      fullPath: '/sign-up/$'
+      preLoaderRoute: typeof SignUpSplatRouteImport
+      parentRoute: typeof SignUpRoute
+    }
+    '/sign-in/$': {
+      id: '/sign-in/$'
+      path: '/$'
+      fullPath: '/sign-in/$'
+      preLoaderRoute: typeof SignInSplatRouteImport
+      parentRoute: typeof SignInRoute
     }
     '/_authenticated/usage': {
       id: '/_authenticated/usage'
@@ -292,10 +330,32 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface SignInRouteChildren {
+  SignInSplatRoute: typeof SignInSplatRoute
+}
+
+const SignInRouteChildren: SignInRouteChildren = {
+  SignInSplatRoute: SignInSplatRoute,
+}
+
+const SignInRouteWithChildren =
+  SignInRoute._addFileChildren(SignInRouteChildren)
+
+interface SignUpRouteChildren {
+  SignUpSplatRoute: typeof SignUpSplatRoute
+}
+
+const SignUpRouteChildren: SignUpRouteChildren = {
+  SignUpSplatRoute: SignUpSplatRoute,
+}
+
+const SignUpRouteWithChildren =
+  SignUpRoute._addFileChildren(SignUpRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  SignInRoute: SignInRoute,
-  SignUpRoute: SignUpRoute,
+  SignInRoute: SignInRouteWithChildren,
+  SignUpRoute: SignUpRouteWithChildren,
   WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
