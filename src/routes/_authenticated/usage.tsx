@@ -1,10 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Suspense } from "react"
-import { getDailyUsageFn, getRecentRunsFn, getUsageSummaryFn } from "@/agent/usage/functions"
+import { getDailyUsageFn, getUsageSummaryFn } from "@/agent/usage/functions"
 import { DailyChart } from "@/components/usage/daily-chart"
-import { RecentRuns } from "@/components/usage/recent-runs"
-import { SummaryCards } from "@/components/usage/summary-cards"
+import { QuotaCard } from "@/components/usage/summary-cards"
 import { QueryErrorBoundary } from "@/components/query-error-boundary"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -35,16 +34,11 @@ function UsageContent() {
     queryKey: ["usage", "daily"],
     queryFn: () => getDailyUsageFn(),
   })
-  const { data: runs } = useSuspenseQuery({
-    queryKey: ["usage", "recent-runs"],
-    queryFn: () => getRecentRunsFn(),
-  })
 
   return (
     <div className="space-y-6">
-      <SummaryCards summary={summary} />
+      <QuotaCard summary={summary} />
       <DailyChart data={daily} />
-      <RecentRuns runs={runs} />
     </div>
   )
 }
@@ -52,12 +46,7 @@ function UsageContent() {
 function UsageSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-xl" />
-        ))}
-      </div>
-      <Skeleton className="h-64 rounded-xl" />
+      <Skeleton className="h-28 rounded-xl" />
       <Skeleton className="h-64 rounded-xl" />
     </div>
   )

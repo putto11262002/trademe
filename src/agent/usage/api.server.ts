@@ -66,7 +66,7 @@ export async function getMonthlyUsageSummary(userId: string): Promise<UsageSumma
   }
 }
 
-export type DailyUsageRow = { day: string; costUsd: number; runs: number }
+export type DailyUsageRow = { day: string; model: string; costUsd: number; runs: number }
 
 export async function getDailyUsage(userId: string, days = 30): Promise<DailyUsageRow[]> {
   const db = getDb()
@@ -75,16 +75,18 @@ export async function getDailyUsage(userId: string, days = 30): Promise<DailyUsa
   const rows = await db
     .select({
       day: sql<string>`date_trunc('day', ${aiRun.createdAt})::date::text`.as("day"),
+      model: aiRun.model,
       totalCost: sum(aiRun.costUsd),
       runCount: count(),
     })
     .from(aiRun)
     .where(and(eq(aiRun.userId, userId), gte(aiRun.createdAt, since)))
-    .groupBy(sql`date_trunc('day', ${aiRun.createdAt})`)
+    .groupBy(sql`date_trunc('day', ${aiRun.createdAt})`, aiRun.model)
     .orderBy(sql`date_trunc('day', ${aiRun.createdAt})`)
 
   return rows.map((r) => ({
     day: r.day,
+    model: r.model,
     costUsd: Number(r.totalCost ?? "0"),
     runs: r.runCount,
   }))
