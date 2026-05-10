@@ -40,9 +40,25 @@ def render_reference(module) -> str:
         "",
         "`trademe` exposes the namespace instances documented below.",
         "",
+        *render_aliases(module),
         *render_namespaces(module),
         *render_types(module),
     ]).rstrip() + "\n"
+
+
+def render_aliases(module) -> list[str]:
+    aliases = discover_type_aliases(module)
+    if not aliases:
+        return []
+    parts: list[str] = ["## Type Aliases", ""]
+    for name in aliases:
+        alias = module[name]
+        annotation = getattr(alias, "annotation", None) or getattr(alias, "value", None)
+        if annotation is None:
+            continue
+        parts.extend([f"- `{name} = {annotation}`"])
+    parts.append("")
+    return parts
 
 
 def render_namespaces(module) -> list[str]:
@@ -105,6 +121,16 @@ def discover_typed_dicts(module) -> set[str]:
         if "TypedDict" in bases:
             result.add(name)
     return result
+
+
+def discover_type_aliases(module) -> list[str]:
+    names: list[str] = []
+    for name, member in module.members.items():
+        if name.startswith("_"):
+            continue
+        if name == "AnalysisArtifact":
+            names.append(name)
+    return names
 
 
 def first_paragraph(value: str) -> str:

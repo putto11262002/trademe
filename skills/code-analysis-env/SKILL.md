@@ -40,9 +40,12 @@ Rules:
 - Do not inspect long candle arrays in text. Load them in code and compute compact metrics.
 - Generated Python must import trademe_sdk as trademe.
 - Read references/sdk.md before writing non-trivial Python against the SDK.
-- Generated Python must finish by calling trademe.output.write(summary, result).
+- Generated Python must finish by calling trademe.output.write(summary, result). Use the optional artifacts argument only when a chart, metric grid, or table would make the analysis clearer.
 - The summary must be one short sentence describing what the code did for the tool UI.
 - The result must be JSON-serializable and compact. Do not return raw candles, large tables, or verbose logs.
+- Artifacts must be compact and schema-shaped. Downsample chart data before returning it.
+- Artifact `xKey`, `series[].key`, and `columns[].key` values must be simple identifiers: letters, numbers, and underscores only, starting with a letter or underscore.
+- In the final answer, place artifacts with `[artifact:<id>]` markers where they should render. Use only ids returned in the artifact payload.
 - If data is missing, return a compact result with dataGaps rather than inventing values.
 - Unexpected HTTP/API failures should fail normally so the tool can surface the error.
 - Use trademe.output.fail(summary, details) only for expected data limitations.
@@ -51,3 +54,37 @@ Reference files:
 - references/sdk.md: SDK API signatures, return shapes, and method behavior.
 
 Prefer direct deterministic tools when they answer the question without custom computation.
+
+Artifact shape example:
+
+```python
+trademe.output.write(
+    "Computed trend metrics for NVDA.",
+    {"ticker": "NVDA", "warnings": []},
+    artifacts=[
+        {
+            "type": "metric_grid",
+            "id": "nvda-metrics",
+            "title": "NVDA key metrics",
+            "items": [
+                {"label": "Period return", "value": -3.2, "unit": "%", "tone": "negative"},
+                {"label": "RSI", "value": 52.1},
+            ],
+        },
+        {
+            "type": "line_chart",
+            "id": "nvda-close-sma",
+            "title": "NVDA close and moving average",
+            "xKey": "date",
+            "series": [
+                {"key": "close", "label": "Close"},
+                {"key": "sma20", "label": "20D SMA"},
+            ],
+            "data": [
+                {"date": "2026-01-02", "close": 120.5, "sma20": None},
+                {"date": "2026-01-03", "close": 122.1, "sma20": 121.0},
+            ],
+        },
+    ],
+)
+```
