@@ -96,7 +96,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
             />
             {/* Chat content */}
             <div className="flex-1 flex flex-col min-w-0">
-              <ChatPanel onClose={() => setChatOpen(false)} />
+              <ChatPanel />
             </div>
           </div>
         ) : (
@@ -183,7 +183,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
           </div>
         ) : (
           <div className="h-full w-full overflow-hidden pt-16">
-            <ChatPanel onClose={() => setMobileView("app")} />
+            <ChatPanel />
           </div>
         )}
       </div>
