@@ -12,7 +12,7 @@ Instructions for AI agents (Claude Code, Cursor, etc.) working in this repo.
 
 ## Project
 
-**Pholio** — early-scaffold trading dashboard. Public repo `putto11262002/trademe`, default branch `master`.
+**Pholio** — early-scaffold trading dashboard. Public repo `putto11262002/pholio`, default branch `master`.
 
 | | |
 |---|---|
