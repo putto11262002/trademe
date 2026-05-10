@@ -23,6 +23,7 @@ import { Route as AuthenticatedPositionsIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedTradesNewRouteImport } from './routes/_authenticated/trades/new'
 import { Route as AuthenticatedTradesFromSlipRouteImport } from './routes/_authenticated/trades/from-slip'
 import { Route as AuthenticatedPositionsTickerRouteImport } from './routes/_authenticated/positions/$ticker'
+import { Route as AuthenticatedDevArtifactsRouteImport } from './routes/_authenticated/dev/artifacts'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -97,6 +98,12 @@ const AuthenticatedPositionsTickerRoute =
     path: '/positions/$ticker',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDevArtifactsRoute =
+  AuthenticatedDevArtifactsRouteImport.update({
+    id: '/dev/artifacts',
+    path: '/dev/artifacts',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/usage': typeof AuthenticatedUsageRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/dev/artifacts': typeof AuthenticatedDevArtifactsRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
   '/trades/new': typeof AuthenticatedTradesNewRoute
@@ -122,6 +130,7 @@ export interface FileRoutesByTo {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/': typeof AuthenticatedIndexRoute
+  '/dev/artifacts': typeof AuthenticatedDevArtifactsRoute
   '/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
   '/trades/new': typeof AuthenticatedTradesNewRoute
@@ -139,6 +148,7 @@ export interface FileRoutesById {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/dev/artifacts': typeof AuthenticatedDevArtifactsRoute
   '/_authenticated/positions/$ticker': typeof AuthenticatedPositionsTickerRoute
   '/_authenticated/trades/from-slip': typeof AuthenticatedTradesFromSlipRoute
   '/_authenticated/trades/new': typeof AuthenticatedTradesNewRoute
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/usage'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/dev/artifacts'
     | '/positions/$ticker'
     | '/trades/from-slip'
     | '/trades/new'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/'
+    | '/dev/artifacts'
     | '/positions/$ticker'
     | '/trades/from-slip'
     | '/trades/new'
@@ -187,6 +199,7 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/_authenticated/'
+    | '/_authenticated/dev/artifacts'
     | '/_authenticated/positions/$ticker'
     | '/_authenticated/trades/from-slip'
     | '/_authenticated/trades/new'
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPositionsTickerRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/dev/artifacts': {
+      id: '/_authenticated/dev/artifacts'
+      path: '/dev/artifacts'
+      fullPath: '/dev/artifacts'
+      preLoaderRoute: typeof AuthenticatedDevArtifactsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -308,6 +328,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedDevArtifactsRoute: typeof AuthenticatedDevArtifactsRoute
   AuthenticatedPositionsTickerRoute: typeof AuthenticatedPositionsTickerRoute
   AuthenticatedTradesFromSlipRoute: typeof AuthenticatedTradesFromSlipRoute
   AuthenticatedTradesNewRoute: typeof AuthenticatedTradesNewRoute
@@ -319,6 +340,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedDevArtifactsRoute: AuthenticatedDevArtifactsRoute,
   AuthenticatedPositionsTickerRoute: AuthenticatedPositionsTickerRoute,
   AuthenticatedTradesFromSlipRoute: AuthenticatedTradesFromSlipRoute,
   AuthenticatedTradesNewRoute: AuthenticatedTradesNewRoute,
