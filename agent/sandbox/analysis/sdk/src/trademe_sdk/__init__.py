@@ -1,4 +1,4 @@
-"""TradeMe analysis sandbox SDK.
+"""Pholio analysis sandbox SDK.
 
 Generated analysis code imports this package as:
 
@@ -6,7 +6,7 @@ Generated analysis code imports this package as:
 import trademe_sdk as trademe
 ```
 
-The SDK fetches TradeMe portfolio and market data through authenticated sandbox
+The SDK fetches Pholio portfolio and market data through authenticated sandbox
 API calls, then writes a compact JSON result for the agent tool UI.
 """
 
@@ -215,7 +215,7 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
     request = Request(url, headers={
         "Authorization": f"Bearer {_api_token()}",
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; TradeMe-SDK/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; Pholio-SDK/1.0)",
     })
 
     try:
@@ -223,17 +223,17 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
             body = response.read().decode("utf-8")
     except HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"TradeMe API request failed with HTTP {exc.code}: {body}") from exc
+        raise RuntimeError(f"Pholio API request failed with HTTP {exc.code}: {body}") from exc
     except URLError as exc:
-        raise RuntimeError(f"TradeMe API request failed: {exc.reason}") from exc
+        raise RuntimeError(f"Pholio API request failed: {exc.reason}") from exc
 
     try:
         payload = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("TradeMe API returned invalid JSON") from exc
+        raise RuntimeError("Pholio API returned invalid JSON") from exc
 
     if not payload.get("ok"):
-        raise RuntimeError(f"TradeMe API error: {payload.get('error', 'unknown error')}")
+        raise RuntimeError(f"Pholio API error: {payload.get('error', 'unknown error')}")
     return payload.get("data")
 
 

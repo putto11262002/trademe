@@ -209,7 +209,7 @@ export function createResearchTools() {
           signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
           headers: {
             "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
-            "User-Agent": "TradeMeResearchBot/0.1 (+https://trademe.sabaiscale.com)",
+            "User-Agent": "PholioResearchBot/0.1 (+https://pholio.markets)",
           },
         })
         if (!response.ok) {

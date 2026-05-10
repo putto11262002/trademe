@@ -12,13 +12,13 @@ Instructions for AI agents (Claude Code, Cursor, etc.) working in this repo.
 
 ## Project
 
-**TradeMe** — early-scaffold trading dashboard. Public repo `putto11262002/trademe`, default branch `master`.
+**Pholio** — early-scaffold trading dashboard. Public repo `putto11262002/trademe`, default branch `master`.
 
 | | |
 |---|---|
 | Frontend | TanStack Start (Vite, SPA mode) · React 19 · Tailwind v4 · shadcn (radix-luma style) |
 | Backend | Cloudflare Worker (no Nitro) · Drizzle ORM · Neon Postgres (HTTP driver) |
-| Deploy | Prod: `https://trademe.sabaiscale.com` · Previews: `https://pr-N-trademe.sabaipics.workers.dev` |
+| Deploy | Prod: `https://pholio.markets` · Previews: `https://pr-N-pholio.sabaipics.workers.dev` |
 | CI/CD | GitHub Actions (`.github/workflows/`) |
 
 ## Commands

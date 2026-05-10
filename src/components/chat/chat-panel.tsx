@@ -788,7 +788,7 @@ function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreamin
 function WorkingIndicator() {
   return (
     <div className="flex items-center gap-2">
-      <img src="/trademe-ai-logo.png" alt="" className="size-6 animate-bounce" />
+      <img src="/pholio-ai-logo.png" alt="" className="size-6 animate-bounce" />
       <span className="text-muted-foreground text-xs">Crunching numbers…</span>
     </div>
   )
@@ -987,7 +987,7 @@ function ConnectedChat({
       <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
-            <img src="/trademe-ai-logo.png" alt="" className="size-20" />
+            <img src="/pholio-ai-logo.png" alt="" className="size-20" />
             <p className="text-muted-foreground text-base">How can I help?</p>
           </div>
         ) : (
@@ -1150,7 +1150,7 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
   return (
     <>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 text-center pointer-events-none">
-        <img src="/trademe-ai-logo.png" alt="" className="size-20" />
+        <img src="/pholio-ai-logo.png" alt="" className="size-20" />
         <p className="text-muted-foreground text-base">How can I help?</p>
       </div>
 

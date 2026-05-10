@@ -47,7 +47,7 @@ function WelcomePage() {
     <div className="fixed inset-0 flex flex-col items-center justify-center gap-6">
       <img
         src="/logo.png"
-        alt="TradeMe"
+        alt="Pholio"
         className={timedOut ? "size-12 opacity-40" : "size-12 animate-pulse"}
       />
       {timedOut ? (
