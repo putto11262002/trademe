@@ -435,12 +435,12 @@ Purpose: flexible custom numerical analysis that combines datasets/tools in ways
 
 The SDK should feel like a small local data-analysis library for Pholio. It should expose large data and helper functions to generated code without bloating LLM context.
 
-### `trademe.output`
+### `pholio.output`
 
 - `write(result)`
   - Write schema-shaped JSON to `/workspace/output.json`.
 
-### `trademe.portfolio`
+### `pholio.portfolio`
 
 - `dashboard()`
   - Fetch current portfolio dashboard through the sandbox API.
@@ -451,7 +451,7 @@ The SDK should feel like a small local data-analysis library for Pholio. It shou
 - `position(ticker)`
   - Return one holding if available.
 
-### `trademe.market`
+### `pholio.market`
 
 - `quote(ticker)`
   - Fetch quote through the sandbox API.
@@ -467,7 +467,7 @@ The SDK should feel like a small local data-analysis library for Pholio. It shou
 
 These call `/api/sandbox/*` with short-lived user-scoped tokens.
 
-### `trademe.utils`
+### `pholio.utils`
 
 Keep SDK utilities intentionally small. The SDK should expose data and output contracts, not become a strategy library.
 
@@ -509,9 +509,9 @@ Example generated-code direction:
 ```python
 import numpy as np
 import pandas as pd
-import trademe_sdk as trademe
+import pholio_sdk as pholio
 
-bars = trademe.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
+bars = pholio.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
 df = pd.DataFrame(bars)
 
 close = df["close"]
@@ -528,7 +528,7 @@ result = {
     "warnings": [],
     "dataGaps": [],
 }
-trademe.output.write("Computed NVDA SMA and RSI from fetched candles.", result)
+pholio.output.write("Computed NVDA SMA and RSI from fetched candles.", result)
 ```
 
 The agent should write code for the specific question, not blindly call a large SDK function that hides the reasoning.
@@ -952,15 +952,15 @@ The same Worker exposes a thin sandbox bridge at `/api/sandbox/*`. These endpoin
 - `GET /api/sandbox/market/news?ticker=NVDA&days=7`
 - `GET /api/sandbox/market/fundamentals?ticker=NVDA`
 
-They use a short-lived `TRADEME_API_TOKEN` bearer token minted by the Worker for the current user. This is a sandbox bridge, not a public product API.
+They use a short-lived `PHOLIO_API_TOKEN` bearer token minted by the Worker for the current user. This is a sandbox bridge, not a public product API.
 
 ## Code execution slice
 
-`analysis_run_code` runs generated Python inside Cloudflare Sandbox. The sandbox image installs the local `trademe_sdk` package. The Worker writes `/workspace/run_analysis.py`, passes `TRADEME_API_BASE_URL` and a short-lived `TRADEME_API_TOKEN`, runs the code, and reads `/workspace/output.json`.
+`analysis_run_code` runs generated Python inside Cloudflare Sandbox. The sandbox image installs the local `pholio_sdk` package. The Worker writes `/workspace/run_analysis.py`, passes `PHOLIO_API_BASE_URL` and a short-lived `PHOLIO_API_TOKEN`, runs the code, and reads `/workspace/output.json`.
 
 Status: prototype only. Normal compact tools are useful today, but code execution still needs a redesign/hardening pass before it is dependable. Known current issues:
 
-- Local runs can fail if `TRADEME_API_BASE_URL` does not point at an origin reachable from the sandbox container.
+- Local runs can fail if `PHOLIO_API_BASE_URL` does not point at an origin reachable from the sandbox container.
 - The agent can make several failed analysis attempts.
 - There is not enough structured logging/debug visibility.
 - The SDK is now packaged into the sandbox image, but its generated reference docs are still maintained manually.
@@ -968,10 +968,10 @@ Status: prototype only. Normal compact tools are useful today, but code executio
 The generated Python contract:
 
 ```python
-import trademe_sdk as trademe
+import pholio_sdk as pholio
 
-bars = trademe.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
-trademe.output.write(
+bars = pholio.market.candles("NVDA", from_="2025-01-01", to="2025-04-15")
+pholio.output.write(
     "Computed 1-month trend metrics for NVDA.",
     {
         "ticker": "NVDA",
@@ -1049,7 +1049,7 @@ type AnalysisArtifact =
 
 Artifact constraints:
 
-- Keep artifacts deterministic and schema-rendered by TradeMe components.
+- Keep artifacts deterministic and schema-rendered by Pholio components.
 - Cap payload size and row/point counts. A first-pass cap of roughly 200 chart points per artifact is enough for chat.
 - Use simple identifier keys for chart/table fields: letters, numbers, and underscores only, starting with a letter or underscore.
 - Keep `summary` and `result` compact for model reasoning. Do not make the model repeat full artifact data.
@@ -1058,18 +1058,18 @@ Artifact constraints:
 
 The bundled SDK now exposes namespaced data accessors:
 
-- `trademe.output.write(summary, result)`
-- `trademe.output.fail(summary, details)`
-- `trademe.portfolio.dashboard()`
-- `trademe.portfolio.summary()`
-- `trademe.portfolio.positions()`
-- `trademe.portfolio.position(ticker)`
-- `trademe.market.quote(ticker)`
-- `trademe.market.candles(ticker, from_, to)`
-- `trademe.market.fundamentals(ticker)`
-- `trademe.news.recent(ticker)`
-- `trademe.utils.closes(candles)`
-- `trademe.utils.returns(values)`
+- `pholio.output.write(summary, result)`
+- `pholio.output.fail(summary, details)`
+- `pholio.portfolio.dashboard()`
+- `pholio.portfolio.summary()`
+- `pholio.portfolio.positions()`
+- `pholio.portfolio.position(ticker)`
+- `pholio.market.quote(ticker)`
+- `pholio.market.candles(ticker, from_, to)`
+- `pholio.market.fundamentals(ticker)`
+- `pholio.news.recent(ticker)`
+- `pholio.utils.closes(candles)`
+- `pholio.utils.returns(values)`
 
 Backward-compatible shims (`load_input`, `write_output`, `closes`) remain temporarily for prototyping.
 
