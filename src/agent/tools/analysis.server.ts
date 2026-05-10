@@ -19,6 +19,8 @@ const MAX_METRIC_ITEMS = 12
 const MAX_CHART_POINTS = 200
 const MAX_TABLE_ROWS = 50
 const MAX_TABLE_COLUMNS = 8
+const MAX_DONUT_SEGMENTS = 12
+const MAX_TIMELINE_EVENTS = 12
 
 const runAnalysisInput = z.object({
   task: z.string().min(1).max(1_000),
@@ -29,35 +31,61 @@ const runAnalysisInput = z.object({
 
 const artifactScalarSchema = z.union([z.string(), z.number(), z.null()])
 const artifactKeySchema = z.string().trim().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).max(60)
+const artifactTitleSchema = z.string().trim().min(1).max(120)
+const artifactCaptionSchema = z.string().trim().max(240).optional()
+const artifactToneSchema = z.enum(["default", "positive", "negative", "warning"]).optional()
 
 const metricGridArtifactSchema = z.object({
   type: z.literal("metric_grid"),
   id: z.string().trim().min(1).max(80),
-  title: z.string().trim().min(1).max(120),
+  title: artifactTitleSchema,
+  caption: artifactCaptionSchema,
   items: z.array(z.object({
     label: z.string().trim().min(1).max(80),
     value: z.union([z.string(), z.number()]),
     unit: z.string().trim().max(24).optional(),
-    tone: z.enum(["default", "positive", "negative", "warning"]).optional(),
+    tone: artifactToneSchema,
   })).min(1).max(MAX_METRIC_ITEMS),
 })
 
-const lineChartArtifactSchema = z.object({
-  type: z.literal("line_chart"),
+const chartSeriesSchema = z.object({
+  key: artifactKeySchema,
+  label: z.string().trim().min(1).max(80),
+})
+
+function xyChartArtifactSchema<T extends "line_chart" | "area_chart" | "bar_chart">(type: T) {
+  return z.object({
+    type: z.literal(type),
+    id: z.string().trim().min(1).max(80),
+    title: artifactTitleSchema,
+    caption: artifactCaptionSchema,
+    xKey: artifactKeySchema,
+    series: z.array(chartSeriesSchema).min(1).max(5),
+    data: z.array(z.record(z.string(), artifactScalarSchema)).min(1).max(MAX_CHART_POINTS),
+    ...(type === "area_chart" ? { stacked: z.boolean().optional() } : {}),
+  })
+}
+
+const lineChartArtifactSchema = xyChartArtifactSchema("line_chart")
+const areaChartArtifactSchema = xyChartArtifactSchema("area_chart")
+const barChartArtifactSchema = xyChartArtifactSchema("bar_chart")
+
+const donutChartArtifactSchema = z.object({
+  type: z.literal("donut_chart"),
   id: z.string().trim().min(1).max(80),
-  title: z.string().trim().min(1).max(120),
-  xKey: artifactKeySchema,
-  series: z.array(z.object({
-    key: artifactKeySchema,
+  title: artifactTitleSchema,
+  caption: artifactCaptionSchema,
+  segments: z.array(z.object({
     label: z.string().trim().min(1).max(80),
-  })).min(1).max(5),
-  data: z.array(z.record(z.string(), artifactScalarSchema)).min(1).max(MAX_CHART_POINTS),
+    value: z.number(),
+  })).min(1).max(MAX_DONUT_SEGMENTS),
 })
 
 const tableArtifactSchema = z.object({
   type: z.literal("table"),
   id: z.string().trim().min(1).max(80),
-  title: z.string().trim().min(1).max(120),
+  title: artifactTitleSchema,
+  caption: artifactCaptionSchema,
   columns: z.array(z.object({
     key: artifactKeySchema,
     label: z.string().trim().min(1).max(80),
@@ -65,10 +93,37 @@ const tableArtifactSchema = z.object({
   rows: z.array(z.record(z.string(), artifactScalarSchema)).max(MAX_TABLE_ROWS),
 })
 
+const timelineArtifactSchema = z.object({
+  type: z.literal("event_timeline"),
+  id: z.string().trim().min(1).max(80),
+  title: artifactTitleSchema,
+  caption: artifactCaptionSchema,
+  events: z.array(z.object({
+    date: z.string().trim().min(1).max(40),
+    title: z.string().trim().min(1).max(120),
+    description: z.string().trim().max(240).optional(),
+    tone: artifactToneSchema,
+    url: z.string().trim().url().max(500).optional(),
+  })).min(1).max(MAX_TIMELINE_EVENTS),
+})
+
+const calloutArtifactSchema = z.object({
+  type: z.literal("callout"),
+  id: z.string().trim().min(1).max(80),
+  title: artifactTitleSchema,
+  body: z.string().trim().min(1).max(500),
+  tone: artifactToneSchema,
+})
+
 const analysisArtifactSchema = z.discriminatedUnion("type", [
   metricGridArtifactSchema,
   lineChartArtifactSchema,
+  areaChartArtifactSchema,
+  barChartArtifactSchema,
+  donutChartArtifactSchema,
   tableArtifactSchema,
+  timelineArtifactSchema,
+  calloutArtifactSchema,
 ])
 
 const analysisOutputSchema = z.object({
@@ -155,7 +210,7 @@ export function createAnalysisTools(userId: string) {
   return {
   analysis_run_code: tool({
     description:
-      "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import trademe_sdk as trademe and finish with trademe.output.write(summary, result, artifacts=...). The summary must be one short sentence describing what was done. Optional artifacts can include metric_grid, line_chart, or table payloads for UI rendering. Do not use for trade execution or portfolio writes.",
+      "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import trademe_sdk as trademe and finish with trademe.output.write(summary, result, artifacts=...). The summary must be one short sentence describing what was done. Optional artifacts can include metric_grid, table, line_chart, area_chart, bar_chart, donut_chart, event_timeline, or callout payloads for UI rendering. Do not use for trade execution or portfolio writes.",
     inputSchema: runAnalysisInput,
     execute: async ({ task, code }) => {
       const runId = crypto.randomUUID()

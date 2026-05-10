@@ -139,6 +139,7 @@ class MetricGridArtifact(TypedDict):
     type: Literal["metric_grid"]
     id: str
     title: str
+    caption: NotRequired[str]
     items: list[MetricGridItem]
 
 
@@ -159,9 +160,52 @@ class LineChartArtifact(TypedDict):
     type: Literal["line_chart"]
     id: str
     title: str
+    caption: NotRequired[str]
     xKey: str
     series: list[LineChartSeries]
     data: list[dict[str, str | int | float | None]]
+
+
+class AreaChartArtifact(TypedDict):
+    """Area chart artifact for filled or stacked time-series analysis."""
+
+    type: Literal["area_chart"]
+    id: str
+    title: str
+    caption: NotRequired[str]
+    xKey: str
+    series: list[LineChartSeries]
+    data: list[dict[str, str | int | float | None]]
+    stacked: NotRequired[bool]
+
+
+class BarChartArtifact(TypedDict):
+    """Bar chart artifact for category or period comparisons."""
+
+    type: Literal["bar_chart"]
+    id: str
+    title: str
+    caption: NotRequired[str]
+    xKey: str
+    series: list[LineChartSeries]
+    data: list[dict[str, str | int | float | None]]
+
+
+class DonutSegment(TypedDict):
+    """One segment in a donut chart artifact."""
+
+    label: str
+    value: int | float
+
+
+class DonutChartArtifact(TypedDict):
+    """Donut chart artifact for composition snapshots."""
+
+    type: Literal["donut_chart"]
+    id: str
+    title: str
+    caption: NotRequired[str]
+    segments: list[DonutSegment]
 
 
 class TableColumn(TypedDict):
@@ -181,11 +225,51 @@ class TableArtifact(TypedDict):
     type: Literal["table"]
     id: str
     title: str
+    caption: NotRequired[str]
     columns: list[TableColumn]
     rows: list[dict[str, str | int | float | None]]
 
 
-AnalysisArtifact = MetricGridArtifact | LineChartArtifact | TableArtifact
+class TimelineEvent(TypedDict):
+    """One event in an event timeline artifact."""
+
+    date: str
+    title: str
+    description: NotRequired[str]
+    tone: NotRequired[Literal["default", "positive", "negative", "warning"]]
+    url: NotRequired[str]
+
+
+class EventTimelineArtifact(TypedDict):
+    """Timeline artifact for dated events, catalysts, or analysis steps."""
+
+    type: Literal["event_timeline"]
+    id: str
+    title: str
+    caption: NotRequired[str]
+    events: list[TimelineEvent]
+
+
+class CalloutArtifact(TypedDict):
+    """Callout artifact for warnings, assumptions, or compact conclusions."""
+
+    type: Literal["callout"]
+    id: str
+    title: str
+    body: str
+    tone: NotRequired[Literal["default", "positive", "negative", "warning"]]
+
+
+AnalysisArtifact = (
+    MetricGridArtifact
+    | LineChartArtifact
+    | AreaChartArtifact
+    | BarChartArtifact
+    | DonutChartArtifact
+    | TableArtifact
+    | EventTimelineArtifact
+    | CalloutArtifact
+)
 
 
 def _get_ticker_key(ticker: Any) -> str:

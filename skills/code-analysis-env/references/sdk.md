@@ -10,7 +10,7 @@ import trademe_sdk as trademe
 
 ## Type Aliases
 
-- `AnalysisArtifact = MetricGridArtifact | LineChartArtifact | TableArtifact`
+- `AnalysisArtifact = MetricGridArtifact | LineChartArtifact | AreaChartArtifact | BarChartArtifact | DonutChartArtifact | TableArtifact | EventTimelineArtifact | CalloutArtifact`
 
 ## Namespaces
 
@@ -308,6 +308,7 @@ class MetricGridArtifact(TypedDict):
     type: Literal['metric_grid']
     id: str
     title: str
+    caption: NotRequired[str]
     items: list[MetricGridItem]
 ```
 
@@ -333,9 +334,64 @@ class LineChartArtifact(TypedDict):
     type: Literal['line_chart']
     id: str
     title: str
+    caption: NotRequired[str]
     xKey: str
     series: list[LineChartSeries]
     data: list[dict[str, str | int | float | None]]
+```
+
+### `AreaChartArtifact`
+
+Area chart artifact for filled or stacked time-series analysis.
+
+```python
+class AreaChartArtifact(TypedDict):
+    type: Literal['area_chart']
+    id: str
+    title: str
+    caption: NotRequired[str]
+    xKey: str
+    series: list[LineChartSeries]
+    data: list[dict[str, str | int | float | None]]
+    stacked: NotRequired[bool]
+```
+
+### `BarChartArtifact`
+
+Bar chart artifact for category or period comparisons.
+
+```python
+class BarChartArtifact(TypedDict):
+    type: Literal['bar_chart']
+    id: str
+    title: str
+    caption: NotRequired[str]
+    xKey: str
+    series: list[LineChartSeries]
+    data: list[dict[str, str | int | float | None]]
+```
+
+### `DonutSegment`
+
+One segment in a donut chart artifact.
+
+```python
+class DonutSegment(TypedDict):
+    label: str
+    value: int | float
+```
+
+### `DonutChartArtifact`
+
+Donut chart artifact for composition snapshots.
+
+```python
+class DonutChartArtifact(TypedDict):
+    type: Literal['donut_chart']
+    id: str
+    title: str
+    caption: NotRequired[str]
+    segments: list[DonutSegment]
 ```
 
 ### `TableColumn`
@@ -360,6 +416,46 @@ class TableArtifact(TypedDict):
     type: Literal['table']
     id: str
     title: str
+    caption: NotRequired[str]
     columns: list[TableColumn]
     rows: list[dict[str, str | int | float | None]]
+```
+
+### `TimelineEvent`
+
+One event in an event timeline artifact.
+
+```python
+class TimelineEvent(TypedDict):
+    date: str
+    title: str
+    description: NotRequired[str]
+    tone: NotRequired[Literal['default', 'positive', 'negative', 'warning']]
+    url: NotRequired[str]
+```
+
+### `EventTimelineArtifact`
+
+Timeline artifact for dated events, catalysts, or analysis steps.
+
+```python
+class EventTimelineArtifact(TypedDict):
+    type: Literal['event_timeline']
+    id: str
+    title: str
+    caption: NotRequired[str]
+    events: list[TimelineEvent]
+```
+
+### `CalloutArtifact`
+
+Callout artifact for warnings, assumptions, or compact conclusions.
+
+```python
+class CalloutArtifact(TypedDict):
+    type: Literal['callout']
+    id: str
+    title: str
+    body: str
+    tone: NotRequired[Literal['default', 'positive', 'negative', 'warning']]
 ```

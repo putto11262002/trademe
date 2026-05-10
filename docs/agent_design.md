@@ -1009,7 +1009,7 @@ First-pass artifact source:
 - Start with `analysis_run_code`, because generated Python is already the flexible path for custom calculations, candle analysis, and portfolio math.
 - Later, deterministic tools can return artifacts directly for common product views such as allocation, risk snapshot, quote cards, and news/source tables.
 
-Proposed output shape:
+Output shape:
 
 ```ts
 type AnalysisOutput = {
@@ -1018,11 +1018,14 @@ type AnalysisOutput = {
   artifacts?: AnalysisArtifact[]
 }
 
+type ArtifactScalar = string | number | null
+
 type AnalysisArtifact =
   | {
       type: "metric_grid"
       id: string
       title: string
+      caption?: string
       items: Array<{
         label: string
         value: string | number
@@ -1034,27 +1037,79 @@ type AnalysisArtifact =
       type: "line_chart"
       id: string
       title: string
+      caption?: string
       xKey: string
       series: Array<{ key: string; label: string }>
-      data: Array<Record<string, string | number | null>>
+      data: Array<Record<string, ArtifactScalar>>
+    }
+  | {
+      type: "area_chart"
+      id: string
+      title: string
+      caption?: string
+      xKey: string
+      series: Array<{ key: string; label: string }>
+      data: Array<Record<string, ArtifactScalar>>
+      stacked?: boolean
+    }
+  | {
+      type: "bar_chart"
+      id: string
+      title: string
+      caption?: string
+      xKey: string
+      series: Array<{ key: string; label: string }>
+      data: Array<Record<string, ArtifactScalar>>
+    }
+  | {
+      type: "donut_chart"
+      id: string
+      title: string
+      caption?: string
+      segments: Array<{ label: string; value: number }>
     }
   | {
       type: "table"
       id: string
       title: string
+      caption?: string
       columns: Array<{ key: string; label: string }>
-      rows: Array<Record<string, string | number | null>>
+      rows: Array<Record<string, ArtifactScalar>>
+    }
+  | {
+      type: "event_timeline"
+      id: string
+      title: string
+      caption?: string
+      events: Array<{
+        date: string
+        title: string
+        description?: string
+        tone?: "default" | "positive" | "negative" | "warning"
+        url?: string
+      }>
+    }
+  | {
+      type: "callout"
+      id: string
+      title: string
+      body: string
+      tone?: "default" | "positive" | "negative" | "warning"
     }
 ```
 
 Artifact constraints:
 
 - Keep artifacts deterministic and schema-rendered by TradeMe components.
+- Treat artifacts as display primitives: use them for shape and rendering, not as a fixed analysis workflow.
 - Cap payload size and row/point counts. A first-pass cap of roughly 200 chart points per artifact is enough for chat.
 - Use simple identifier keys for chart/table fields: letters, numbers, and underscores only, starting with a letter or underscore.
+- Use ISO date strings such as `YYYY-MM-DD` for date/time chart rows. The UI formats recognized ISO dates; arbitrary category labels are displayed as provided.
+- Keep model-generated labels short because artifacts render inside compact chat surfaces.
 - Keep `summary` and `result` compact for model reasoning. Do not make the model repeat full artifact data.
 - Large artifact data may later move to persisted artifact refs if tool-output context cost becomes a problem.
 - Initial frontend renderers should use existing shadcn/Tailwind and the app's chart primitives where possible.
+- Artifact demo route: `/dev/artifacts` renders every primitive with sample data for visual alignment before expanding prompt guidance.
 
 The bundled SDK now exposes namespaced data accessors:
 

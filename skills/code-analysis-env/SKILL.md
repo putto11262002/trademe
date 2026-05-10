@@ -40,11 +40,13 @@ Rules:
 - Do not inspect long candle arrays in text. Load them in code and compute compact metrics.
 - Generated Python must import trademe_sdk as trademe.
 - Read references/sdk.md before writing non-trivial Python against the SDK.
-- Generated Python must finish by calling trademe.output.write(summary, result). Use the optional artifacts argument only when a chart, metric grid, or table would make the analysis clearer.
+- Generated Python must finish by calling trademe.output.write(summary, result). Use the optional artifacts argument only when a compact rendered primitive would make the analysis clearer.
 - The summary must be one short sentence describing what the code did for the tool UI.
 - The result must be JSON-serializable and compact. Do not return raw candles, large tables, or verbose logs.
-- Artifacts must be compact and schema-shaped. Downsample chart data before returning it.
+- Artifacts must be compact and schema-shaped. Use display primitives, not bespoke finance widgets.
 - Artifact `xKey`, `series[].key`, and `columns[].key` values must be simple identifiers: letters, numbers, and underscores only, starting with a letter or underscore.
+- For date/time chart data, use ISO date strings like `YYYY-MM-DD`. The UI formats recognized ISO dates; arbitrary category labels are rendered as provided.
+- Keep display labels short: metric labels, column labels, series labels, segment labels, and event titles should fit compact chat UI.
 - In the final answer, place artifacts with `[artifact:<id>]` markers where they should render. Use only ids returned in the artifact payload.
 - If data is missing, return a compact result with dataGaps rather than inventing values.
 - Unexpected HTTP/API failures should fail normally so the tool can surface the error.
@@ -54,6 +56,16 @@ Reference files:
 - references/sdk.md: SDK API signatures, return shapes, and method behavior.
 
 Prefer direct deterministic tools when they answer the question without custom computation.
+
+Artifact primitives:
+- `metric_grid`: compact KPI values.
+- `table`: small row comparisons.
+- `line_chart`: price, moving average, drawdown, or return time series.
+- `area_chart`: filled or stacked time-series exposure.
+- `bar_chart`: category, ranking, or period comparison.
+- `donut_chart`: composition snapshot.
+- `event_timeline`: dated events, catalysts, earnings, or trade history.
+- `callout`: assumptions, warnings, data gaps, or compact conclusions.
 
 Artifact shape example:
 
