@@ -4,7 +4,7 @@ Last updated 2026-05-07.
 
 ## Current direction
 
-The chat agent is a general-use analyst agent inside the TradeMe product domain. It is not a general assistant. Its job is to help a retail investor understand their portfolio, stocks they care about, and market context well enough to think better.
+The chat agent is a general-use analyst agent inside the Pholio product domain. It is not a general assistant. Its job is to help a retail investor understand their portfolio, stocks they care about, and market context well enough to think better.
 
 For v0, the agent is a proof of concept for how far an AI analyst can go with user portfolio data, market data, research context, and bounded computation. We are testing what it can do, where it fails, and what data/tools it needs before splitting work into specialized subagents.
 
@@ -276,7 +276,7 @@ AI SDK v6 gives us several useful controls for a larger tool surface:
 
 - Dynamic tools
   - Useful when schemas are not known at compile time, especially MCP.
-  - Prefer static, typed tools for TradeMe core tools. Use dynamic tools only for external/MCP-style expansion.
+  - Prefer static, typed tools for Pholio core tools. Use dynamic tools only for external/MCP-style expansion.
 
 Best-practice implication: do not expose every possible tool on every step. Keep the active tool set small and contextual. AI SDK's own prompt guidance recommends keeping tool count low and parameter schemas simple where possible.
 
@@ -326,7 +326,7 @@ For every tool:
 - Avoid overlapping tools unless their routing is clear.
 - Add display metadata for every visible chat tool.
 
-For TradeMe specifically:
+For Pholio specifically:
 
 - Agent tools should be compact facts and summaries for reasoning.
 - Sandbox SDK should expose larger data for generated code.
@@ -433,7 +433,7 @@ Purpose: flexible custom numerical analysis that combines datasets/tools in ways
 
 ## Proposed Sandbox SDK Namespaces
 
-The SDK should feel like a small local data-analysis library for TradeMe. It should expose large data and helper functions to generated code without bloating LLM context.
+The SDK should feel like a small local data-analysis library for Pholio. It should expose large data and helper functions to generated code without bloating LLM context.
 
 ### `trademe.output`
 

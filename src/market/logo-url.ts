@@ -10,7 +10,7 @@ type LogoOptions = {
  * through this zone — even from dev or preview deploys — so every render
  * hits the same edge-cached transformed image.
  */
-const TRANSFORMS_ORIGIN = "https://trademe.sabaiscale.com"
+const TRANSFORMS_ORIGIN = "https://pholio.markets"
 
 /**
  * Wrap a company-profile logo URL in Cloudflare Image Transformations so the
