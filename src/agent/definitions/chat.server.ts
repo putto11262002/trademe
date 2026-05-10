@@ -17,7 +17,7 @@ const CHAT_TOTAL_TIMEOUT_MS = 90_000
 const CHAT_STEP_TIMEOUT_MS = 45_000
 const CHAT_CHUNK_TIMEOUT_MS = 30_000
 
-const SYSTEM_PROMPT = `You are TradeMe's stock analysis assistant for a retail investor holding US stocks.
+const SYSTEM_PROMPT = `You are Pholio's stock analysis assistant for a retail investor holding US stocks.
 
 Scope:
 - Only help with stock, market, portfolio, and investment-analysis questions.

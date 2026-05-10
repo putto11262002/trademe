@@ -1,12 +1,12 @@
-"""TradeMe analysis sandbox SDK.
+"""Pholio analysis sandbox SDK.
 
 Generated analysis code imports this package as:
 
 ```python
-import trademe_sdk as trademe
+import pholio_sdk as pholio
 ```
 
-The SDK fetches TradeMe portfolio and market data through authenticated sandbox
+The SDK fetches Pholio portfolio and market data through authenticated sandbox
 API calls, then writes a compact JSON result for the agent tool UI.
 """
 
@@ -277,16 +277,16 @@ def _get_ticker_key(ticker: Any) -> str:
 
 
 def _api_base_url() -> str:
-    value = os.environ.get("TRADEME_API_BASE_URL")
+    value = os.environ.get("PHOLIO_API_BASE_URL")
     if not value:
-        raise RuntimeError("TRADEME_API_BASE_URL is not configured")
+        raise RuntimeError("PHOLIO_API_BASE_URL is not configured")
     return value.rstrip("/")
 
 
 def _api_token() -> str:
-    value = os.environ.get("TRADEME_API_TOKEN")
+    value = os.environ.get("PHOLIO_API_TOKEN")
     if not value:
-        raise RuntimeError("TRADEME_API_TOKEN is not configured")
+        raise RuntimeError("PHOLIO_API_TOKEN is not configured")
     return value
 
 
@@ -299,7 +299,7 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
     request = Request(url, headers={
         "Authorization": f"Bearer {_api_token()}",
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; TradeMe-SDK/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; Pholio-SDK/1.0)",
     })
 
     try:
@@ -307,25 +307,25 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
             body = response.read().decode("utf-8")
     except HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"TradeMe API request failed with HTTP {exc.code}: {body}") from exc
+        raise RuntimeError(f"Pholio API request failed with HTTP {exc.code}: {body}") from exc
     except URLError as exc:
-        raise RuntimeError(f"TradeMe API request failed: {exc.reason}") from exc
+        raise RuntimeError(f"Pholio API request failed: {exc.reason}") from exc
 
     try:
         payload = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("TradeMe API returned invalid JSON") from exc
+        raise RuntimeError("Pholio API returned invalid JSON") from exc
 
     if not payload.get("ok"):
-        raise RuntimeError(f"TradeMe API error: {payload.get('error', 'unknown error')}")
+        raise RuntimeError(f"Pholio API error: {payload.get('error', 'unknown error')}")
     return payload.get("data")
 
 
 class Input:
     """Compatibility namespace for older generated code.
 
-    New analysis code should fetch data through `trademe.portfolio`,
-    `trademe.market`, and `trademe.news` instead of reading preloaded input.
+    New analysis code should fetch data through `pholio.portfolio`,
+    `pholio.market`, and `pholio.news` instead of reading preloaded input.
     """
 
     def load(self) -> dict[str, Any]:
@@ -488,7 +488,7 @@ class Utils:
         return result
 
 
-class TradeMeSDK:
+class PholioSDK:
     """Root SDK object for the analysis environment."""
 
     input: Input
@@ -507,7 +507,7 @@ class TradeMeSDK:
         self.utils = Utils()
 
 
-sdk = TradeMeSDK()
+sdk = PholioSDK()
 input = sdk.input
 output = sdk.output
 portfolio = sdk.portfolio
@@ -520,7 +520,7 @@ utils = sdk.utils
 def load_input() -> dict[str, Any]:
     """Return an empty compatibility payload.
 
-    Prefer `trademe.portfolio`, `trademe.market`, and `trademe.news` for new
+    Prefer `pholio.portfolio`, `pholio.market`, and `pholio.news` for new
     analysis code.
     """
 

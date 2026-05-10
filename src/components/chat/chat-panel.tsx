@@ -2,11 +2,10 @@ import { useRef, useEffect, useLayoutEffect, useState, Suspense } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { useAgent } from "agents/react"
 import { useAgentChat } from "agents/ai-react"
-import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowUp, Brain, CheckCircle2, ChevronDown, Loader2 } from "lucide-react"
 import { Streamdown, type Components } from "streamdown"
 import type { ChatMessage } from "@/agent/chat-message"
 import { ArtifactBlock, ArtifactView, parseArtifact, type AnalysisArtifact } from "@/components/artifacts/analysis-artifacts"
-import { Button } from "@/components/ui/button"
 import {
   InputGroup,
   InputGroupAddon,
@@ -457,16 +456,13 @@ function FaviconStack({ items }: { items: { url: string; favicon?: string; sourc
   const visible = items.slice(0, visibleCount)
   const overflow = Math.max(0, items.length - visibleCount)
   if (visible.length === 0 && overflow === 0) return null
-  const stepMs = 60
   return (
     <span className="flex items-center">
       {visible.map((item, i) => (
         <span
           key={`${item.url}-${i}`}
-          style={{ animationDelay: `${i * stepMs}ms`, animationFillMode: "both" }}
           className={cn(
             "ring-border bg-background text-muted-foreground inline-flex size-4 items-center justify-center overflow-hidden rounded-full text-[9px] font-medium ring-1",
-            "animate-in fade-in zoom-in-75 duration-300",
             i > 0 && "-ml-1.5",
           )}
         >
@@ -478,10 +474,7 @@ function FaviconStack({ items }: { items: { url: string; favicon?: string; sourc
         </span>
       ))}
       {overflow > 0 && (
-        <span
-          style={{ animationDelay: `${visible.length * stepMs}ms`, animationFillMode: "both" }}
-          className="ring-border bg-muted text-muted-foreground animate-in fade-in zoom-in-75 -ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-medium ring-1 duration-300"
-        >
+        <span className="ring-border bg-muted text-muted-foreground -ml-1.5 inline-flex size-4 items-center justify-center rounded-full text-[9px] font-medium ring-1">
           +{overflow}
         </span>
       )}
@@ -545,12 +538,14 @@ function RailRow({ part }: { part: AnyPart }) {
   return null
 }
 
-function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreaming: boolean }) {
+function IntermediateRail({ parts, isStreaming, isLast }: { parts: AnyPart[]; isStreaming: boolean; isLast: boolean }) {
   const [override, setOverride] = useState<boolean | null>(null)
-  const open = override ?? isStreaming
+  const defaultOpen = isStreaming && isLast
+  const open = override ?? defaultOpen
 
+  const isActive = isStreaming && isLast
   const toolCount = parts.filter((p) => p.type.startsWith("tool-") || p.type === "dynamic-tool").length
-  const summary = isStreaming
+  const summary = isActive
     ? "Working…"
     : toolCount > 0
     ? `Used ${toolCount} tool${toolCount === 1 ? "" : "s"}`
@@ -563,7 +558,7 @@ function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreamin
         onClick={() => setOverride(!open)}
         className="text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
       >
-        {isStreaming ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <CheckCircle2 className="size-3 shrink-0" />}
+        {isActive ? <Loader2 className="size-3 shrink-0 animate-spin" /> : <CheckCircle2 className="size-3 shrink-0" />}
         <span className="font-medium">{summary}</span>
         <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
       </button>
@@ -580,7 +575,7 @@ function IntermediateRail({ parts, isStreaming }: { parts: AnyPart[]; isStreamin
 function WorkingIndicator() {
   return (
     <div className="flex items-center gap-2">
-      <img src="/trademe-ai-logo.png" alt="" className="size-6 animate-bounce" />
+      <img src="/pholio-ai-logo.png" alt="" className="size-6 animate-bounce" />
       <span className="text-muted-foreground text-xs">Crunching numbers…</span>
     </div>
   )
@@ -621,8 +616,9 @@ function Message({ message, isStreaming }: { message: ChatMessage; isStreaming: 
   return (
     <div className="flex flex-col items-start gap-5">
       {blocks.map((block, i) => {
+        const isLastBlock = i === blocks.length - 1
         if (block.kind === "rail") {
-          return <IntermediateRail key={i} parts={block.parts} isStreaming={isStreaming} />
+          return <IntermediateRail key={i} parts={block.parts} isStreaming={isStreaming} isLast={isLastBlock} />
         }
         const { segments, renderedArtifactIds: blockArtifactIds } = splitTextWithArtifactMarkers(block.text, artifacts)
         for (const id of blockArtifactIds) renderedArtifactIds.add(id)
@@ -658,7 +654,6 @@ type ConnectedChatProps = {
   activeTitle: string | null
   initialMessage?: string | null
   onInitialMessageSent?: () => void
-  onClose: () => void
   onModelSelect: (key: GeneralChatModelKey) => void
   onThinkingSelect: (opts: ProviderOptions) => void
   onAutoTitle: (title: string) => void
@@ -667,7 +662,7 @@ type ConnectedChatProps = {
 function ConnectedChat({
   threadId, modelKey, providerOptions, activeTitle,
   initialMessage, onInitialMessageSent,
-  onClose, onModelSelect, onThinkingSelect, onAutoTitle,
+  onModelSelect, onThinkingSelect, onAutoTitle,
 }: ConnectedChatProps) {
   const lastPairRef = useRef<HTMLDivElement>(null)
   const prevLastPairRef = useRef<HTMLDivElement | null>(null)
@@ -680,7 +675,7 @@ function ConnectedChat({
   const [modelOpen, setModelOpen] = useState(false)
 
   const agent = useAgent({ agent: "chat", name: threadId })
-  const { messages, sendMessage, isStreaming, clearHistory } = useAgentChat<unknown, ChatMessage>({
+  const { messages, sendMessage, isStreaming } = useAgentChat<unknown, ChatMessage>({
     agent,
     resume: false,
     body: () => ({ modelKey, providerOptions }),
@@ -779,7 +774,7 @@ function ConnectedChat({
       <div ref={scrollContainerRef} className="h-full overflow-y-auto overscroll-none px-4 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
-            <img src="/trademe-ai-logo.png" alt="" className="size-20" />
+            <img src="/pholio-ai-logo.png" alt="" className="size-20" />
             <p className="text-muted-foreground text-base">How can I help?</p>
           </div>
         ) : (
@@ -825,18 +820,6 @@ function ConnectedChat({
 
       {/* Floating input */}
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
-        <div className="pointer-events-auto flex items-center justify-end gap-1">
-          {messages.length > 0 && (
-            <Button type="button" size="icon-sm" variant="ghost" onClick={clearHistory} disabled={isStreaming}
-              className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-destructive" aria-label="Clear history">
-              <Trash2 className="size-3.5" />
-            </Button>
-          )}
-          <Button type="button" size="icon-sm" variant="ghost" onClick={onClose}
-            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground" aria-label="Close chat">
-            <X className="size-3.5" />
-          </Button>
-        </div>
         <div className="pointer-events-auto">
           <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
             <InputGroupTextarea
@@ -903,6 +886,60 @@ function ConnectedChat({
 }
 
 // ---------------------------------------------------------------------------
+// ChatSkeleton — Suspense fallback while ConnectedChat fetches initial messages.
+// Mirrors the real input layout (disabled) so the input doesn't disappear on
+// thread switch / mount. Spinner only covers the messages area.
+// ---------------------------------------------------------------------------
+
+function ChatSkeleton({ modelKey, providerOptions }: { modelKey: GeneralChatModelKey; providerOptions: ProviderOptions }) {
+  const selectedModel = generalChatModels[modelKey] as GeneralChatModel
+  const thinkingLevels = selectedModel.thinking?.levels ?? []
+  const currentThinkingKey = thinkingLevels.find(
+    (l) => JSON.stringify(l.providerOptions) === JSON.stringify(providerOptions)
+  )?.key ?? null
+
+  return (
+    <>
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+      </div>
+
+      <div className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
+        <div className="pointer-events-auto">
+          <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 opacity-60">
+            <InputGroupTextarea
+              placeholder="Ask about your portfolio…"
+              className="max-h-32 px-4 pt-4 text-sm"
+              rows={2}
+              disabled
+            />
+            <InputGroupAddon align="block-end" className="justify-between">
+              <div className="flex items-center gap-1">
+                <button type="button" disabled
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground disabled:opacity-50">
+                  {selectedModel.label}
+                  <ChevronDown className="size-3 opacity-60" />
+                </button>
+                {thinkingLevels.length > 0 && (
+                  <button type="button" disabled
+                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground disabled:opacity-50">
+                    Think: {thinkingLevels.find((l) => l.key === currentThinkingKey)?.label ?? "Off"}
+                    <ChevronDown className="size-3 opacity-60" />
+                  </button>
+                )}
+              </div>
+              <InputGroupButton size="icon-sm" variant="default" disabled>
+                <ArrowUp />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // PreChatInput — shown when no thread exists yet; creates thread on first send
 // ---------------------------------------------------------------------------
 
@@ -913,10 +950,9 @@ type PreChatInputProps = {
   onModelSelect: (key: GeneralChatModelKey) => void
   onThinkingSelect: (opts: ProviderOptions) => void
   onSubmit: (text: string) => void
-  onClose: () => void
 }
 
-function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onThinkingSelect, onSubmit, onClose }: PreChatInputProps) {
+function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onThinkingSelect, onSubmit }: PreChatInputProps) {
   const [input, setInput] = useState("")
   const [modelOpen, setModelOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -942,17 +978,11 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
   return (
     <>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 text-center pointer-events-none">
-        <img src="/trademe-ai-logo.png" alt="" className="size-20" />
+        <img src="/pholio-ai-logo.png" alt="" className="size-20" />
         <p className="text-muted-foreground text-base">How can I help?</p>
       </div>
 
       <div ref={floatingRef} className="absolute bottom-4 left-4 right-4 pointer-events-none flex flex-col gap-1.5">
-        <div className="pointer-events-auto flex items-center justify-end gap-1">
-          <Button type="button" size="icon-sm" variant="ghost" onClick={onClose}
-            className="size-7 rounded-full bg-background/80 backdrop-blur-sm shadow text-muted-foreground hover:text-foreground" aria-label="Close chat">
-            <X className="size-3.5" />
-          </Button>
-        </div>
         <div className="pointer-events-auto">
           <InputGroup className="border-primary bg-background/80 backdrop-blur-sm shadow-xl ring-1 ring-primary/30 has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30">
             <InputGroupTextarea
@@ -1022,7 +1052,7 @@ function PreChatInput({ modelKey, providerOptions, isLoading, onModelSelect, onT
 // ChatPanel — thread management shell
 // ---------------------------------------------------------------------------
 
-export function ChatPanel({ onClose }: { onClose: () => void }) {
+export function ChatPanel() {
   const { userId } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
@@ -1141,12 +1171,11 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
           onModelSelect={handleModelSelect}
           onThinkingSelect={handleThinkingSelect}
           onSubmit={handleFirstMessage}
-          onClose={onClose}
         />
       )}
 
       {initialized && activeThreadId && (
-        <Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>}>
+        <Suspense fallback={<ChatSkeleton modelKey={modelKey} providerOptions={providerOptions} />}>
           <ConnectedChat
             key={activeThreadId}
             threadId={activeThreadId}
@@ -1155,7 +1184,6 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
             activeTitle={activeTitle}
             initialMessage={pendingMessage}
             onInitialMessageSent={() => setPendingMessage(null)}
-            onClose={onClose}
             onModelSelect={handleModelSelect}
             onThinkingSelect={handleThinkingSelect}
             onAutoTitle={handleAutoTitle}

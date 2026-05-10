@@ -1,12 +1,12 @@
-# TradeMe Python SDK Reference
+# Pholio Python SDK Reference
 
 Generated analysis code imports the SDK as:
 
 ```python
-import trademe_sdk as trademe
+import pholio_sdk as pholio
 ```
 
-`trademe` exposes the namespace instances documented below.
+`pholio` exposes the namespace instances documented below.
 
 ## Type Aliases
 
@@ -14,11 +14,11 @@ import trademe_sdk as trademe
 
 ## Namespaces
 
-### `trademe.input`
+### `pholio.input`
 
 Compatibility namespace for older generated code.
 
-#### `trademe.input.load() -> dict[str, Any]`
+#### `pholio.input.load() -> dict[str, Any]`
 
 Return an empty compatibility payload.
 
@@ -27,23 +27,23 @@ Use the network-backed SDK namespaces for data access.
 
 Returns: `dict[str, Any]`
 
-#### `trademe.input.metadata() -> dict[str, Any]`
+#### `pholio.input.metadata() -> dict[str, Any]`
 
 Return empty run metadata for compatibility.
 
 Returns: `dict[str, Any]`
 
-#### `trademe.input.available_tickers() -> list[str]`
+#### `pholio.input.available_tickers() -> list[str]`
 
 Return no preloaded tickers for compatibility.
 
 Returns: `list[str]`
 
-### `trademe.output`
+### `pholio.output`
 
 Output namespace for returning analysis results.
 
-#### `trademe.output.write(summary: str, result: Any, artifacts: list[AnalysisArtifact] | None = None) -> None`
+#### `pholio.output.write(summary: str, result: Any, artifacts: list[AnalysisArtifact] | None = None) -> None`
 
 Write the successful analysis output.
 
@@ -58,7 +58,7 @@ Parameters:
 
 Returns: `None`
 
-#### `trademe.output.fail(summary: str, details: Any = None) -> None`
+#### `pholio.output.fail(summary: str, details: Any = None) -> None`
 
 Write an expected data-gap result without raising an exception.
 
@@ -67,45 +67,45 @@ failures raise normally so the tool can surface the error.
 
 Returns: `None`
 
-### `trademe.portfolio`
+### `pholio.portfolio`
 
 Portfolio namespace for user-scoped holdings and P&L data.
 
-#### `trademe.portfolio.dashboard() -> PortfolioDashboard`
+#### `pholio.portfolio.dashboard() -> PortfolioDashboard`
 
 Fetch the portfolio dashboard with summary and open positions.
 
 Returns: `PortfolioDashboard`
 
-#### `trademe.portfolio.summary() -> PortfolioSummary | None`
+#### `pholio.portfolio.summary() -> PortfolioSummary | None`
 
 Fetch and return the portfolio summary, or `None` if unavailable.
 
 Returns: `PortfolioSummary | None`
 
-#### `trademe.portfolio.positions() -> list[Position]`
+#### `pholio.portfolio.positions() -> list[Position]`
 
 Fetch and return open portfolio positions.
 
 Returns: `list[Position]`
 
-#### `trademe.portfolio.position(ticker: str) -> Position | None`
+#### `pholio.portfolio.position(ticker: str) -> Position | None`
 
 Return one open position by ticker, case-insensitive.
 
 Returns: `Position | None`
 
-### `trademe.market`
+### `pholio.market`
 
 Market namespace for quote, candle, and fundamentals data.
 
-#### `trademe.market.quote(ticker: str) -> Quote`
+#### `pholio.market.quote(ticker: str) -> Quote`
 
 Fetch the latest quote snapshot for a ticker.
 
 Returns: `Quote`
 
-#### `trademe.market.candles(ticker: str, from_: str | None = None, to: str | None = None, **kwargs: Any) -> list[Candle]`
+#### `pholio.market.candles(ticker: str, from_: str | None = None, to: str | None = None, **kwargs: Any) -> list[Candle]`
 
 Fetch daily OHLCV candles for a ticker and date range.
 
@@ -122,17 +122,17 @@ for compatibility, but new code should use `from_` and `to`.
 
 Returns: `list[Candle]`
 
-#### `trademe.market.fundamentals(ticker: str) -> Fundamentals`
+#### `pholio.market.fundamentals(ticker: str) -> Fundamentals`
 
 Fetch compact fundamentals for a ticker.
 
 Returns: `Fundamentals`
 
-### `trademe.news`
+### `pholio.news`
 
 News namespace for recent ticker-specific articles.
 
-#### `trademe.news.recent(ticker: str, days: int = 7) -> list[NewsArticle]`
+#### `pholio.news.recent(ticker: str, days: int = 7) -> list[NewsArticle]`
 
 Fetch recent news articles for a ticker.
 
@@ -143,17 +143,17 @@ Parameters:
 
 Returns: `list[NewsArticle]`
 
-### `trademe.utils`
+### `pholio.utils`
 
 Small utility helpers for common analysis code.
 
-#### `trademe.utils.closes(candles: list[Candle] | list[dict[str, Any]]) -> list[float]`
+#### `pholio.utils.closes(candles: list[Candle] | list[dict[str, Any]]) -> list[float]`
 
 Extract numeric close prices from candle dictionaries.
 
 Returns: `list[float]`
 
-#### `trademe.utils.returns(values: list[float]) -> list[float]`
+#### `pholio.utils.returns(values: list[float]) -> list[float]`
 
 Compute simple period returns from a price series.
 

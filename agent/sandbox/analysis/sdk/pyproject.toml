@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trademe-sdk"
+name = "pholio-sdk"
 version = "0.1.0"
-description = "TradeMe analysis sandbox SDK"
+description = "Pholio analysis sandbox SDK"
 requires-python = ">=3.11"
 
 [project.optional-dependencies]

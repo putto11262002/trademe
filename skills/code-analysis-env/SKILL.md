@@ -10,10 +10,10 @@ Use this skill when the user's stock, market, or portfolio question requires cal
 Inside `analysis_run_code`, generated Python runs in `/workspace` with:
 
 ```python
-import trademe_sdk as trademe
+import pholio_sdk as pholio
 ```
 
-The sandbox image installs `trademe_sdk`. The Worker writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
+The sandbox image installs `pholio_sdk`. The Worker writes `/workspace/run_analysis.py`, runs it, then reads `/workspace/output.json`.
 
 The SDK fetches portfolio and market data over authenticated sandbox API calls. Fetch only the data needed for the calculation.
 
@@ -38,9 +38,9 @@ Rules:
 - Only use code execution for stock, market, portfolio, or investment-analysis tasks.
 - Fetch only the data needed for the question through the SDK.
 - Do not inspect long candle arrays in text. Load them in code and compute compact metrics.
-- Generated Python must import trademe_sdk as trademe.
+- Generated Python must import pholio_sdk as pholio.
 - Read references/sdk.md before writing non-trivial Python against the SDK.
-- Generated Python must finish by calling trademe.output.write(summary, result). Use the optional artifacts argument only when a compact rendered primitive would make the analysis clearer.
+- Generated Python must finish by calling pholio.output.write(summary, result). Use the optional artifacts argument only when a compact rendered primitive would make the analysis clearer.
 - The summary must be one short sentence describing what the code did for the tool UI.
 - The result must be JSON-serializable and compact. Do not return raw candles, large tables, or verbose logs.
 - Artifacts must be compact and schema-shaped. Use display primitives, not bespoke finance widgets.
@@ -50,7 +50,7 @@ Rules:
 - In the final answer, place artifacts with `[artifact:<id>]` markers where they should render. Use only ids returned in the artifact payload.
 - If data is missing, return a compact result with dataGaps rather than inventing values.
 - Unexpected HTTP/API failures should fail normally so the tool can surface the error.
-- Use trademe.output.fail(summary, details) only for expected data limitations.
+- Use pholio.output.fail(summary, details) only for expected data limitations.
 
 Reference files:
 - references/sdk.md: SDK API signatures, return shapes, and method behavior.
@@ -70,7 +70,7 @@ Artifact primitives:
 Artifact shape example:
 
 ```python
-trademe.output.write(
+pholio.output.write(
     "Computed trend metrics for NVDA.",
     {"ticker": "NVDA", "warnings": []},
     artifacts=[

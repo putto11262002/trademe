@@ -25,7 +25,7 @@ const MAX_TIMELINE_EVENTS = 12
 const runAnalysisInput = z.object({
   task: z.string().min(1).max(1_000),
   code: z.string().min(1).max(12_000).describe(
-    "Python code. It must import trademe_sdk as trademe, fetch data through its API-backed accessors, and write output with trademe.output.write(summary, result).",
+    "Python code. It must import pholio_sdk as pholio, fetch data through its API-backed accessors, and write output with pholio.output.write(summary, result).",
   ),
 })
 
@@ -210,7 +210,7 @@ export function createAnalysisTools(userId: string) {
   return {
   analysis_run_code: tool({
     description:
-      "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import trademe_sdk as trademe and finish with trademe.output.write(summary, result, artifacts=...). The summary must be one short sentence describing what was done. Optional artifacts can include metric_grid, table, line_chart, area_chart, bar_chart, donut_chart, event_timeline, or callout payloads for UI rendering. Do not use for trade execution or portfolio writes.",
+      "Run bounded Python analysis over portfolio and market data. Use for calculations over price history, technical indicators, drawdown, volatility, concentration, comparisons, and other numerical work. Python should import pholio_sdk as pholio and finish with pholio.output.write(summary, result, artifacts=...). The summary must be one short sentence describing what was done. Optional artifacts can include metric_grid, table, line_chart, area_chart, bar_chart, donut_chart, event_timeline, or callout payloads for UI rendering. Do not use for trade execution or portfolio writes.",
     inputSchema: runAnalysisInput,
     execute: async ({ task, code }) => {
       const runId = crypto.randomUUID()
@@ -260,8 +260,8 @@ export function createAnalysisTools(userId: string) {
             timeout: EXEC_TIMEOUT_MS,
             env: {
               PYTHONPATH: "/workspace",
-              TRADEME_API_BASE_URL: env.TRADEME_API_BASE_URL,
-              TRADEME_API_TOKEN: apiToken,
+              PHOLIO_API_BASE_URL: env.PHOLIO_API_BASE_URL,
+              PHOLIO_API_TOKEN: apiToken,
             },
           }),
           EXEC_TIMEOUT_MS + 2_000,

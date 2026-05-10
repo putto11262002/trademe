@@ -20,7 +20,7 @@ export function AppSidebar() {
     >
       <Link
         to="/"
-        aria-label="TradeMe home"
+        aria-label="Pholio home"
         className="mb-3 flex size-8 items-center justify-center"
       >
         <img src="/logo.png" alt="" className="size-8 object-contain" />
