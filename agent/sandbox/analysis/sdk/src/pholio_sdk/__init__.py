@@ -3,7 +3,7 @@
 Generated analysis code imports this package as:
 
 ```python
-import trademe_sdk as trademe
+import pholio_sdk as pholio
 ```
 
 The SDK fetches Pholio portfolio and market data through authenticated sandbox
@@ -240,8 +240,8 @@ def _get(path: str, params: dict[str, Any] | None = None) -> Any:
 class Input:
     """Compatibility namespace for older generated code.
 
-    New analysis code should fetch data through `trademe.portfolio`,
-    `trademe.market`, and `trademe.news` instead of reading preloaded input.
+    New analysis code should fetch data through `pholio.portfolio`,
+    `pholio.market`, and `pholio.news` instead of reading preloaded input.
     """
 
     def load(self) -> dict[str, Any]:
@@ -404,7 +404,7 @@ class Utils:
         return result
 
 
-class TradeMeSDK:
+class PholioSDK:
     """Root SDK object for the analysis environment."""
 
     input: Input
@@ -423,7 +423,7 @@ class TradeMeSDK:
         self.utils = Utils()
 
 
-sdk = TradeMeSDK()
+sdk = PholioSDK()
 input = sdk.input
 output = sdk.output
 portfolio = sdk.portfolio
@@ -436,7 +436,7 @@ utils = sdk.utils
 def load_input() -> dict[str, Any]:
     """Return an empty compatibility payload.
 
-    Prefer `trademe.portfolio`, `trademe.market`, and `trademe.news` for new
+    Prefer `pholio.portfolio`, `pholio.market`, and `pholio.news` for new
     analysis code.
     """
 

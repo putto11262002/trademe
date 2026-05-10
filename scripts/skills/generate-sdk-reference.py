@@ -10,7 +10,7 @@ import textwrap
 ROOT = Path(__file__).resolve().parents[2]
 SDK_SRC = ROOT / "agent/sandbox/analysis/sdk/src"
 OUTPUT = ROOT / "skills/code-analysis-env/references/sdk.md"
-ROOT_CLASS = "TradeMeSDK"
+ROOT_CLASS = "PholioSDK"
 
 
 def main() -> None:
@@ -22,7 +22,7 @@ def main() -> None:
             "  python3 -m pip install 'griffe>=1,<2'"
         ) from exc
 
-    module = griffe.load("trademe_sdk", search_paths=[str(SDK_SRC)])
+    module = griffe.load("pholio_sdk", search_paths=[str(SDK_SRC)])
     content = render_reference(module)
     OUTPUT.write_text(content, encoding="utf-8")
     print(f"Wrote {OUTPUT.relative_to(ROOT)}")
@@ -30,15 +30,15 @@ def main() -> None:
 
 def render_reference(module) -> str:
     return "\n".join([
-        "# TradeMe Python SDK Reference",
+        "# Pholio Python SDK Reference",
         "",
         "Generated analysis code imports the SDK as:",
         "",
         "```python",
-        "import trademe_sdk as trademe",
+        "import pholio_sdk as pholio",
         "```",
         "",
-        "`trademe` exposes the namespace instances documented below.",
+        "`pholio` exposes the namespace instances documented below.",
         "",
         *render_aliases(module),
         *render_namespaces(module),
@@ -66,14 +66,14 @@ def render_namespaces(module) -> list[str]:
     parts: list[str] = ["## Namespaces", ""]
     for namespace, namespace_type in iter_root_namespaces(root):
         cls = module[namespace_type]
-        parts.extend([f"### `trademe.{namespace}`", ""])
+        parts.extend([f"### `pholio.{namespace}`", ""])
         if cls.docstring:
             parts.extend([first_paragraph(cls.docstring.value), ""])
 
         for method_name, member in cls.members.items():
             if not getattr(member, "is_function", False):
                 continue
-            signature = str(member.signature()).replace(f"{method_name}(", f"trademe.{namespace}.{method_name}(")
+            signature = str(member.signature()).replace(f"{method_name}(", f"pholio.{namespace}.{method_name}(")
             parts.extend([f"#### `{signature}`", ""])
             doc = normalize_docstring(member.docstring.value if member.docstring else "")
             if doc:
