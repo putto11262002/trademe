@@ -205,8 +205,8 @@ export function createAnalysisTools(userId: string) {
             timeout: EXEC_TIMEOUT_MS,
             env: {
               PYTHONPATH: "/workspace",
-              TRADEME_API_BASE_URL: env.TRADEME_API_BASE_URL,
-              TRADEME_API_TOKEN: apiToken,
+              PHOLIO_API_BASE_URL: env.PHOLIO_API_BASE_URL,
+              PHOLIO_API_TOKEN: apiToken,
             },
           }),
           EXEC_TIMEOUT_MS + 2_000,

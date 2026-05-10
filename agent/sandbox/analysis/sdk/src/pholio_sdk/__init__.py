@@ -193,16 +193,16 @@ def _get_ticker_key(ticker: Any) -> str:
 
 
 def _api_base_url() -> str:
-    value = os.environ.get("TRADEME_API_BASE_URL")
+    value = os.environ.get("PHOLIO_API_BASE_URL")
     if not value:
-        raise RuntimeError("TRADEME_API_BASE_URL is not configured")
+        raise RuntimeError("PHOLIO_API_BASE_URL is not configured")
     return value.rstrip("/")
 
 
 def _api_token() -> str:
-    value = os.environ.get("TRADEME_API_TOKEN")
+    value = os.environ.get("PHOLIO_API_TOKEN")
     if not value:
-        raise RuntimeError("TRADEME_API_TOKEN is not configured")
+        raise RuntimeError("PHOLIO_API_TOKEN is not configured")
     return value
 
 

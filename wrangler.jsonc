@@ -1,15 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "trademe",
+  "name": "pholio",
   "main": "./src/server/worker.ts",
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "vars": {
-    "TRADEME_API_BASE_URL": "https://trademe.sabaiscale.com"
+    "PHOLIO_API_BASE_URL": "https://pholio.markets"
   },
   "routes": [
-    { "pattern": "trademe.sabaiscale.com", "custom_domain": true }
+    { "pattern": "pholio.markets", "custom_domain": true }
   ],
   "kv_namespaces": [
     {
@@ -26,7 +26,7 @@
   "env": {
     "dev": {
       "vars": {
-        "TRADEME_API_BASE_URL": "http://host.docker.internal:3000"
+        "PHOLIO_API_BASE_URL": "http://host.docker.internal:3000"
       },
       "kv_namespaces": [
         {
@@ -44,7 +44,7 @@
 
       "containers": [
         {
-          "name": "trademe-analysissandbox-dev",
+          "name": "pholio-analysissandbox-dev",
           "class_name": "AnalysisSandbox",
           "image": "./agent/sandbox/analysis/Dockerfile",
           "instance_type": "lite"
