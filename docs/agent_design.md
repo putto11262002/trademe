@@ -1106,6 +1106,8 @@ Artifact constraints:
 - Use simple identifier keys for chart/table fields: letters, numbers, and underscores only, starting with a letter or underscore.
 - Use ISO date strings such as `YYYY-MM-DD` for date/time chart rows. The UI formats recognized ISO dates; arbitrary category labels are displayed as provided.
 - Keep model-generated labels short because artifacts render inside compact chat surfaces.
+- Reject non-finite values such as `NaN` and `Infinity`; generated code should use `None` plus a data gap when a metric cannot be computed.
+- Normalize small harmless artifact aliases before validation, but keep documented field names as the expected contract.
 - Keep `summary` and `result` compact for model reasoning. Do not make the model repeat full artifact data.
 - Large artifact data may later move to persisted artifact refs if tool-output context cost becomes a problem.
 - Initial frontend renderers should use existing shadcn/Tailwind and the app's chart primitives where possible.
